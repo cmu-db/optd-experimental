@@ -7,27 +7,28 @@ use sea_orm::entity::prelude::*;
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
-    pub fingerprint_id: i32,
+    pub fingerprint: i64,
     pub data: Json,
+    pub group_id: i32,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
     #[sea_orm(
-        belongs_to = "super::fingerprint::Entity",
-        from = "Column::FingerprintId",
-        to = "super::fingerprint::Column::Id",
+        belongs_to = "super::cascades_group::Entity",
+        from = "Column::GroupId",
+        to = "super::cascades_group::Column::Id",
         on_update = "NoAction",
         on_delete = "NoAction"
     )]
-    Fingerprint,
+    CascadesGroup,
     #[sea_orm(has_many = "super::physical_property::Entity")]
     PhysicalProperty,
 }
 
-impl Related<super::fingerprint::Entity> for Entity {
+impl Related<super::cascades_group::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::Fingerprint.def()
+        Relation::CascadesGroup.def()
     }
 }
 

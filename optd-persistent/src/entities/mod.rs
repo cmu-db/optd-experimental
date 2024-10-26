@@ -2,8 +2,7 @@
 
 pub mod prelude;
 
-pub mod fingerprint;
-pub mod group;
+pub mod cascades_group;
 pub mod logical_expression;
 pub mod logical_property;
 pub mod physical_expression;

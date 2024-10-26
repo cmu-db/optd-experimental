@@ -3,17 +3,19 @@
 use sea_orm::entity::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
-#[sea_orm(table_name = "fingerprint")]
+#[sea_orm(table_name = "cascades_group")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
-    pub inner: i64,
+    pub winner: Option<i64>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
     #[sea_orm(has_many = "super::logical_expression::Entity")]
     LogicalExpression,
+    #[sea_orm(has_many = "super::logical_property::Entity")]
+    LogicalProperty,
     #[sea_orm(has_many = "super::physical_expression::Entity")]
     PhysicalExpression,
 }
@@ -21,6 +23,12 @@ pub enum Relation {
 impl Related<super::logical_expression::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::LogicalExpression.def()
+    }
+}
+
+impl Related<super::logical_property::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::LogicalProperty.def()
     }
 }
 
