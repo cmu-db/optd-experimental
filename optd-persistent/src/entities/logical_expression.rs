@@ -22,11 +22,26 @@ pub enum Relation {
         on_delete = "NoAction"
     )]
     CascadesGroup,
+    #[sea_orm(has_many = "super::logical_group_junction::Entity")]
+    LogicalGroupJunction,
+}
+
+impl Related<super::logical_group_junction::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::LogicalGroupJunction.def()
+    }
 }
 
 impl Related<super::cascades_group::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::CascadesGroup.def()
+        super::logical_group_junction::Relation::CascadesGroup.def()
+    }
+    fn via() -> Option<RelationDef> {
+        Some(
+            super::logical_group_junction::Relation::LogicalExpression
+                .def()
+                .rev(),
+        )
     }
 }
 

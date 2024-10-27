@@ -14,15 +14,19 @@ pub struct Model {
 pub enum Relation {
     #[sea_orm(has_many = "super::logical_expression::Entity")]
     LogicalExpression,
+    #[sea_orm(has_many = "super::logical_group_junction::Entity")]
+    LogicalGroupJunction,
     #[sea_orm(has_many = "super::logical_property::Entity")]
     LogicalProperty,
     #[sea_orm(has_many = "super::physical_expression::Entity")]
     PhysicalExpression,
+    #[sea_orm(has_many = "super::physical_group_junction::Entity")]
+    PhysicalGroupJunction,
 }
 
-impl Related<super::logical_expression::Entity> for Entity {
+impl Related<super::logical_group_junction::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::LogicalExpression.def()
+        Relation::LogicalGroupJunction.def()
     }
 }
 
@@ -32,9 +36,35 @@ impl Related<super::logical_property::Entity> for Entity {
     }
 }
 
+impl Related<super::physical_group_junction::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::PhysicalGroupJunction.def()
+    }
+}
+
+impl Related<super::logical_expression::Entity> for Entity {
+    fn to() -> RelationDef {
+        super::logical_group_junction::Relation::LogicalExpression.def()
+    }
+    fn via() -> Option<RelationDef> {
+        Some(
+            super::logical_group_junction::Relation::CascadesGroup
+                .def()
+                .rev(),
+        )
+    }
+}
+
 impl Related<super::physical_expression::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::PhysicalExpression.def()
+        super::physical_group_junction::Relation::PhysicalExpression.def()
+    }
+    fn via() -> Option<RelationDef> {
+        Some(
+            super::physical_group_junction::Relation::CascadesGroup
+                .def()
+                .rev(),
+        )
     }
 }
 

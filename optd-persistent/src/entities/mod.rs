@@ -4,6 +4,8 @@ pub mod prelude;
 
 pub mod cascades_group;
 pub mod logical_expression;
+pub mod logical_group_junction;
 pub mod logical_property;
 pub mod physical_expression;
+pub mod physical_group_junction;
 pub mod physical_property;

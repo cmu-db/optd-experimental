@@ -22,19 +22,34 @@ pub enum Relation {
         on_delete = "NoAction"
     )]
     CascadesGroup,
+    #[sea_orm(has_many = "super::physical_group_junction::Entity")]
+    PhysicalGroupJunction,
     #[sea_orm(has_many = "super::physical_property::Entity")]
     PhysicalProperty,
 }
 
-impl Related<super::cascades_group::Entity> for Entity {
+impl Related<super::physical_group_junction::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::CascadesGroup.def()
+        Relation::PhysicalGroupJunction.def()
     }
 }
 
 impl Related<super::physical_property::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::PhysicalProperty.def()
+    }
+}
+
+impl Related<super::cascades_group::Entity> for Entity {
+    fn to() -> RelationDef {
+        super::physical_group_junction::Relation::CascadesGroup.def()
+    }
+    fn via() -> Option<RelationDef> {
+        Some(
+            super::physical_group_junction::Relation::PhysicalExpression
+                .def()
+                .rev(),
+        )
     }
 }
 
