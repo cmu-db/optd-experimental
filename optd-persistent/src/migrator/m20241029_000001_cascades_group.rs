@@ -4,7 +4,9 @@ use sea_orm_migration::{prelude::*, schema::*};
 pub enum CascadesGroup {
     Table,
     Id,
-    Winner,
+    LatestWinner,
+    InProgress,
+    IsOptimized,
 }
 
 pub struct Migration;
@@ -24,7 +26,9 @@ impl MigrationTrait for Migration {
                     .table(CascadesGroup::Table)
                     .if_not_exists()
                     .col(pk_auto(CascadesGroup::Id))
-                    .col(big_unsigned_null(CascadesGroup::Winner)) // TODO how to represent winner?
+                    .col(integer_null(CascadesGroup::LatestWinner)) // TODO foreign key
+                    .col(boolean(CascadesGroup::InProgress))
+                    .col(boolean(CascadesGroup::IsOptimized))
                     .to_owned(),
             )
             .await

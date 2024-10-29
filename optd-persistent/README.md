@@ -25,3 +25,11 @@ Finally, run this command to generate / overwrite the `entities` module in the `
 ```
 $ sea-orm-cli generate entity -u sqlite:./sqlite.db -o src/entities
 ```
+
+# Demo
+
+To run the demo, run the root binary crate:
+
+```sh
+$ cargo run --bin optd-persistent
+```

@@ -5,8 +5,9 @@ use sea_orm_migration::{prelude::*, schema::*};
 pub enum PhysicalProperty {
     Table,
     Id,
-    Data,
     PhysicalExpressionId,
+    VariantTag,
+    Data,
 }
 
 pub struct Migration;
@@ -19,15 +20,16 @@ impl MigrationName for Migration {
 
 #[async_trait::async_trait]
 impl MigrationTrait for Migration {
-    // TODO add property variant identifier
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        // Note that the foreign key constraint is `Cascade` for both delete and update, since if
+        // for some reason the physical expression ID (primary key) changes, we want to update the
+        // foreign keys of the physical properties that reference it.
         manager
             .create_table(
                 Table::create()
                     .table(PhysicalProperty::Table)
                     .if_not_exists()
                     .col(pk_auto(PhysicalProperty::Id))
-                    .col(json(PhysicalProperty::Data))
                     .col(integer(PhysicalProperty::PhysicalExpressionId))
                     .foreign_key(
                         ForeignKey::create()
@@ -40,6 +42,8 @@ impl MigrationTrait for Migration {
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
+                    .col(small_integer(PhysicalProperty::VariantTag))
+                    .col(json(PhysicalProperty::Data))
                     .to_owned(),
             )
             .await
