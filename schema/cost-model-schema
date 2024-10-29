@@ -1,0 +1,51 @@
+// Use DBML to define your database structure
+// Docs: https://dbml.dbdiagram.io/docs
+
+Table database {
+  id int PK
+  created_time timestamp 
+}
+
+Table namespace_schema {
+  id int PK
+  database_id int
+  name varchar
+  created_time timestamp
+}
+
+Table table_metadata {
+  id int PK
+  schema_id int
+  name varchar
+  created_time timestamp
+}
+
+Table table_attribute {
+  id int PK // global index
+  table_id int
+  name varchar
+  base_col_number int // local index within the table
+  attnotnull bool // physical property
+}
+
+Table attribute_stats {
+  id int PK
+  attribute_id int
+  epoch_id int
+  name varchar
+  created_time timestamp
+}
+
+Table event {
+  epoch_id int PK
+  source_variant varchar
+  create_timestamp timestamp
+  data json
+}
+
+Ref: database.id < namespace_schema.database_id
+Ref: namespace_schema.id < table_metadata.schema_id
+Ref: table_metadata.id < table_attribute.table_id
+Ref: table_attribute.id < attribute_stats.attribute_id
+Ref: attribute_stats.epoch_id > event.epoch_id
+
