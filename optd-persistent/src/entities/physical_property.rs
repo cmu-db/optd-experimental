@@ -17,8 +17,8 @@ pub enum Relation {
         belongs_to = "super::physical_expression::Entity",
         from = "Column::PhysicalExpressionId",
         to = "super::physical_expression::Column::Id",
-        on_update = "NoAction",
-        on_delete = "NoAction"
+        on_update = "Cascade",
+        on_delete = "Cascade"
     )]
     PhysicalExpression,
 }

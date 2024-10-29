@@ -35,7 +35,9 @@ impl MigrationTrait for Migration {
                         ForeignKey::create()
                             .name("fk-physical_expression-group_id")
                             .from(PhysicalExpression::Table, PhysicalExpression::GroupId)
-                            .to(CascadesGroup::Table, CascadesGroup::Id),
+                            .to(CascadesGroup::Table, CascadesGroup::Id)
+                            .on_delete(ForeignKeyAction::Cascade)
+                            .on_update(ForeignKeyAction::Cascade),
                     )
                     .to_owned(),
             )

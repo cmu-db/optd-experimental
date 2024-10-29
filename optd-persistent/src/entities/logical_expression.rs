@@ -18,8 +18,8 @@ pub enum Relation {
         belongs_to = "super::cascades_group::Entity",
         from = "Column::GroupId",
         to = "super::cascades_group::Column::Id",
-        on_update = "NoAction",
-        on_delete = "NoAction"
+        on_update = "Cascade",
+        on_delete = "Cascade"
     )]
     CascadesGroup,
     #[sea_orm(has_many = "super::logical_group_junction::Entity")]

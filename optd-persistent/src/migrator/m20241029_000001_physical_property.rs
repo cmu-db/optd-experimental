@@ -36,7 +36,9 @@ impl MigrationTrait for Migration {
                                 PhysicalProperty::Table,
                                 PhysicalProperty::PhysicalExpressionId,
                             )
-                            .to(PhysicalExpression::Table, PhysicalExpression::Id),
+                            .to(PhysicalExpression::Table, PhysicalExpression::Id)
+                            .on_delete(ForeignKeyAction::Cascade)
+                            .on_update(ForeignKeyAction::Cascade),
                     )
                     .to_owned(),
             )

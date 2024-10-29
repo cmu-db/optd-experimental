@@ -33,7 +33,9 @@ impl MigrationTrait for Migration {
                         ForeignKey::create()
                             .name("fk-logical_property-group_id")
                             .from(LogicalProperty::Table, LogicalProperty::GroupId)
-                            .to(CascadesGroup::Table, CascadesGroup::Id),
+                            .to(CascadesGroup::Table, CascadesGroup::Id)
+                            .on_delete(ForeignKeyAction::Cascade)
+                            .on_update(ForeignKeyAction::Cascade),
                     )
                     .to_owned(),
             )

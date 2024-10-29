@@ -17,16 +17,16 @@ pub enum Relation {
         belongs_to = "super::cascades_group::Entity",
         from = "Column::GroupId",
         to = "super::cascades_group::Column::Id",
-        on_update = "NoAction",
-        on_delete = "NoAction"
+        on_update = "Cascade",
+        on_delete = "Cascade"
     )]
     CascadesGroup,
     #[sea_orm(
         belongs_to = "super::physical_expression::Entity",
         from = "Column::PhysicalExpressionId",
         to = "super::physical_expression::Column::Id",
-        on_update = "NoAction",
-        on_delete = "NoAction"
+        on_update = "Cascade",
+        on_delete = "Cascade"
     )]
     PhysicalExpression,
 }
