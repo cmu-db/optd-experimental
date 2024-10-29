@@ -49,3 +49,70 @@ Ref: table_metadata.id < table_attribute.table_id
 Ref: table_attribute.id < attribute_stats.attribute_id
 Ref: attribute_stats.epoch_id > event.epoch_id
 
+
+// Logical expressions and groups
+Table logical_expression {
+  id integer [pk]
+  group_id integer [ref: > cascades_group.id]
+  fingerprint integer
+  variant_tag integer
+  data json
+}
+
+Table cascades_group {
+  id integer [pk]
+  latest_winner integer [ref: > physical_expression.id, null]
+  in_progress boolean
+  is_optimized boolean
+}
+
+// Physical expressions and properties
+Table physical_expression {
+  id integer [pk]
+  group_id integer [ref: > cascades_group.id]
+  fingerprint integer
+  variant_tag integer
+  data json
+}
+
+Table physical_property {
+  id integer [pk]
+  physical_expression_id integer [ref: > physical_expression.id]
+  variant_tag integer
+  data json
+}
+
+// Junction tables
+Table logical_group_junction {
+  group_id integer [ref: > cascades_group.id]
+  logical_expression_id integer [ref: > logical_expression.id]
+}
+
+Table physical_group_junction {
+  group_id integer [ref: > cascades_group.id]
+  physical_expression_id integer [ref: > physical_expression.id]
+}
+
+// Properties
+Table logical_property {
+  id integer [pk]
+  group_id integer [ref: > cascades_group.id]
+  variant_tag integer
+  data json
+}
+
+// Winners tracking
+Table group_winner {
+  id integer [pk]
+  group_id integer [ref: > cascades_group.id]
+  physical_expression_id integer [ref: > physical_expression.id]
+  cost integer
+  epoch_id integer [ref: > event.epoch_id]
+}
+
+
+// Notes:
+// - All columns are NOT NULL unless specified otherwise
+// - fingerprint represents a hash of the actual data in the logical and physical expression tuple
+// - Each new event inserted into events table has its own epoch_id
+// - cascades_group.latest_winner is an optimization to avoid querying entire group_winner table
