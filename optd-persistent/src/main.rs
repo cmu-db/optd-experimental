@@ -21,7 +21,9 @@ async fn main() {
 
     // Create a new `CascadesGroup`.
     let group = cascades_group::ActiveModel {
-        winner: ActiveValue::Set(None),
+        latest_winner: ActiveValue::Set(None),
+        in_progress: ActiveValue::Set(false),
+        is_optimized: ActiveValue::Set(false),
         ..Default::default()
     }
     .save(&db)
