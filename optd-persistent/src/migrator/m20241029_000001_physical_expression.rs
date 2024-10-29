@@ -5,9 +5,9 @@ use sea_orm_migration::{prelude::*, schema::*};
 pub enum PhysicalExpression {
     Table,
     Id,
+    GroupId,
     Fingerprint,
     Data,
-    GroupId,
 }
 
 pub struct Migration;
@@ -28,8 +28,6 @@ impl MigrationTrait for Migration {
                     .table(PhysicalExpression::Table)
                     .if_not_exists()
                     .col(pk_auto(PhysicalExpression::Id))
-                    .col(big_unsigned(PhysicalExpression::Fingerprint))
-                    .col(json(PhysicalExpression::Data))
                     .col(integer(PhysicalExpression::GroupId))
                     .foreign_key(
                         ForeignKey::create()
@@ -39,6 +37,8 @@ impl MigrationTrait for Migration {
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
+                    .col(big_unsigned(PhysicalExpression::Fingerprint))
+                    .col(json(PhysicalExpression::Data))
                     .to_owned(),
             )
             .await

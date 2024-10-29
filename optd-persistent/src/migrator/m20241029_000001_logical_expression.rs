@@ -5,9 +5,9 @@ use sea_orm_migration::{prelude::*, schema::*};
 pub enum LogicalExpression {
     Table,
     Id,
+    GroupId,
     Fingerprint,
     Data,
-    GroupId,
 }
 
 pub struct Migration;
@@ -28,8 +28,6 @@ impl MigrationTrait for Migration {
                     .table(LogicalExpression::Table)
                     .if_not_exists()
                     .col(pk_auto(LogicalExpression::Id))
-                    .col(big_unsigned(LogicalExpression::Fingerprint))
-                    .col(json(LogicalExpression::Data))
                     .col(integer(LogicalExpression::GroupId))
                     .foreign_key(
                         ForeignKey::create()
@@ -39,6 +37,8 @@ impl MigrationTrait for Migration {
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
+                    .col(big_unsigned(LogicalExpression::Fingerprint))
+                    .col(json(LogicalExpression::Data))
                     .to_owned(),
             )
             .await
