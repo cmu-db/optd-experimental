@@ -12,7 +12,7 @@ pub struct Migration;
 
 impl MigrationName for Migration {
     fn name(&self) -> &str {
-        "m20241026_000001_create_logical_group_junction_table"
+        "m20241029_000001_logical_group_junction"
     }
 }
 

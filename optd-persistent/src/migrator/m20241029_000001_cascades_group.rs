@@ -11,7 +11,7 @@ pub struct Migration;
 
 impl MigrationName for Migration {
     fn name(&self) -> &str {
-        "m20241026_000001_create_cascades_group_table"
+        "m20241029_000001_cascades_group"
     }
 }
 

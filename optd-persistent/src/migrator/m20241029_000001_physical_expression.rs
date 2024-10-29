@@ -14,7 +14,7 @@ pub struct Migration;
 
 impl MigrationName for Migration {
     fn name(&self) -> &str {
-        "m20241026_000001_create_physical_expression_table"
+        "m20241029_000001_physical_expression"
     }
 }
 
