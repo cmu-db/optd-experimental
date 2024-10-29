@@ -1,40 +1,25 @@
-mod entities;
-mod migrator;
+//! Very basic demo of using the ORM for optd-persistent.
+//!
+//! You may run into errors when you first clone this repository.
+//! See the `README.md` for setup instructions.
 
-use migrator::Migrator;
+#![allow(dead_code, unused_imports)]
+
 use sea_orm::*;
 use sea_orm_migration::prelude::*;
 use serde_json::json;
 
+mod entities;
+mod migrator;
+
 use entities::{prelude::*, *};
-
-const DATABASE_URL: &str = "sqlite:./sqlite.db?mode=rwc";
-
-async fn migrate(db: &DatabaseConnection) -> Result<(), DbErr> {
-    let schema_manager = SchemaManager::new(db);
-
-    Migrator::refresh(db).await.unwrap();
-
-    assert!(schema_manager.has_table("cascades_group").await?);
-    assert!(schema_manager.has_table("logical_expression").await?);
-    assert!(schema_manager.has_table("logical_group_junction").await?);
-    assert!(schema_manager.has_table("logical_property").await?);
-    assert!(schema_manager.has_table("physical_expression").await?);
-    assert!(schema_manager.has_table("physical_property").await?);
-    assert!(schema_manager.has_table("physical_group_junction").await?);
-
-    Ok(())
-}
+use optd_persistent::DATABASE_URL;
 
 #[tokio::main]
-async fn main() -> Result<(), DbErr> {
-    let db = Database::connect(DATABASE_URL).await?;
+async fn main() {
+    let db = Database::connect(DATABASE_URL).await.unwrap();
 
-    println!("{:?}", db.get_database_backend());
-
-    migrate(&db).await.unwrap();
-
-    // Create a new Group.
+    // Create a new `CascadesGroup`.
     let group = cascades_group::ActiveModel {
         winner: ActiveValue::Set(None),
         ..Default::default()
@@ -45,8 +30,8 @@ async fn main() -> Result<(), DbErr> {
 
     // Create a new logical expression.
     let l_expr = logical_expression::ActiveModel {
-        fingerprint: ActiveValue::Set(42), // Made up fingerprint
-        data: ActiveValue::Set(json!({
+        fingerprint: ActiveValue::Set(42), // Example fingerprint
+        data: ActiveValue::Set(json!({ // Example operator
             "type": "Scan",
             "table": "lineitem",
             "predicate": "l_quantity < 10",
@@ -79,7 +64,7 @@ async fn main() -> Result<(), DbErr> {
 
     // Retrieve all logical expressions that belong to this group with lazy loading.
     {
-        let group = CascadesGroup::find_by_id(group.id.unwrap())
+        let group = CascadesGroup::find_by_id(*group.id.try_as_ref().unwrap())
             .one(&db)
             .await
             .unwrap()
@@ -105,5 +90,9 @@ async fn main() -> Result<(), DbErr> {
         assert_eq!(group_with_expressions[0].1.len(), 1);
     }
 
-    Ok(())
+    // Clean up everything. Since everything is cascading, we only need to manually delete the group
+    // and then SeaORM will take care of the expression and the junction.
+    group.delete(&db).await.unwrap();
+
+    println!("Demo Finished!");
 }
