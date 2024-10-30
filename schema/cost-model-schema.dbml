@@ -8,21 +8,21 @@ Table database_metadata {
 
 Table namespace_metadata {
   id integer PK
-  database_id integer
+  database_id integer [ref: > database_metadata.id]
   name varchar
   created_time timestamp
 }
 
 Table table_metadata {
   id integer PK
-  schema_id inintegert
+  schema_id integer [ref: > namespace_metadata.id]
   name varchar
   created_time timestamp
 }
 
 Table table_attribute {
   id integer PK // global index
-  table_id integer
+  table_id integer [ref: > table_metadata.id]
   name varchar
   compression_method char
   type integer // Data type of this attribute. Should we make another table to explain the type mapping?
@@ -34,7 +34,7 @@ Table attribute_stats {
   id integer PK
   number_of_attributes integer // do we need it?
   data json // stores the related table id and attribute ids
-  epoch_id integer
+  epoch_id integer [ref: > event.epoch_id]
   name varchar
   created_time timestamp
   stats_type integer // Should we make another table to explain the type mapping?
@@ -105,12 +105,6 @@ Table attribute_stats_junction {
   attr_id integer [ref: > table_attribute.id]
   stats_id integer [ref: > attribute_stats.id]
 }
-
-Ref: database_metadata.id < namespace_metadata.database_id
-Ref: namespace_metadata.id < table_metadata.schema_id
-Ref: table_metadata.id < table_attribute.table_id
-Ref: attribute_stats.epoch_id > event.epoch_id
-
 
 // Logical expressions and groups
 Table logical_expression {
