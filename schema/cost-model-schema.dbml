@@ -1,0 +1,175 @@
+// Use DBML to define your database structure
+// Docs: https://dbml.dbdiagram.io/docs
+
+Table database_metadata {
+  id integer PK
+  created_time timestamp 
+}
+
+Table namespace_metadata {
+  id integer PK
+  database_id integer [ref: > database_metadata.id]
+  name varchar
+  created_time timestamp
+}
+
+Table table_metadata {
+  id integer PK
+  schema_id integer [ref: > namespace_metadata.id]
+  name varchar
+  created_time timestamp
+}
+
+Table table_attribute {
+  id integer PK // global index
+  table_id integer [ref: > table_metadata.id]
+  name varchar
+  compression_method char
+  type integer // Data type of this attribute. Should we make another table to explain the type mapping?
+  base_col_number integer // local index within the table
+  is_not_null boolean // physical property
+}
+
+Table attribute_stats {
+  id integer PK
+  number_of_attributes integer // do we need it?
+  data json // stores the related table id and attribute ids
+  epoch_id integer [ref: > event.epoch_id]
+  name varchar
+  created_time timestamp
+  stats_type integer // Should we make another table to explain the type mapping?
+  stats_value integer // Can we represent every stats value into integer?
+}
+
+Table event {
+  epoch_id integer PK
+  source_variant varchar
+  create_timestamp timestamp
+  data json
+}
+
+Table cost {
+  id integer PK
+  expr_id integer [ref: > physical_expression.id]
+  epoch_id integer [ref: > event.epoch_id]
+  cost integer
+  valid boolean
+}
+
+Table index {
+  id integer PK
+  name varchar
+  table_id integer [ref: > table_metadata.id]
+  number_of_attributes integer
+  is_unique boolean
+  nulls_not_distinct boolean // Only valid for unique index, if true, then null value is equal, if false, null value is distinct
+  is_primary boolean
+  is_clustered boolean // If true, the table was last clustered on this index
+  is_exclusion boolean // More fields might be added in the future for expressiveness on exclusion constraint.
+  data json // Stores the attribute ids. The reason for not creating an additional junction table is the same as with the attribute_stats table.
+}
+
+Table trigger {
+  id integer PK
+  name varchar
+  table_id integer [ref: > table_metadata.id]
+  parent_trigger_id integer [ref: > trigger.id]
+  function json
+}
+
+// Not-null is handled directly in `table_attribute`. See `is_not_null` field.
+// Constraint trigger is handled directly in `trigger`.
+Table constraint {
+  id integer PK
+  name varchar
+  constraint_type integer // pk, fk, unique, check, exclusion
+  table_id integer [ref: > table_metadata.id] // 0 if not a table constraint
+  index_id integer [ref: > index.id] // The index supporting this constraint, if it's a unique, primary key, foreign key, or exclusion constraint; else 0
+  foreign_ref_id integer [ref: > table_metadata.id] // If a foreign key, the referenced table; else 0
+  check_src varchar // the expression tree for a check constraint, which provides a textual representation of the constraint expression
+}
+
+// The constrained attributes (columns) if a constraint is a table constraint (including foreign keys, but not constraint triggers)
+Table constraint_attribute_junction {
+  constraint_id integer [ref: > constraint.id]
+  attr_id integer [ref: > table_attribute.id]
+}
+
+// The referenced attributes (columns) if the constraint is a foreign key
+Table foreign_constraint_ref_attribute_junction {
+  constraint_id integer [ref: > constraint.id]
+  attr_id integer [ref: > table_attribute.id]
+}
+
+Table attribute_stats_junction {
+  attr_id integer [ref: > table_attribute.id]
+  stats_id integer [ref: > attribute_stats.id]
+}
+
+// Logical expressions and groups
+Table logical_expression {
+  id integer [pk]
+  group_id integer [ref: > cascades_group.id]
+  fingerprint integer
+  variant_tag integer
+  data json
+}
+
+Table cascades_group {
+  id integer [pk]
+  latest_winner integer [ref: > physical_expression.id, null]
+  in_progress boolean
+  is_optimized boolean
+}
+
+// Physical expressions and properties
+Table physical_expression {
+  id integer [pk]
+  group_id integer [ref: > cascades_group.id]
+  fingerprint integer
+  variant_tag integer
+  data json
+}
+
+Table physical_property {
+  id integer [pk]
+  physical_expression_id integer [ref: > physical_expression.id]
+  variant_tag integer
+  data json
+}
+
+// Junction tables
+Table logical_group_junction {
+  group_id integer [ref: > cascades_group.id]
+  logical_expression_id integer [ref: > logical_expression.id]
+}
+
+Table physical_group_junction {
+  group_id integer [ref: > cascades_group.id]
+  physical_expression_id integer [ref: > physical_expression.id]
+}
+
+// Properties
+Table logical_property {
+  id integer [pk]
+  group_id integer [ref: > cascades_group.id]
+  variant_tag integer
+  data json
+}
+
+// Winners tracking
+Table group_winner {
+  id integer [pk]
+  group_id integer [ref: > cascades_group.id]
+  physical_expression_id integer [ref: > physical_expression.id]
+  cost integer
+  epoch_id integer [ref: > event.epoch_id]
+}
+
+
+// Notes:
+// - All columns are NOT NULL unless specified otherwise
+// - fingerprint represents a hash of the actual data in the logical and physical expression tuple
+// - Each new event inserted into events table has its own epoch_id
+// - `cascades_group.latest_winner` is an optimization to avoid querying entire group_winner table
+// - We will have a dummy index and table with id being 0 to satisfy the foreign key constraint of `table_id`, `index_id`, and `foreign_ref_id`
