@@ -1,0 +1,18 @@
+[package]
+name = "optd-persistent"
+version = "0.1.0"
+edition = "2021"
+authors = ["Sarvesh Tandon", "Connor Tsui"]
+
+[dependencies]
+sea-orm = { version = "1.1", features = [
+    "sqlx-sqlite",
+    "runtime-tokio-rustls",
+    "macros",
+    "debug-print",
+    "with-json",
+] }
+sea-orm-migration = "1.1"
+serde_json = "1.0"
+
+tokio = { version = "1.41", features = ["full"] }
