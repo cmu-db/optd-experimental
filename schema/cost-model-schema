@@ -65,6 +65,7 @@ Table index {
   nulls_not_distinct boolean // Only valid for unique index, if true, then null value is equal, if false, null value is distinct
   is_primary boolean
   is_clustered boolean // If true, the table was last clustered on this index
+  is_exclusion boolean // More fields might be added in the future for expressiveness on exclusion constraint.
   data json // Stores the attribute ids. The reason for not creating an additional junction table is the same as with the attribute_stats table.
 }
 
@@ -75,6 +76,31 @@ Table trigger {
   parent_trigger_id integer [ref: > trigger.id]
   function json
 }
+
+// Not-null is handled directly in `table_attribute`. See `is_not_null` field.
+// Constraint trigger is handled directly in `trigger`.
+Table constraint {
+  id integer PK
+  name varchar
+  constraint_type integer // pk, fk, unique, check, exclusion
+  table_id integer [ref: > table_metadata.id] // 0 if not a table constraint
+  index_id integer [ref: > index.id] // The index supporting this constraint, if it's a unique, primary key, foreign key, or exclusion constraint; else 0
+  foreign_ref_id integer [ref: > table_metadata.id] // If a foreign key, the referenced table; else 0
+  check_src varchar // the expression tree for a check constraint, which provides a textual representation of the constraint expression
+}
+
+// The constrained attributes (columns) if a constraint is a table constraint (including foreign keys, but not constraint triggers)
+Table constraint_attribute {
+  constraint_id integer [ref: > constraint.id]
+  attr_id integer [ref: > table_attribute.id]
+}
+
+// The referenced attributes (columns) if the constraint is a foreign key
+Table foreign_constraint_ref_attribute {
+  constraint_id integer [ref: > constraint.id]
+  attr_id integer [ref: > table_attribute.id]
+}
+
 
 Ref: database.id < namespace_schema.database_id
 Ref: namespace_schema.id < table_metadata.schema_id
@@ -147,4 +173,5 @@ Table group_winner {
 // - All columns are NOT NULL unless specified otherwise
 // - fingerprint represents a hash of the actual data in the logical and physical expression tuple
 // - Each new event inserted into events table has its own epoch_id
-// - cascades_group.latest_winner is an optimization to avoid querying entire group_winner table
+// - `cascades_group.latest_winner` is an optimization to avoid querying entire group_winner table
+// - We will have a dummy index and table with id being 0 to satisfy the foreign key constraint of `table_id`, `index_id`, and `foreign_ref_id`
