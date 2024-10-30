@@ -1,5 +1,6 @@
 use super::database_metadata::DatabaseMetadata;
 use sea_orm_migration::prelude::*;
+use sea_orm_migration::schema::*;
 
 #[derive(Iden)]
 pub enum NamespaceSchema {
@@ -21,15 +22,10 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(NamespaceSchema::Table)
                     .if_not_exists()
-                    .col(
-                        ColumnDef::new(NamespaceSchema::Id)
-                            .integer()
-                            .primary_key()
-                            .auto_increment(),
-                    )
-                    .col(ColumnDef::new(NamespaceSchema::DatabaseId).integer())
-                    .col(ColumnDef::new(NamespaceSchema::Name).string())
-                    .col(ColumnDef::new(NamespaceSchema::CreatedTime).timestamp())
+                    .col(pk_auto(NamespaceSchema::Id))
+                    .col(integer(NamespaceSchema::DatabaseId))
+                    .col(string(NamespaceSchema::Name))
+                    .col(timestamp(NamespaceSchema::CreatedTime))
                     .foreign_key(
                         ForeignKey::create()
                             .from(NamespaceSchema::Table, NamespaceSchema::DatabaseId)

@@ -1,5 +1,6 @@
 use super::table_metadata::TableMetadata;
 use sea_orm_migration::prelude::*;
+use sea_orm_migration::schema::*;
 
 #[derive(Iden)]
 pub enum Trigger {
@@ -22,16 +23,11 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(Trigger::Table)
                     .if_not_exists()
-                    .col(
-                        ColumnDef::new(Trigger::Id)
-                            .integer()
-                            .primary_key()
-                            .auto_increment(),
-                    )
-                    .col(ColumnDef::new(Trigger::TableId).integer())
-                    .col(ColumnDef::new(Trigger::Name).string())
-                    .col(ColumnDef::new(Trigger::ParentTriggerId).integer())
-                    .col(ColumnDef::new(Trigger::Function).json())
+                    .col(pk_auto(Trigger::Id))
+                    .col(integer(Trigger::TableId))
+                    .col(string(Trigger::Name))
+                    .col(integer(Trigger::ParentTriggerId))
+                    .col(json(Trigger::Function))
                     .foreign_key(
                         ForeignKey::create()
                             .from(Trigger::Table, Trigger::TableId)

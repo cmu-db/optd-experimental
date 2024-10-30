@@ -1,4 +1,5 @@
 use sea_orm_migration::prelude::*;
+use sea_orm_migration::schema::*;
 
 #[derive(Iden)]
 pub enum DatabaseMetadata {
@@ -18,13 +19,8 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(DatabaseMetadata::Table)
                     .if_not_exists()
-                    .col(
-                        ColumnDef::new(DatabaseMetadata::Id)
-                            .integer()
-                            .primary_key()
-                            .auto_increment(),
-                    )
-                    .col(ColumnDef::new(DatabaseMetadata::CreatedTime).timestamp())
+                    .col(pk_auto(DatabaseMetadata::Id))
+                    .col(timestamp(DatabaseMetadata::CreatedTime))
                     .to_owned(),
             )
             .await

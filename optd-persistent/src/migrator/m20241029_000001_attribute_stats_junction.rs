@@ -8,6 +8,7 @@ Table attribute_stats_junction {
 use super::attribute_stat::AttributeStat;
 use super::table_attribute::TableAttribute;
 use sea_orm_migration::prelude::*;
+use sea_orm_migration::schema::*;
 
 #[derive(Iden)]
 pub enum AttributeStatsJunction {
@@ -27,16 +28,8 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(AttributeStatsJunction::Table)
                     .if_not_exists()
-                    .col(
-                        ColumnDef::new(AttributeStatsJunction::AttrId)
-                            .integer()
-                            .not_null(),
-                    )
-                    .col(
-                        ColumnDef::new(AttributeStatsJunction::StatsId)
-                            .integer()
-                            .not_null(),
-                    )
+                    .col(integer(AttributeStatsJunction::AttrId).not_null())
+                    .col(integer(AttributeStatsJunction::StatsId).not_null())
                     .foreign_key(
                         ForeignKey::create()
 

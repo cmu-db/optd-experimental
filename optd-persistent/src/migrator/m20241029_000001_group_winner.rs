@@ -3,6 +3,7 @@ use super::cost::Cost;
 use super::event::Event;
 use super::physical_expression::PhysicalExpression;
 use sea_orm_migration::prelude::*;
+use sea_orm_migration::schema::*;
 
 #[derive(Iden)]
 pub enum GroupWinner {
@@ -25,11 +26,11 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(GroupWinner::Table)
                     .if_not_exists()
-                    .col(ColumnDef::new(GroupWinner::Id).integer().primary_key().auto_increment())
-                    .col(ColumnDef::new(GroupWinner::GroupId).integer())
-                    .col(ColumnDef::new(GroupWinner::PhysicalExpressionId).integer())
-                    .col(ColumnDef::new(GroupWinner::Cost).integer())
-                    .col(ColumnDef::new(GroupWinner::EpochId).integer())
+                    .col(pk_auto(GroupWinner::Id))
+                    .col(integer(GroupWinner::GroupId))
+                    .col(integer(GroupWinner::PhysicalExpressionId))
+                    .col(integer(GroupWinner::Cost))
+                    .col(integer(GroupWinner::EpochId))
                     .foreign_key(
                         ForeignKey::create()
                             .from(GroupWinner::Table, GroupWinner::EpochId)

@@ -1,4 +1,5 @@
 use sea_orm_migration::prelude::*;
+use sea_orm_migration::schema::*;
 
 use super::namespace_schema::NamespaceSchema;
 
@@ -22,15 +23,10 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(TableMetadata::Table)
                     .if_not_exists()
-                    .col(
-                        ColumnDef::new(TableMetadata::Id)
-                            .integer()
-                            .primary_key()
-                            .auto_increment(),
-                    )
-                    .col(ColumnDef::new(TableMetadata::SchemaId).integer())
-                    .col(ColumnDef::new(TableMetadata::Name).string())
-                    .col(ColumnDef::new(TableMetadata::CreatedTime).timestamp())
+                    .col(pk_auto(TableMetadata::Id))
+                    .col(integer(TableMetadata::SchemaId))
+                    .col(string(TableMetadata::Name))
+                    .col(timestamp(TableMetadata::CreatedTime))
                     .foreign_key(
                         ForeignKey::create()
                             .from(TableMetadata::Table, TableMetadata::SchemaId)

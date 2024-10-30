@@ -15,6 +15,7 @@ Table index {
 
 use super::table_metadata::TableMetadata;
 use sea_orm_migration::prelude::*;
+use sea_orm_migration::schema::*;
 
 #[derive(Iden)]
 pub enum Index {
@@ -42,21 +43,16 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(Index::Table)
                     .if_not_exists()
-                    .col(
-                        ColumnDef::new(Index::Id)
-                            .integer()
-                            .primary_key()
-                            .auto_increment(),
-                    )
-                    .col(ColumnDef::new(Index::TableId).integer())
-                    .col(ColumnDef::new(Index::Name).string())
-                    .col(ColumnDef::new(Index::NumberOfAttributes).integer())
-                    .col(ColumnDef::new(Index::IsUnique).boolean())
-                    .col(ColumnDef::new(Index::NullsNotDistinct).boolean())
-                    .col(ColumnDef::new(Index::IsPrimary).boolean())
-                    .col(ColumnDef::new(Index::IsClustered).boolean())
-                    .col(ColumnDef::new(Index::IsExclusion).boolean())
-                    .col(ColumnDef::new(Index::Data).json())
+                    .col(pk_auto(Index::Id))
+                    .col(integer(Index::TableId))
+                    .col(string(Index::Name))
+                    .col(integer(Index::NumberOfAttributes))
+                    .col(boolean(Index::IsUnique))
+                    .col(boolean(Index::NullsNotDistinct))
+                    .col(boolean(Index::IsPrimary))
+                    .col(boolean(Index::IsClustered))
+                    .col(boolean(Index::IsExclusion))
+                    .col(json(Index::Data))
                     .foreign_key(
                         ForeignKey::create()
                             .from(Index::Table, Index::TableId)

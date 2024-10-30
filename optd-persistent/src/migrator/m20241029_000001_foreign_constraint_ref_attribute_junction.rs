@@ -1,6 +1,7 @@
 use super::constraint::Constraint;
 use super::table_attribute::TableAttribute;
 use sea_orm_migration::prelude::*;
+use sea_orm_migration::schema::integer;
 
 #[derive(Iden)]
 pub enum ForeignConstraintRefAttributeJunction {
@@ -20,11 +21,8 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(ForeignConstraintRefAttributeJunction::Table)
                     .if_not_exists()
-                    .col(
-                        ColumnDef::new(ForeignConstraintRefAttributeJunction::ConstraintId)
-                            .integer(),
-                    )
-                    .col(ColumnDef::new(ForeignConstraintRefAttributeJunction::AttrId).integer())
+                    .col(integer(ForeignConstraintRefAttributeJunction::ConstraintId))
+                    .col(integer(ForeignConstraintRefAttributeJunction::AttrId))
                     .foreign_key(
                         ForeignKey::create()
                             .from(

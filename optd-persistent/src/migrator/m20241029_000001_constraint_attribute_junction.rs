@@ -9,6 +9,7 @@ Table constraint_attribute_junction {
 use super::constraint::Constraint;
 use super::table_attribute::TableAttribute;
 use sea_orm_migration::prelude::*;
+use sea_orm_migration::schema::*;
 
 #[derive(Iden)]
 pub enum ConstraintAttributeJunction {
@@ -28,8 +29,8 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(ConstraintAttributeJunction::Table)
                     .if_not_exists()
-                    .col(ColumnDef::new(ConstraintAttributeJunction::ConstraintId).integer())
-                    .col(ColumnDef::new(ConstraintAttributeJunction::AttrId).integer())
+                    .col(integer(ConstraintAttributeJunction::ConstraintId))
+                    .col(integer(ConstraintAttributeJunction::AttrId))
                     .foreign_key(
                         ForeignKey::create()
                             .from(

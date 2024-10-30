@@ -10,6 +10,8 @@ Table cost {
 use super::event::Event;
 use super::physical_expression::PhysicalExpression;
 use sea_orm_migration::prelude::*;
+use sea_orm_migration::schema::pk_auto;
+use sea_orm_migration::schema::*;
 
 #[derive(Iden)]
 pub enum Cost {
@@ -32,11 +34,11 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(Cost::Table)
                     .if_not_exists()
-                    .col(ColumnDef::new(Cost::Id).integer().primary_key().auto_increment())
-                    .col(ColumnDef::new(Cost::ExprId).integer())
-                    .col(ColumnDef::new(Cost::EpochId).integer())
-                    .col(ColumnDef::new(Cost::Cost).integer())
-                    .col(ColumnDef::new(Cost::Valid).boolean())
+                    .col(pk_auto(Cost::Id))
+                    .col(integer(Cost::ExprId))
+                    .col(integer(Cost::EpochId))
+                    .col(integer(Cost::Cost))
+                    .col(boolean(Cost::Valid))
                     .foreign_key(
                         ForeignKey::create()
                             .from(Cost::Table, Cost::ExprId)

@@ -1,4 +1,5 @@
 use sea_orm_migration::prelude::*;
+use sea_orm_migration::schema::*;
 
 use super::table_metadata::TableMetadata;
 
@@ -25,18 +26,13 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(TableAttribute::Table)
                     .if_not_exists()
-                    .col(
-                        ColumnDef::new(TableAttribute::Id)
-                            .integer()
-                            .primary_key()
-                            .auto_increment(),
-                    )
-                    .col(ColumnDef::new(TableAttribute::TableId).integer())
-                    .col(ColumnDef::new(TableAttribute::Name).string())
-                    .col(ColumnDef::new(TableAttribute::CompressionMethod).char())
-                    .col(ColumnDef::new(TableAttribute::Type).integer())
-                    .col(ColumnDef::new(TableAttribute::BaseColNumber).integer())
-                    .col(ColumnDef::new(TableAttribute::IsNotNull).boolean())
+                    .col(pk_auto(TableAttribute::Id))
+                    .col(integer(TableAttribute::TableId))
+                    .col(string(TableAttribute::Name))
+                    .col(char(TableAttribute::CompressionMethod))
+                    .col(integer(TableAttribute::Type))
+                    .col(integer(TableAttribute::BaseColNumber))
+                    .col(boolean(TableAttribute::IsNotNull))
                     .foreign_key(
                         ForeignKey::create()
                             .from(TableAttribute::Table, TableAttribute::TableId)

@@ -13,6 +13,7 @@ Table attribute_stat {
 
 use super::event::Event;
 use sea_orm_migration::prelude::*;
+use sea_orm_migration::schema::*;
 
 #[derive(Iden)]
 pub enum AttributeStat {
@@ -38,19 +39,14 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(AttributeStat::Table)
                     .if_not_exists()
-                    .col(
-                        ColumnDef::new(AttributeStat::Id)
-                            .integer()
-                            .primary_key()
-                            .auto_increment(),
-                    )
-                    .col(ColumnDef::new(AttributeStat::NumberOfAttributes).integer())
-                    .col(ColumnDef::new(AttributeStat::Data).json())
-                    .col(ColumnDef::new(AttributeStat::EpochId).integer())
-                    .col(ColumnDef::new(AttributeStat::Name).string())
-                    .col(ColumnDef::new(AttributeStat::CreatedTime).timestamp())
-                    .col(ColumnDef::new(AttributeStat::StatsType).integer())
-                    .col(ColumnDef::new(AttributeStat::StatsValue).integer())
+                    .col(pk_auto(AttributeStat::Id))
+                    .col(integer(AttributeStat::NumberOfAttributes))
+                    .col(json(AttributeStat::Data))
+                    .col(integer(AttributeStat::EpochId))
+                    .col(string(AttributeStat::Name))
+                    .col(timestamp(AttributeStat::CreatedTime))
+                    .col(integer(AttributeStat::StatsType))
+                    .col(integer(AttributeStat::StatsValue))
                     .foreign_key(
                         ForeignKey::create()
                             .from(AttributeStat::Table, AttributeStat::EpochId)

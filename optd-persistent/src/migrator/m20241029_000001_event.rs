@@ -1,4 +1,5 @@
 use sea_orm_migration::prelude::*;
+use sea_orm_migration::schema::*;
 
 #[derive(Iden)]
 pub enum Event {
@@ -21,11 +22,11 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(Event::Table)
                     .if_not_exists()
-                    .col(ColumnDef::new(Event::Id).integer().primary_key().auto_increment())
-                    .col(ColumnDef::new(Event::EpochId).integer())
-                    .col(ColumnDef::new(Event::SourceVariant).string())
-                    .col(ColumnDef::new(Event::CreateTimestamp).timestamp())
-                    .col(ColumnDef::new(Event::Data).json())
+                    .col(pk_auto(Event::Id))
+                    .col(integer(Event::EpochId))
+                    .col(string(Event::SourceVariant))
+                    .col(timestamp(Event::CreateTimestamp))
+                    .col(json(Event::Data))
                     .to_owned(),
             )
             .await

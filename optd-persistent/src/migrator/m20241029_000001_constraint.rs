@@ -14,6 +14,7 @@ Table constraint {
 use super::index::Index;
 use super::table_metadata::TableMetadata;
 use sea_orm_migration::prelude::*;
+use sea_orm_migration::schema::*;
 
 #[derive(Iden)]
 pub enum Constraint {
@@ -38,13 +39,13 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(Constraint::Table)
                     .if_not_exists()
-                    .col(ColumnDef::new(Constraint::Id).integer().primary_key().auto_increment())
-                    .col(ColumnDef::new(Constraint::Name).string())
-                    .col(ColumnDef::new(Constraint::ConstraintType).integer())
-                    .col(ColumnDef::new(Constraint::TableId).integer())
-                    .col(ColumnDef::new(Constraint::IndexId).integer())
-                    .col(ColumnDef::new(Constraint::ForeignRefId).integer())
-                    .col(ColumnDef::new(Constraint::CheckSrc).string())
+                    .col(pk_auto(Constraint::Id))
+                    .col(string(Constraint::Name))
+                    .col(integer(Constraint::ConstraintType))
+                    .col(integer(Constraint::TableId))
+                    .col(integer(Constraint::IndexId))
+                    .col(integer(Constraint::ForeignRefId))
+                    .col(string(Constraint::CheckSrc))
                     .foreign_key(
                         ForeignKey::create()
                             .from(Constraint::Table, Constraint::TableId)
