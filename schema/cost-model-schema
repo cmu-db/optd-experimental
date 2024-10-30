@@ -90,17 +90,21 @@ Table constraint {
 }
 
 // The constrained attributes (columns) if a constraint is a table constraint (including foreign keys, but not constraint triggers)
-Table constraint_attribute {
+Table constraint_attribute_junction {
   constraint_id integer [ref: > constraint.id]
   attr_id integer [ref: > table_attribute.id]
 }
 
 // The referenced attributes (columns) if the constraint is a foreign key
-Table foreign_constraint_ref_attribute {
+Table foreign_constraint_ref_attribute_junction {
   constraint_id integer [ref: > constraint.id]
   attr_id integer [ref: > table_attribute.id]
 }
 
+Table attribute_stats_junction {
+  attr_id integer [ref: > table_attribute.id]
+  stats_id integer [ref: > attribute_stats.id]
+}
 
 Ref: database.id < namespace_schema.database_id
 Ref: namespace_schema.id < table_metadata.schema_id
