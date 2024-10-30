@@ -2,85 +2,77 @@
 // Docs: https://dbml.dbdiagram.io/docs
 
 Table database {
-  id int PK
+  id integer PK
   created_time timestamp 
 }
 
 Table namespace_schema {
-  id int PK
-  database_id int
+  id integer PK
+  database_id integer
   name varchar
   created_time timestamp
 }
 
 Table table_metadata {
-  id int PK
-  schema_id int
+  id integer PK
+  schema_id inintegert
   name varchar
   created_time timestamp
 }
 
 Table table_attribute {
-  id int PK // global index
-  table_id int
+  id integer PK // global index
+  table_id integer
   name varchar
   compression_method char
-  type int // Data type of this attribute. Should we make another table to explain the type mapping?
-  base_col_number int // local index within the table
-  is_not_null bool // physical property
+  type integer // Data type of this attribute. Should we make another table to explain the type mapping?
+  base_col_number integer // local index within the table
+  is_not_null boolean // physical property
 }
 
 Table attribute_stats {
-  id int PK
-  number_of_attributes int // Do we need it?
-  data json // Stores the related table id and attribute ids.
-  // Currently, the reason why we don't make an extra conjuntion table is:
-  // Let's assume in the stats_attr_mapping (the junction table) table:
-  // Stats_id, attr_id
-  // 1, 1
-  // 2, 1
-  // 2, 2
-
-  // So let say we have 2 stats, the first one is a single-column stats, 
-  // and the second one are multi-columns stats. So if we want to query 
-  // the stats for column 1 (attribute 1), then it is hard to get it unless 
-  // we have a field in the stats_table indicating the number of columns. 
-  // But even with that field, what if we want to query the stats for 
-  // column 1 and 2? I think we need join stats table and then join 
-  // stats_attr_mapping table twice to get the result, and it sounds like 
-  // too many joins.
-
-  epoch_id int
+  id integer PK
+  number_of_attributes integer // do we need it?
+  data json // stores the related table id and attribute ids
+  epoch_id integer
   name varchar
   created_time timestamp
-  stats_type int // Should we make another table to explain the type mapping?
-  stats_value int // Can we represent every stats value into integer?
+  stats_type integer // Should we make another table to explain the type mapping?
+  stats_value integer // Can we represent every stats value into integer?
 }
 
 Table event {
-  epoch_id int PK
+  epoch_id integer PK
   source_variant varchar
   create_timestamp timestamp
   data json
 }
 
+Table cost {
+  id integer PK
+  expr_id integer [ref: > physical_expression.id]
+  epoch_id integer [ref: > event.epoch_id]
+  cost integer
+  valid boolean
+}
+
 Table index {
-  id int PK
+  id integer PK
   name varchar
-  table_id int [ref: > table_metadata.id]
-  number_of_attributes int
-  is_unique bool
-  nulls_not_distinct bool // Only valid for unique index, if true, then null value is equal, if false, null value is distinct
-  is_primary bool
-  is_clustered bool // If true, the table was last clustered on this index
-  data json // Stores the related attribute ids. The reason for not creating an additional junction table is the same as with the attribute_stats table.
+  table_id integer [ref: > table_metadata.id]
+  number_of_attributes integer
+  is_unique boolean
+  nulls_not_distinct boolean // Only valid for unique index, if true, then null value is equal, if false, null value is distinct
+  is_primary boolean
+  is_clustered boolean // If true, the table was last clustered on this index
+  data json // Stores the attribute ids. The reason for not creating an additional junction table is the same as with the attribute_stats table.
 }
 
 Table trigger {
-  id int PK
+  id integer PK
   name varchar
-  table_id int [ref: > table_metadata.id]
-  parent_trigger_id int [ref: > trigger.id]
+  table_id integer [ref: > table_metadata.id]
+  parent_trigger_id integer [ref: > trigger.id]
   function json
 }
 
