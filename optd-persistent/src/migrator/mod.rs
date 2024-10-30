@@ -14,7 +14,7 @@ mod m20241029_000001_index;
 mod m20241029_000001_logical_expression;
 mod m20241029_000001_logical_group_junction;
 mod m20241029_000001_logical_property;
-mod m20241029_000001_namespace_schema;
+mod m20241029_000001_namespace_metadata;
 mod m20241029_000001_physical_expression;
 mod m20241029_000001_physical_group_junction;
 mod m20241029_000001_physical_property;
@@ -36,7 +36,7 @@ use m20241029_000001_index as index;
 use m20241029_000001_logical_expression as logical_expression;
 use m20241029_000001_logical_group_junction as logical_group_junction;
 use m20241029_000001_logical_property as logical_property;
-use m20241029_000001_namespace_schema as namespace_schema;
+use m20241029_000001_namespace_metadata as namespace_metadata;
 use m20241029_000001_physical_expression as physical_expression;
 use m20241029_000001_physical_group_junction as physical_group_junction;
 use m20241029_000001_physical_property as physical_property;
@@ -61,7 +61,7 @@ impl MigratorTrait for Migrator {
             Box::new(table_metadata::Migration),
             Box::new(table_attribute::Migration),
             Box::new(index::Migration),
-            Box::new(namespace_schema::Migration),
+            Box::new(namespace_metadata::Migration),
             Box::new(database_metadata::Migration),
             Box::new(event::Migration),
             Box::new(cost::Migration),

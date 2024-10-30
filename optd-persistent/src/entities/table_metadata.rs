@@ -17,13 +17,13 @@ pub enum Relation {
     #[sea_orm(has_many = "super::index::Entity")]
     Index,
     #[sea_orm(
-        belongs_to = "super::namespace_schema::Entity",
+        belongs_to = "super::namespace_metadata::Entity",
         from = "Column::SchemaId",
-        to = "super::namespace_schema::Column::Id",
+        to = "super::namespace_metadata::Column::Id",
         on_update = "Cascade",
         on_delete = "Cascade"
     )]
-    NamespaceSchema,
+    NamespaceMetadata,
     #[sea_orm(has_many = "super::table_attribute::Entity")]
     TableAttribute,
     #[sea_orm(has_many = "super::trigger::Entity")]
@@ -36,9 +36,9 @@ impl Related<super::index::Entity> for Entity {
     }
 }
 
-impl Related<super::namespace_schema::Entity> for Entity {
+impl Related<super::namespace_metadata::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::NamespaceSchema.def()
+        Relation::NamespaceMetadata.def()
     }
 }
 

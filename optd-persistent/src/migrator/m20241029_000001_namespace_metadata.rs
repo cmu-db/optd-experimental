@@ -3,7 +3,7 @@ use sea_orm_migration::prelude::*;
 use sea_orm_migration::schema::*;
 
 #[derive(Iden)]
-pub enum NamespaceSchema {
+pub enum NamespaceMetadata {
     Table,
     Id,
     DatabaseId,
@@ -20,15 +20,15 @@ impl MigrationTrait for Migration {
         manager
             .create_table(
                 Table::create()
-                    .table(NamespaceSchema::Table)
+                    .table(NamespaceMetadata::Table)
                     .if_not_exists()
-                    .col(pk_auto(NamespaceSchema::Id))
-                    .col(integer(NamespaceSchema::DatabaseId))
-                    .col(string(NamespaceSchema::Name))
-                    .col(timestamp(NamespaceSchema::CreatedTime))
+                    .col(pk_auto(NamespaceMetadata::Id))
+                    .col(integer(NamespaceMetadata::DatabaseId))
+                    .col(string(NamespaceMetadata::Name))
+                    .col(timestamp(NamespaceMetadata::CreatedTime))
                     .foreign_key(
                         ForeignKey::create()
-                            .from(NamespaceSchema::Table, NamespaceSchema::DatabaseId)
+                            .from(NamespaceMetadata::Table, NamespaceMetadata::DatabaseId)
                             .to(DatabaseMetadata::Table, DatabaseMetadata::Id)
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
@@ -40,7 +40,7 @@ impl MigrationTrait for Migration {
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
-            .drop_table(Table::drop().table(NamespaceSchema::Table).to_owned())
+            .drop_table(Table::drop().table(NamespaceMetadata::Table).to_owned())
             .await
     }
 }

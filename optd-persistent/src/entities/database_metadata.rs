@@ -12,13 +12,13 @@ pub struct Model {
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
-    #[sea_orm(has_many = "super::namespace_schema::Entity")]
-    NamespaceSchema,
+    #[sea_orm(has_many = "super::namespace_metadata::Entity")]
+    NamespaceMetadata,
 }
 
-impl Related<super::namespace_schema::Entity> for Entity {
+impl Related<super::namespace_metadata::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::NamespaceSchema.def()
+        Relation::NamespaceMetadata.def()
     }
 }
 

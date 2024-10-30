@@ -14,7 +14,7 @@ pub use super::index::Entity as Index;
 pub use super::logical_expression::Entity as LogicalExpression;
 pub use super::logical_group_junction::Entity as LogicalGroupJunction;
 pub use super::logical_property::Entity as LogicalProperty;
-pub use super::namespace_schema::Entity as NamespaceSchema;
+pub use super::namespace_metadata::Entity as NamespaceMetadata;
 pub use super::physical_expression::Entity as PhysicalExpression;
 pub use super::physical_group_junction::Entity as PhysicalGroupJunction;
 pub use super::physical_property::Entity as PhysicalProperty;
