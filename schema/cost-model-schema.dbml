@@ -32,12 +32,13 @@ Table table_attribute {
 
 Table attribute_stats {
   id integer PK
-  number_of_attributes integer // do we need it?
-  data json // stores the related table id and attribute ids
+  number_of_attributes integer
   epoch_id integer [ref: > event.epoch_id]
   name varchar
   created_time timestamp
-  stats_type integer // Should we make another table to explain the type mapping?
+  // Every type of stats will have a separate row, even if their attributes are the same, which can better support epoch_id
+  // Should we make another table to explain the type mapping?
+  stats_type integer
   stats_value integer // Can we represent every stats value into integer?
 }
 
@@ -53,6 +54,8 @@ Table cost {
   expr_id integer [ref: > physical_expression.id]
   epoch_id integer [ref: > event.epoch_id]
   cost integer
+  // Whether the cost is valid or not. If the latest cost for an expr is invalid, then we need to recompute the cost.
+  // We need to invalidate the cost when the related stats are updated.
   valid boolean
 }
 
@@ -60,19 +63,27 @@ Table index {
   id integer PK
   name varchar
   table_id integer [ref: > table_metadata.id]
-  number_of_attributes integer
+  // Whether it is an unique index.
   is_unique boolean
-  nulls_not_distinct boolean // Only valid for unique index, if true, then null value is equal, if false, null value is distinct
+  // Only valid for unique index, if true, then null value is equal, if false, null value is distinct.
+  nulls_not_distinct boolean
+  // Whether the attribute is primary.
   is_primary boolean
-  is_clustered boolean // If true, the table was last clustered on this index
-  is_exclusion boolean // More fields might be added in the future for expressiveness on exclusion constraint.
-  data json // Stores the attribute ids. The reason for not creating an additional junction table is the same as with the attribute_stats table.
+  // If true, the table was last clustered on this index
+  is_clustered boolean
+  // More fields might be added in the future for expressiveness on exclusion constraint.
+  is_exclusion boolean
+  // Do we need it?
+  number_of_attributes integer
+  // Stores the related attribute ids.
+  data json
 }
 
 Table trigger {
   id integer PK
   name varchar
   table_id integer [ref: > table_metadata.id]
+  // This field is only valid if it is triggered by another parent trigger.
   parent_trigger_id integer [ref: > trigger.id]
   function json
 }
