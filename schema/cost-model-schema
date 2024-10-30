@@ -1,7 +1,7 @@
 // Use DBML to define your database structure
 // Docs: https://dbml.dbdiagram.io/docs
 
-Table database {
+Table database_metadata {
   id integer PK
   created_time timestamp 
 }
@@ -106,7 +106,7 @@ Table attribute_stats_junction {
   stats_id integer [ref: > attribute_stats.id]
 }
 
-Ref: database.id < namespace_schema.database_id
+Ref: database_metadata.id < namespace_schema.database_id
 Ref: namespace_schema.id < table_metadata.schema_id
 Ref: table_metadata.id < table_attribute.table_id
 Ref: attribute_stats.epoch_id > event.epoch_id
