@@ -7,9 +7,9 @@ use sea_orm::entity::prelude::*;
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
+    pub group_id: i32,
     pub fingerprint: i64,
     pub data: Json,
-    pub group_id: i32,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -22,10 +22,26 @@ pub enum Relation {
         on_delete = "Cascade"
     )]
     CascadesGroup,
+    #[sea_orm(has_many = "super::cost::Entity")]
+    Cost,
+    #[sea_orm(has_many = "super::group_winner::Entity")]
+    GroupWinner,
     #[sea_orm(has_many = "super::physical_group_junction::Entity")]
     PhysicalGroupJunction,
     #[sea_orm(has_many = "super::physical_property::Entity")]
     PhysicalProperty,
+}
+
+impl Related<super::cost::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Cost.def()
+    }
+}
+
+impl Related<super::group_winner::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::GroupWinner.def()
+    }
 }
 
 impl Related<super::physical_group_junction::Entity> for Entity {

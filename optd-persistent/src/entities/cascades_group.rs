@@ -14,6 +14,8 @@ pub struct Model {
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
+    #[sea_orm(has_many = "super::group_winner::Entity")]
+    GroupWinner,
     #[sea_orm(has_many = "super::logical_expression::Entity")]
     LogicalExpression,
     #[sea_orm(has_many = "super::logical_group_junction::Entity")]
@@ -24,6 +26,12 @@ pub enum Relation {
     PhysicalExpression,
     #[sea_orm(has_many = "super::physical_group_junction::Entity")]
     PhysicalGroupJunction,
+}
+
+impl Related<super::group_winner::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::GroupWinner.def()
+    }
 }
 
 impl Related<super::logical_group_junction::Entity> for Entity {
