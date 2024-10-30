@@ -20,7 +20,6 @@ pub enum AttributeStat {
     Table,
     Id,
     NumberOfAttributes,
-    Data,
     EpochId,
     Name,
     CreatedTime,
@@ -41,7 +40,6 @@ impl MigrationTrait for Migration {
                     .if_not_exists()
                     .col(pk_auto(AttributeStat::Id))
                     .col(integer(AttributeStat::NumberOfAttributes))
-                    .col(json(AttributeStat::Data))
                     .col(integer(AttributeStat::EpochId))
                     .col(string(AttributeStat::Name))
                     .col(timestamp(AttributeStat::CreatedTime))

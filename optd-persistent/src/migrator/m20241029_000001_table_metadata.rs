@@ -1,7 +1,7 @@
 use sea_orm_migration::prelude::*;
 use sea_orm_migration::schema::*;
 
-use super::namespace_schema::NamespaceSchema;
+use super::namespace_metadata::NamespaceMetadata;
 
 #[derive(Iden)]
 pub enum TableMetadata {
@@ -30,7 +30,7 @@ impl MigrationTrait for Migration {
                     .foreign_key(
                         ForeignKey::create()
                             .from(TableMetadata::Table, TableMetadata::SchemaId)
-                            .to(NamespaceSchema::Table, NamespaceSchema::Id)
+                            .to(NamespaceMetadata::Table, NamespaceMetadata::Id)
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )

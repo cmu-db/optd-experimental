@@ -8,7 +8,6 @@ pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
     pub number_of_attributes: i32,
-    pub data: Json,
     pub epoch_id: i32,
     pub name: String,
     pub created_time: DateTimeUtc,

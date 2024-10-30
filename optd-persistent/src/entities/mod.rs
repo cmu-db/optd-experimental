@@ -16,7 +16,7 @@ pub mod index;
 pub mod logical_expression;
 pub mod logical_group_junction;
 pub mod logical_property;
-pub mod namespace_schema;
+pub mod namespace_metadata;
 pub mod physical_expression;
 pub mod physical_group_junction;
 pub mod physical_property;
