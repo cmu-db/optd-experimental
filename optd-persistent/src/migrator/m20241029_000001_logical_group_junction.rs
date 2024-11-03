@@ -42,7 +42,7 @@ impl MigrationTrait for Migration {
                     .foreign_key(
                         ForeignKey::create()
                             .name("fk-logical_group_junction-logical_expression")
-                            .from(LogicalGroupJunction::Table, LogicalGroupJunction::GroupId)
+                            .from(LogicalGroupJunction::Table, LogicalGroupJunction::LogicalExpressionId)
                             .to(LogicalExpression::Table, LogicalExpression::Id)
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
