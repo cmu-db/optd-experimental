@@ -16,9 +16,6 @@ pub struct Migration;
 #[async_trait::async_trait]
 impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-        // Note that the foreign key constraint is `Cascade` for both delete and update, since if
-        // for some reason the group ID (primary key) changes, we want to update the foreign keys of
-        // the logical properties that reference it.
         manager
             .create_table(
                 Table::create()
@@ -28,7 +25,6 @@ impl MigrationTrait for Migration {
                     .col(integer(LogicalProperty::GroupId))
                     .foreign_key(
                         ForeignKey::create()
-                            .name("fk-logical_property-group_id")
                             .from(LogicalProperty::Table, LogicalProperty::GroupId)
                             .to(CascadesGroup::Table, CascadesGroup::Id)
                             .on_delete(ForeignKeyAction::Cascade)

@@ -24,14 +24,6 @@ pub enum Relation {
     )]
     CascadesGroup,
     #[sea_orm(
-        belongs_to = "super::cost::Entity",
-        from = "Column::Cost",
-        to = "super::cost::Column::Id",
-        on_update = "Cascade",
-        on_delete = "Cascade"
-    )]
-    Cost,
-    #[sea_orm(
         belongs_to = "super::event::Entity",
         from = "Column::EpochId",
         to = "super::event::Column::EpochId",
@@ -47,17 +39,19 @@ pub enum Relation {
         on_delete = "Cascade"
     )]
     PhysicalExpression,
+    #[sea_orm(
+        belongs_to = "super::plan_cost::Entity",
+        from = "Column::Cost",
+        to = "super::plan_cost::Column::Id",
+        on_update = "Cascade",
+        on_delete = "Cascade"
+    )]
+    PlanCost,
 }
 
 impl Related<super::cascades_group::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::CascadesGroup.def()
-    }
-}
-
-impl Related<super::cost::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::Cost.def()
     }
 }
 
@@ -70,6 +64,12 @@ impl Related<super::event::Entity> for Entity {
 impl Related<super::physical_expression::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::PhysicalExpression.def()
+    }
+}
+
+impl Related<super::plan_cost::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::PlanCost.def()
     }
 }
 

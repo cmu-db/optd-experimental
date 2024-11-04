@@ -27,7 +27,7 @@ pub enum Relation {
         from = "Column::LatestWinner",
         to = "super::physical_expression::Column::Id",
         on_update = "Cascade",
-        on_delete = "Cascade"
+        on_delete = "SetNull"
     )]
     PhysicalExpression,
     #[sea_orm(has_many = "super::physical_group_junction::Entity")]

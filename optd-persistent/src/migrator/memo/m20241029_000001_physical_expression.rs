@@ -7,6 +7,7 @@ pub enum PhysicalExpression {
     Id,
     GroupId,
     Fingerprint,
+    VariantTag,
     Data,
 }
 
@@ -15,7 +16,6 @@ pub struct Migration;
 
 #[async_trait::async_trait]
 impl MigrationTrait for Migration {
-    // TODO add expression / root operator variant identifier
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
             .create_table(
@@ -26,13 +26,13 @@ impl MigrationTrait for Migration {
                     .col(integer(PhysicalExpression::GroupId))
                     .foreign_key(
                         ForeignKey::create()
-                            .name("fk-physical_expression-group_id")
                             .from(PhysicalExpression::Table, PhysicalExpression::GroupId)
                             .to(CascadesGroup::Table, CascadesGroup::Id)
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
                     .col(big_unsigned(PhysicalExpression::Fingerprint))
+                    .col(small_integer(PhysicalExpression::VariantTag))
                     .col(json(PhysicalExpression::Data))
                     .to_owned(),
             )

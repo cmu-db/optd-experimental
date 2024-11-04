@@ -9,6 +9,7 @@ pub struct Model {
     pub id: i32,
     pub group_id: i32,
     pub fingerprint: i64,
+    pub variant_tag: i16,
     pub data: Json,
 }
 
@@ -22,20 +23,14 @@ pub enum Relation {
         on_delete = "Cascade"
     )]
     CascadesGroup,
-    #[sea_orm(has_many = "super::cost::Entity")]
-    Cost,
     #[sea_orm(has_many = "super::group_winner::Entity")]
     GroupWinner,
     #[sea_orm(has_many = "super::physical_group_junction::Entity")]
     PhysicalGroupJunction,
     #[sea_orm(has_many = "super::physical_property::Entity")]
     PhysicalProperty,
-}
-
-impl Related<super::cost::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::Cost.def()
-    }
+    #[sea_orm(has_many = "super::plan_cost::Entity")]
+    PlanCost,
 }
 
 impl Related<super::group_winner::Entity> for Entity {
@@ -53,6 +48,12 @@ impl Related<super::physical_group_junction::Entity> for Entity {
 impl Related<super::physical_property::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::PhysicalProperty.def()
+    }
+}
+
+impl Related<super::plan_cost::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::PlanCost.def()
     }
 }
 

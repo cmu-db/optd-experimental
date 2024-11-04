@@ -1,4 +1,4 @@
-use crate::migrator::cost_model::{cost::Cost, event::Event};
+use crate::migrator::cost_model::{cost::PlanCost, event::Event};
 use crate::migrator::memo::{
     cascades_group::CascadesGroup, physical_expression::PhysicalExpression,
 };
@@ -27,16 +27,6 @@ impl MigrationTrait for Migration {
                     .if_not_exists()
                     .col(pk_auto(GroupWinner::Id))
                     .col(integer(GroupWinner::GroupId))
-                    .col(integer(GroupWinner::PhysicalExpressionId))
-                    .col(integer(GroupWinner::Cost))
-                    .col(integer(GroupWinner::EpochId))
-                    .foreign_key(
-                        ForeignKey::create()
-                            .from(GroupWinner::Table, GroupWinner::EpochId)
-                            .to(Event::Table, Event::EpochId)
-                            .on_delete(ForeignKeyAction::Cascade)
-                            .on_update(ForeignKeyAction::Cascade),
-                    )
                     .foreign_key(
                         ForeignKey::create()
                             .from(GroupWinner::Table, GroupWinner::GroupId)
@@ -44,6 +34,7 @@ impl MigrationTrait for Migration {
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
+                    .col(integer(GroupWinner::PhysicalExpressionId))
                     .foreign_key(
                         ForeignKey::create()
                             .from(GroupWinner::Table, GroupWinner::PhysicalExpressionId)
@@ -51,10 +42,19 @@ impl MigrationTrait for Migration {
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
+                    .col(integer(GroupWinner::Cost))
                     .foreign_key(
                         ForeignKey::create()
                             .from(GroupWinner::Table, GroupWinner::Cost)
-                            .to(Cost::Table, Cost::Id)
+                            .to(PlanCost::Table, PlanCost::Id)
+                            .on_delete(ForeignKeyAction::Cascade)
+                            .on_update(ForeignKeyAction::Cascade),
+                    )
+                    .col(integer(GroupWinner::EpochId))
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(GroupWinner::Table, GroupWinner::EpochId)
+                            .to(Event::Table, Event::EpochId)
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )

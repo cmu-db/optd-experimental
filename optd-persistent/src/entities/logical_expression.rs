@@ -9,6 +9,7 @@ pub struct Model {
     pub id: i32,
     pub group_id: i32,
     pub fingerprint: i64,
+    pub variant_tag: i16,
     pub data: Json,
 }
 

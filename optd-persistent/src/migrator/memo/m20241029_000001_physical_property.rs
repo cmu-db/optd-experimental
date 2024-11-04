@@ -16,9 +16,6 @@ pub struct Migration;
 #[async_trait::async_trait]
 impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-        // Note that the foreign key constraint is `Cascade` for both delete and update, since if
-        // for some reason the physical expression ID (primary key) changes, we want to update the
-        // foreign keys of the physical properties that reference it.
         manager
             .create_table(
                 Table::create()
@@ -28,7 +25,6 @@ impl MigrationTrait for Migration {
                     .col(integer(PhysicalProperty::PhysicalExpressionId))
                     .foreign_key(
                         ForeignKey::create()
-                            .name("fk-physical_property-physical_expression")
                             .from(
                                 PhysicalProperty::Table,
                                 PhysicalProperty::PhysicalExpressionId,

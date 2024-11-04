@@ -22,16 +22,16 @@ impl MigrationTrait for Migration {
                     .table(CascadesGroup::Table)
                     .if_not_exists()
                     .col(pk_auto(CascadesGroup::Id))
-                    .col(integer_null(CascadesGroup::LatestWinner)) // TODO foreign key
-                    .col(boolean(CascadesGroup::InProgress))
-                    .col(boolean(CascadesGroup::IsOptimized))
+                    .col(integer_null(CascadesGroup::LatestWinner))
                     .foreign_key(
                         ForeignKey::create()
                             .from(CascadesGroup::Table, CascadesGroup::LatestWinner)
                             .to(PhysicalExpression::Table, PhysicalExpression::Id)
-                            .on_delete(ForeignKeyAction::Cascade)
+                            .on_delete(ForeignKeyAction::SetNull)
                             .on_update(ForeignKeyAction::Cascade),
                     )
+                    .col(boolean(CascadesGroup::InProgress))
+                    .col(boolean(CascadesGroup::IsOptimized))
                     .to_owned(),
             )
             .await

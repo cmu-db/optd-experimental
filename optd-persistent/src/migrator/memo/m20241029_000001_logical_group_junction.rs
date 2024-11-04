@@ -4,8 +4,8 @@ use sea_orm_migration::{prelude::*, schema::*};
 #[derive(DeriveIden)]
 pub enum LogicalGroupJunction {
     Table,
-    GroupId,
     LogicalExpressionId,
+    GroupId,
 }
 
 #[derive(DeriveMigrationName)]
@@ -19,26 +19,24 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(LogicalGroupJunction::Table)
                     .if_not_exists()
-                    .col(integer(LogicalGroupJunction::GroupId))
                     .col(integer(LogicalGroupJunction::LogicalExpressionId))
+                    .col(integer(LogicalGroupJunction::GroupId))
                     .primary_key(
                         Index::create()
-                            .col(LogicalGroupJunction::GroupId)
-                            .col(LogicalGroupJunction::LogicalExpressionId),
+                            .col(LogicalGroupJunction::LogicalExpressionId)
+                            .col(LogicalGroupJunction::GroupId),
                     )
                     .foreign_key(
                         ForeignKey::create()
-                            .name("fk-logical_group_junction-group_id")
                             .from(LogicalGroupJunction::Table, LogicalGroupJunction::GroupId)
-                            .to(CascadesGroup::Table, CascadesGroup::Id)
+                            .to(LogicalExpression::Table, LogicalExpression::Id)
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
                     .foreign_key(
                         ForeignKey::create()
-                            .name("fk-logical_group_junction-logical_expression")
                             .from(LogicalGroupJunction::Table, LogicalGroupJunction::GroupId)
-                            .to(LogicalExpression::Table, LogicalExpression::Id)
+                            .to(CascadesGroup::Table, CascadesGroup::Id)
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
