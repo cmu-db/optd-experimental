@@ -1,7 +1,5 @@
-use sea_orm_migration::prelude::*;
-use sea_orm_migration::schema::*;
-
-use crate::migrator::cost_model::table_metadata::TableMetadata;
+use crate::migrator::catalog::table_metadata::TableMetadata;
+use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(Iden)]
 pub enum TableAttribute {

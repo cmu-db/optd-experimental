@@ -1,6 +1,5 @@
-use sea_orm_migration::{prelude::*, schema::*};
-
 use crate::migrator::memo::physical_expression::PhysicalExpression;
+use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(DeriveIden)]
 pub enum CascadesGroup {

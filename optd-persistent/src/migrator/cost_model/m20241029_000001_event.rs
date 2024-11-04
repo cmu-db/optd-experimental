@@ -1,5 +1,4 @@
-use sea_orm_migration::prelude::*;
-use sea_orm_migration::schema::*;
+use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(Iden)]
 pub enum Event {

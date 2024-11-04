@@ -5,10 +5,9 @@ Table attribute_stats_junction {
 }
  */
 
+use crate::migrator::catalog::table_attribute::TableAttribute;
 use crate::migrator::cost_model::attribute_stat::AttributeStat;
-use crate::migrator::cost_model::table_attribute::TableAttribute;
-use sea_orm_migration::prelude::*;
-use sea_orm_migration::schema::*;
+use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(Iden)]
 pub enum AttributeStatsJunction {

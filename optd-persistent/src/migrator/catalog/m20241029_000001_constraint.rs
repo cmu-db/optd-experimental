@@ -11,10 +11,8 @@ Table constraint {
   check_src varchar // the expression tree for a check constraint, which provides a textual representation of the constraint expression
 } */
 
-use crate::migrator::cost_model::index::Index;
-use crate::migrator::cost_model::table_metadata::TableMetadata;
-use sea_orm_migration::prelude::*;
-use sea_orm_migration::schema::*;
+use crate::migrator::catalog::{index::Index, table_metadata::TableMetadata};
+use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(Iden)]
 pub enum Constraint {

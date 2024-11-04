@@ -9,9 +9,7 @@ Table cost {
 
 use crate::migrator::cost_model::event::Event;
 use crate::migrator::memo::physical_expression::PhysicalExpression;
-use sea_orm_migration::prelude::*;
-use sea_orm_migration::schema::pk_auto;
-use sea_orm_migration::schema::*;
+use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(Iden)]
 pub enum Cost {

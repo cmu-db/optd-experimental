@@ -1,9 +1,8 @@
-use crate::migrator::cost_model::cost::Cost;
-use crate::migrator::cost_model::event::Event;
-use crate::migrator::memo::cascades_group::CascadesGroup;
-use crate::migrator::memo::physical_expression::PhysicalExpression;
-use sea_orm_migration::prelude::*;
-use sea_orm_migration::schema::*;
+use crate::migrator::cost_model::{cost::Cost, event::Event};
+use crate::migrator::memo::{
+    cascades_group::CascadesGroup, physical_expression::PhysicalExpression,
+};
+use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(Iden)]
 pub enum GroupWinner {

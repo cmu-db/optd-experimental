@@ -1,7 +1,5 @@
-use sea_orm_migration::prelude::*;
-use sea_orm_migration::schema::*;
-
-use crate::migrator::cost_model::namespace_metadata::NamespaceMetadata;
+use crate::migrator::catalog::namespace_metadata::NamespaceMetadata;
+use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(Iden)]
 pub enum TableMetadata {
