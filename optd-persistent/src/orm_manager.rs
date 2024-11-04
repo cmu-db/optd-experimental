@@ -1,7 +1,7 @@
 #![allow(dead_code, unused_imports, unused_variables)]
 
 use sea_orm::DatabaseConnection;
-use crate::memo_table::{self, EpochId, MemoTable};
+use crate::storage_layer::{self, EpochId, StorageLayer};
 use crate::entities::physical_expression;
 
 pub struct ORMManager {
@@ -10,24 +10,24 @@ pub struct ORMManager {
     latest_epoch_id: EpochId,
 }
 
-impl MemoTable for ORMManager {
-    async fn create_new_epoch(&self) -> memo_table::EpochId {
+impl StorageLayer for ORMManager {
+    async fn create_new_epoch(&self) -> storage_layer::EpochId {
         todo!()
     }
 
-    async fn update_stats_from_catalog(&self, c:memo_table::CatalogSource, epoch_id:memo_table::EpochId) -> Result<(), ()> {
+    async fn update_stats_from_catalog(&self, c:storage_layer::CatalogSource, epoch_id:storage_layer::EpochId) -> Result<(), ()> {
         todo!()
     }
 
-    async fn update_stats(&self, stats:i32, epoch_id:memo_table::EpochId) -> Result<(), ()> {
+    async fn update_stats(&self, stats:i32, epoch_id:storage_layer::EpochId) -> Result<(), ()> {
         todo!()
     }
 
-    async fn store_cost(&self, expr_id:memo_table::ExprId, cost:i32, epoch_id:memo_table::EpochId) -> Result<(), ()> {
+    async fn store_cost(&self, expr_id:storage_layer::ExprId, cost:i32, epoch_id:storage_layer::EpochId) -> Result<(), ()> {
         todo!()
     }
 
-    async fn get_stats_analysis(&self, table_id:i32, attr_id:Option<i32>, epoch_id:memo_table::EpochId) -> Option<i32> {
+    async fn get_stats_analysis(&self, table_id:i32, attr_id:Option<i32>, epoch_id:storage_layer::EpochId) -> Option<i32> {
         todo!()
     }
 
@@ -35,11 +35,11 @@ impl MemoTable for ORMManager {
         todo!()
     }
 
-    async fn get_cost_analysis(&self, expr_id:memo_table::ExprId, epoch_id:memo_table::EpochId) -> Option<i32> {
+    async fn get_cost_analysis(&self, expr_id:storage_layer::ExprId, epoch_id:storage_layer::EpochId) -> Option<i32> {
         todo!()
     }
 
-    async fn get_cost(&self, expr_id:memo_table::ExprId) -> Option<i32> {
+    async fn get_cost(&self, expr_id:storage_layer::ExprId) -> Option<i32> {
         todo!()
     }
 
@@ -47,47 +47,47 @@ impl MemoTable for ORMManager {
         todo!()
     }
 
-    async fn add_new_expr(&mut self, expr:memo_table::Expression) -> (memo_table::GroupId, memo_table::ExprId) {
+    async fn add_new_expr(&mut self, expr:storage_layer::Expression) -> (storage_layer::GroupId, storage_layer::ExprId) {
         todo!()
     }
 
-    async fn add_expr_to_group(&mut self, expr: memo_table::Expression, group_id: memo_table::GroupId) -> Option<memo_table::ExprId> {
+    async fn add_expr_to_group(&mut self, expr: storage_layer::Expression, group_id: storage_layer::GroupId) -> Option<storage_layer::ExprId> {
         todo!()
     }
 
-    async fn get_group_id(&self, expr_id: memo_table::ExprId) -> memo_table::GroupId {
+    async fn get_group_id(&self, expr_id: storage_layer::ExprId) -> storage_layer::GroupId {
         todo!()
     }
 
-    async fn get_expr_memoed(&self, expr_id: memo_table::ExprId) -> memo_table::Expression {
+    async fn get_expr_memoed(&self, expr_id: storage_layer::ExprId) -> storage_layer::Expression {
         todo!()
     }
 
-    async fn get_all_group_ids(&self) -> Vec<memo_table::GroupId> {
+    async fn get_all_group_ids(&self) -> Vec<storage_layer::GroupId> {
         todo!()
     }
 
-    async fn get_group(&self, group_id: memo_table::GroupId) -> crate::entities::cascades_group::ActiveModel {
+    async fn get_group(&self, group_id: storage_layer::GroupId) -> crate::entities::cascades_group::ActiveModel {
         todo!()
     }
 
-    async fn update_group_winner(&mut self, group_id: memo_table::GroupId, latest_winner:Option<memo_table::ExprId>) {
+    async fn update_group_winner(&mut self, group_id: storage_layer::GroupId, latest_winner:Option<storage_layer::ExprId>) {
         todo!()
     }
 
-    async fn get_all_exprs_in_group(&self, group_id: memo_table::GroupId) -> Vec<memo_table::ExprId> {
+    async fn get_all_exprs_in_group(&self, group_id: storage_layer::GroupId) -> Vec<storage_layer::ExprId> {
         todo!()
     }
 
-    async fn get_group_info(&self, group_id: memo_table::GroupId) -> &Option<memo_table::ExprId> {
+    async fn get_group_info(&self, group_id: storage_layer::GroupId) -> &Option<storage_layer::ExprId> {
         todo!()
     }
 
-    async fn get_predicate_binding(&self, group_id: memo_table::GroupId) -> Option<memo_table::Expression> {
+    async fn get_predicate_binding(&self, group_id: storage_layer::GroupId) -> Option<storage_layer::Expression> {
         todo!()
     }
 
-    async fn try_get_predicate_binding(&self, group_id: memo_table::GroupId) -> Option<memo_table::Expression> {
+    async fn try_get_predicate_binding(&self, group_id: storage_layer::GroupId) -> Option<storage_layer::Expression> {
         todo!()
     }
 }

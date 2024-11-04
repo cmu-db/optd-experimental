@@ -36,7 +36,7 @@ pub enum Expression {
 pub struct WinnerInfo {
 }
 
-pub trait MemoTable {
+pub trait StorageLayer {
     // TODO: Change EpochId to event::Model::epoch_id
     async fn create_new_epoch(&self) -> EpochId;
     async fn update_stats_from_catalog(&self, c:CatalogSource, epoch_id:EpochId) -> Result<(), ()>;
