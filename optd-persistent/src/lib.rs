@@ -8,6 +8,7 @@ mod storage_layer;
 use migrator::Migrator;
 
 pub const DATABASE_URL: &str = "sqlite:./sqlite.db?mode=rwc";
+pub const TEST_DATABASE_URL: &str = "sqlite:./test.db?mode=rwc";
 
 pub async fn migrate(db: &DatabaseConnection) -> Result<(), DbErr> {
     let schema_manager = SchemaManager::new(db);
