@@ -1,10 +1,10 @@
 use sea_orm::*;
 use sea_orm_migration::prelude::*;
 
+mod entities;
 mod migrator;
 mod orm_manager;
 mod storage_layer;
-mod entities;
 use migrator::Migrator;
 
 pub const DATABASE_URL: &str = "sqlite:./sqlite.db?mode=rwc";
