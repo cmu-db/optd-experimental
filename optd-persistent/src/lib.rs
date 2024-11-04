@@ -3,7 +3,7 @@ use sea_orm_migration::prelude::*;
 
 mod migrator;
 mod orm_manager;
-mod memo_table;
+mod storage_layer;
 mod entities;
 use migrator::Migrator;
 
