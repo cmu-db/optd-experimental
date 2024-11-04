@@ -3,43 +3,43 @@
 use sea_orm::entity::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
-#[sea_orm(table_name = "constraint_attribute_junction")]
+#[sea_orm(table_name = "column_statistic_to_column_junction")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
-    pub constraint_id: i32,
+    pub column_statistic_id: i32,
     #[sea_orm(primary_key, auto_increment = false)]
-    pub attr_id: i32,
+    pub column_id: i32,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
     #[sea_orm(
-        belongs_to = "super::constraint::Entity",
-        from = "Column::ConstraintId",
-        to = "super::constraint::Column::Id",
+        belongs_to = "super::column::Entity",
+        from = "Column::ColumnId",
+        to = "super::column::Column::Id",
         on_update = "Cascade",
         on_delete = "Cascade"
     )]
-    Constraint,
+    Column,
     #[sea_orm(
-        belongs_to = "super::table_attribute::Entity",
-        from = "Column::AttrId",
-        to = "super::table_attribute::Column::Id",
+        belongs_to = "super::column_statistic::Entity",
+        from = "Column::ColumnStatisticId",
+        to = "super::column_statistic::Column::Id",
         on_update = "Cascade",
         on_delete = "Cascade"
     )]
-    TableAttribute,
+    ColumnStatistic,
 }
 
-impl Related<super::constraint::Entity> for Entity {
+impl Related<super::column::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::Constraint.def()
+        Relation::Column.def()
     }
 }
 
-impl Related<super::table_attribute::Entity> for Entity {
+impl Related<super::column_statistic::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::TableAttribute.def()
+        Relation::ColumnStatistic.def()
     }
 }
 

@@ -3,22 +3,22 @@
 use sea_orm::entity::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
-#[sea_orm(table_name = "attribute_stat")]
+#[sea_orm(table_name = "column_statistic")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
-    pub number_of_attributes: i32,
-    pub epoch_id: i32,
     pub name: String,
+    pub epoch_id: i32,
     pub created_time: DateTimeUtc,
-    pub stats_type: i32,
-    pub stats_value: i32,
+    pub number_of_attributes: i32,
+    pub statistic_type: i32,
+    pub statistic_value: i32,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
-    #[sea_orm(has_many = "super::attribute_stats_junction::Entity")]
-    AttributeStatsJunction,
+    #[sea_orm(has_many = "super::column_statistic_to_column_junction::Entity")]
+    ColumnStatisticToColumnJunction,
     #[sea_orm(
         belongs_to = "super::event::Entity",
         from = "Column::EpochId",
@@ -29,9 +29,9 @@ pub enum Relation {
     Event,
 }
 
-impl Related<super::attribute_stats_junction::Entity> for Entity {
+impl Related<super::column_statistic_to_column_junction::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::AttributeStatsJunction.def()
+        Relation::ColumnStatisticToColumnJunction.def()
     }
 }
 
@@ -41,13 +41,13 @@ impl Related<super::event::Entity> for Entity {
     }
 }
 
-impl Related<super::table_attribute::Entity> for Entity {
+impl Related<super::column::Entity> for Entity {
     fn to() -> RelationDef {
-        super::attribute_stats_junction::Relation::TableAttribute.def()
+        super::column_statistic_to_column_junction::Relation::Column.def()
     }
     fn via() -> Option<RelationDef> {
         Some(
-            super::attribute_stats_junction::Relation::AttributeStat
+            super::column_statistic_to_column_junction::Relation::ColumnStatistic
                 .def()
                 .rev(),
         )

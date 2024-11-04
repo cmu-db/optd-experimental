@@ -4,8 +4,8 @@ use sea_orm_migration::{prelude::*, schema::*};
 pub enum Event {
     Table,
     EpochId,
+    Timestamp,
     SourceVariant,
-    CreateTimestamp,
     Data,
 }
 
@@ -21,8 +21,8 @@ impl MigrationTrait for Migration {
                     .table(Event::Table)
                     .if_not_exists()
                     .col(pk_auto(Event::EpochId))
+                    .col(timestamp(Event::Timestamp))
                     .col(string(Event::SourceVariant))
-                    .col(timestamp(Event::CreateTimestamp))
                     .col(json(Event::Data))
                     .to_owned(),
             )

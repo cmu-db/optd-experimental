@@ -15,15 +15,15 @@ use crate::migrator::cost_model::event::Event;
 use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(Iden)]
-pub enum AttributeStat {
+pub enum ColumnStatistic {
     Table,
     Id,
-    NumberOfAttributes,
-    EpochId,
     Name,
+    EpochId,
     CreatedTime,
-    StatsType,
-    StatsValue,
+    NumberOfAttributes,
+    StatisticType,
+    StatisticValue,
 }
 
 #[derive(DeriveMigrationName)]
@@ -35,22 +35,22 @@ impl MigrationTrait for Migration {
         manager
             .create_table(
                 Table::create()
-                    .table(AttributeStat::Table)
+                    .table(ColumnStatistic::Table)
                     .if_not_exists()
-                    .col(pk_auto(AttributeStat::Id))
-                    .col(integer(AttributeStat::NumberOfAttributes))
-                    .col(integer(AttributeStat::EpochId))
-                    .col(string(AttributeStat::Name))
-                    .col(timestamp(AttributeStat::CreatedTime))
-                    .col(integer(AttributeStat::StatsType))
-                    .col(integer(AttributeStat::StatsValue))
+                    .col(pk_auto(ColumnStatistic::Id))
+                    .col(string(ColumnStatistic::Name))
+                    .col(integer(ColumnStatistic::EpochId))
                     .foreign_key(
                         ForeignKey::create()
-                            .from(AttributeStat::Table, AttributeStat::EpochId)
+                            .from(ColumnStatistic::Table, ColumnStatistic::EpochId)
                             .to(Event::Table, Event::EpochId)
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
+                    .col(timestamp(ColumnStatistic::CreatedTime))
+                    .col(integer(ColumnStatistic::NumberOfAttributes))
+                    .col(integer(ColumnStatistic::StatisticType))
+                    .col(integer(ColumnStatistic::StatisticValue))
                     .to_owned(),
             )
             .await
@@ -58,7 +58,7 @@ impl MigrationTrait for Migration {
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
-            .drop_table(Table::drop().table(AttributeStat::Table).to_owned())
+            .drop_table(Table::drop().table(ColumnStatistic::Table).to_owned())
             .await
     }
 }

@@ -5,15 +5,15 @@ Table attribute_stats_junction {
 }
  */
 
-use crate::migrator::catalog::table_attribute::TableAttribute;
-use crate::migrator::cost_model::attribute_stat::AttributeStat;
+use crate::migrator::catalog::table_attribute::Column;
+use crate::migrator::cost_model::attribute_stat::ColumnStatistic;
 use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(Iden)]
-pub enum AttributeStatsJunction {
+pub enum ColumnStatisticToColumnJunction {
     Table,
-    AttrId,
-    StatsId,
+    ColumnStatisticId,
+    ColumnId,
 }
 
 #[derive(DeriveMigrationName)]
@@ -25,36 +25,34 @@ impl MigrationTrait for Migration {
         manager
             .create_table(
                 Table::create()
-                    .table(AttributeStatsJunction::Table)
+                    .table(ColumnStatisticToColumnJunction::Table)
                     .if_not_exists()
-                    .col(integer(AttributeStatsJunction::AttrId).not_null())
-                    .col(integer(AttributeStatsJunction::StatsId).not_null())
-                    .foreign_key(
-                        ForeignKey::create()
-                            .from(
-                                AttributeStatsJunction::Table,
-                                AttributeStatsJunction::AttrId,
-                            )
-                            .to(TableAttribute::Table, TableAttribute::Id)
-                            .on_delete(ForeignKeyAction::Cascade)
-                            .on_update(ForeignKeyAction::Cascade),
-                    )
-                    .foreign_key(
-                        ForeignKey::create()
-                            .from(
-                                AttributeStatsJunction::Table,
-                                AttributeStatsJunction::StatsId,
-                            )
-                            .to(AttributeStat::Table, AttributeStat::Id)
-                            .on_delete(ForeignKeyAction::Cascade)
-                            .on_update(ForeignKeyAction::Cascade),
-                    )
+                    .col(integer(ColumnStatisticToColumnJunction::ColumnStatisticId))
+                    .col(integer(ColumnStatisticToColumnJunction::ColumnId))
                     .primary_key(
                         Index::create()
-                            .col(AttributeStatsJunction::AttrId)
-                            .col(AttributeStatsJunction::StatsId)
-                            .name("attribute_stats_junction_pk")
-                            .unique(),
+                            .col(ColumnStatisticToColumnJunction::ColumnStatisticId)
+                            .col(ColumnStatisticToColumnJunction::ColumnId),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(
+                                ColumnStatisticToColumnJunction::Table,
+                                ColumnStatisticToColumnJunction::ColumnStatisticId,
+                            )
+                            .to(ColumnStatistic::Table, ColumnStatistic::Id)
+                            .on_delete(ForeignKeyAction::Cascade)
+                            .on_update(ForeignKeyAction::Cascade),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(
+                                ColumnStatisticToColumnJunction::Table,
+                                ColumnStatisticToColumnJunction::ColumnId,
+                            )
+                            .to(Column::Table, Column::Id)
+                            .on_delete(ForeignKeyAction::Cascade)
+                            .on_update(ForeignKeyAction::Cascade),
                     )
                     .to_owned(),
             )
@@ -65,7 +63,7 @@ impl MigrationTrait for Migration {
         manager
             .drop_table(
                 Table::drop()
-                    .table(AttributeStatsJunction::Table)
+                    .table(ColumnStatisticToColumnJunction::Table)
                     .to_owned(),
             )
             .await

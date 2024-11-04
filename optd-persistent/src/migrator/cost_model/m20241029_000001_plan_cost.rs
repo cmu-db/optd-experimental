@@ -12,13 +12,13 @@ use crate::migrator::memo::physical_expression::PhysicalExpression;
 use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(Iden)]
-pub enum Cost {
+pub enum PlanCost {
     Table,
     Id,
-    ExprId,
+    PhysicalExpressionId,
     EpochId,
     Cost,
-    Valid,
+    IsValid,
 }
 
 #[derive(DeriveMigrationName)]
@@ -30,27 +30,27 @@ impl MigrationTrait for Migration {
         manager
             .create_table(
                 Table::create()
-                    .table(Cost::Table)
+                    .table(PlanCost::Table)
                     .if_not_exists()
-                    .col(pk_auto(Cost::Id))
-                    .col(integer(Cost::ExprId))
-                    .col(integer(Cost::EpochId))
-                    .col(integer(Cost::Cost))
-                    .col(boolean(Cost::Valid))
+                    .col(pk_auto(PlanCost::Id))
+                    .col(integer(PlanCost::PhysicalExpressionId))
                     .foreign_key(
                         ForeignKey::create()
-                            .from(Cost::Table, Cost::ExprId)
+                            .from(PlanCost::Table, PlanCost::PhysicalExpressionId)
                             .to(PhysicalExpression::Table, PhysicalExpression::Id)
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
+                    .col(integer(PlanCost::EpochId))
                     .foreign_key(
                         ForeignKey::create()
-                            .from(Cost::Table, Cost::EpochId)
+                            .from(PlanCost::Table, PlanCost::EpochId)
                             .to(Event::Table, Event::EpochId)
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
+                    .col(integer(PlanCost::Cost))
+                    .col(boolean(PlanCost::IsValid))
                     .to_owned(),
             )
             .await
@@ -58,7 +58,7 @@ impl MigrationTrait for Migration {
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
-            .drop_table(Table::drop().table(Cost::Table).to_owned())
+            .drop_table(Table::drop().table(PlanCost::Table).to_owned())
             .await
     }
 }
