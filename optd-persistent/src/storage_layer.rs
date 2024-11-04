@@ -37,7 +37,7 @@ pub struct WinnerInfo {}
 
 pub trait StorageLayer {
     // TODO: Change EpochId to event::Model::epoch_id
-    async fn create_new_epoch(&mut self, source:String, data:String) -> Result<EpochId, ()>;
+    async fn create_new_epoch(&mut self, source: String, data: String) -> Result<EpochId, ()>;
     async fn update_stats_from_catalog(
         &self,
         c: CatalogSource,
@@ -45,7 +45,7 @@ pub trait StorageLayer {
     ) -> Result<(), ()>;
     // i32 in `stats:i32` is a placeholder for the stats type
     async fn update_stats(&self, stats: i32, epoch_id: EpochId) -> Result<(), ()>;
-    async fn store_cost(&self, expr_id: ExprId, cost: i32, epoch_id: EpochId) -> Result<(), ()>;
+    async fn store_cost(&self, expr_id: ExprId, cost: i32, epoch_id: EpochId) -> Result<(), DbErr>;
     // table_id, attr_id OR expr_id and return a vector?
     async fn get_stats_analysis(
         &self,
