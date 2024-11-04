@@ -1,8 +1,13 @@
 #![allow(dead_code, unused_imports, unused_variables)]
 
-use crate::entities::physical_expression;
+use sea_orm::*;
+use sea_orm_migration::prelude::*;
+use sqlx::types::chrono::Utc;
+use crate::entities::event::Entity as Event;
+use crate::entities::{event, physical_expression};
 use crate::storage_layer::{self, EpochId, StorageLayer};
-use sea_orm::DatabaseConnection;
+use crate::DATABASE_URL;
+use sea_orm::{Database, DatabaseConnection};
 
 pub struct ORMManager {
     db_conn: DatabaseConnection,
@@ -10,9 +15,30 @@ pub struct ORMManager {
     latest_epoch_id: EpochId,
 }
 
+impl ORMManager {
+    pub async fn new(database_url: Option<&str>) -> Self {
+        let latest_epoch_id = -1;
+        let db_conn = Database::connect(database_url.unwrap_or(DATABASE_URL)).await.unwrap();
+        Self { db_conn, latest_epoch_id }
+    }
+}
+
 impl StorageLayer for ORMManager {
-    async fn create_new_epoch(&self) -> storage_layer::EpochId {
-        todo!()
+    async fn create_new_epoch(&mut self, source:String, data:String) -> Result<storage_layer::EpochId, ()> {
+        let new_event = event::ActiveModel {
+            source_variant: sea_orm::ActiveValue::Set(source),
+            create_timestamp: sea_orm::ActiveValue::Set(Utc::now()),
+            data: sea_orm::ActiveValue::Set(sea_orm::JsonValue::String(data)),
+            ..Default::default()
+        };
+        let res = Event::insert(new_event).exec(&self.db_conn).await;
+        match res {
+            Ok(insert_res) => {
+                self.latest_epoch_id = insert_res.last_insert_id;
+                Ok(self.latest_epoch_id)
+            },
+            Err(_) => Err(()),
+        }
     }
 
     async fn update_stats_from_catalog(
@@ -136,5 +162,36 @@ impl StorageLayer for ORMManager {
         group_id: storage_layer::GroupId,
     ) -> Option<storage_layer::Expression> {
         todo!()
+    }
+}
+
+// NOTE: Please run `cargo run --bin migrate_test` before you want to run this test.
+#[cfg(test)]
+mod tests {
+    use sea_orm::{EntityTrait, ModelTrait};
+    use serde_json::de;
+
+    use crate::entities::event::Entity as Event;
+    use crate::storage_layer::StorageLayer;
+    use crate::TEST_DATABASE_URL;
+
+    async fn delete_all_events(orm_manager: &mut super::ORMManager) {
+        let events = super::Event::find().all(&orm_manager.db_conn).await.unwrap();
+        for event in events {
+            event.delete(&orm_manager.db_conn).await.unwrap();
+        }
+    }
+
+    #[tokio::test]
+    async fn test_create_new_epoch() {
+        let mut orm_manager = super::ORMManager::new(Some(TEST_DATABASE_URL)).await;
+        delete_all_events(&mut orm_manager).await;
+        let res = orm_manager.create_new_epoch("source".to_string(), "data".to_string()).await;
+        println!("{:?}", res);
+        assert!(res.is_ok());
+        assert_eq!(super::Event::find().all(&orm_manager.db_conn).await.unwrap().len(), 1);
+        println!("{:?}", super::Event::find().all(&orm_manager.db_conn).await.unwrap()[0]);
+        assert_eq!(super::Event::find().all(&orm_manager.db_conn).await.unwrap()[0].epoch_id, res.unwrap());
+        delete_all_events(&mut orm_manager).await;
     }
 }
