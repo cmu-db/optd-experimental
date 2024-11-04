@@ -1,13 +1,13 @@
 #![allow(dead_code, unused_imports)]
 
-use std::sync::Arc;
 use crate::entities::cascades_group;
 use crate::entities::event::Model as event_model;
-use crate::entities::physical_expression;
 use crate::entities::logical_expression;
+use crate::entities::physical_expression;
 use sea_orm::*;
 use sea_orm_migration::prelude::*;
 use serde_json::json;
+use std::sync::Arc;
 
 pub type GroupId = i32;
 pub type ExprId = i32;
@@ -19,7 +19,7 @@ pub enum CatalogSource {
 
 pub enum Expression {
     LogicalExpression(logical_expression::Model),
-    PhysicalExpression(physical_expression::Model)
+    PhysicalExpression(physical_expression::Model),
 }
 
 // TODO
@@ -33,27 +33,38 @@ pub enum Expression {
 //     pub statistics: Arc<Statistics>,
 // }
 // The optd WinnerInfo struct makes everything too coupled.
-pub struct WinnerInfo {
-}
+pub struct WinnerInfo {}
 
 pub trait StorageLayer {
     // TODO: Change EpochId to event::Model::epoch_id
     async fn create_new_epoch(&self) -> EpochId;
-    async fn update_stats_from_catalog(&self, c:CatalogSource, epoch_id:EpochId) -> Result<(), ()>;
+    async fn update_stats_from_catalog(
+        &self,
+        c: CatalogSource,
+        epoch_id: EpochId,
+    ) -> Result<(), ()>;
     // i32 in `stats:i32` is a placeholder for the stats type
-    async fn update_stats(&self, stats:i32, epoch_id:EpochId) -> Result<(), ()>;
-    async fn store_cost(&self, expr_id:ExprId, cost:i32, epoch_id:EpochId) -> Result<(), ()>;
+    async fn update_stats(&self, stats: i32, epoch_id: EpochId) -> Result<(), ()>;
+    async fn store_cost(&self, expr_id: ExprId, cost: i32, epoch_id: EpochId) -> Result<(), ()>;
     // table_id, attr_id OR expr_id and return a vector?
-    async fn get_stats_analysis(&self, table_id:i32, attr_id:Option<i32>, epoch_id:EpochId) -> Option<i32>;
-    async fn get_stats(&self, table_id:i32, attr_id:Option<i32>) -> Option<i32>;
-    async fn get_cost_analysis(&self, expr_id:ExprId, epoch_id:EpochId) -> Option<i32>;
-    async fn get_cost(&self, expr_id:ExprId) -> Option<i32>;
+    async fn get_stats_analysis(
+        &self,
+        table_id: i32,
+        attr_id: Option<i32>,
+        epoch_id: EpochId,
+    ) -> Option<i32>;
+    async fn get_stats(&self, table_id: i32, attr_id: Option<i32>) -> Option<i32>;
+    async fn get_cost_analysis(&self, expr_id: ExprId, epoch_id: EpochId) -> Option<i32>;
+    async fn get_cost(&self, expr_id: ExprId) -> Option<i32>;
 
-    async fn get_group_winner_from_group_id(&self, group_id:i32) -> Option<physical_expression::ActiveModel>;
+    async fn get_group_winner_from_group_id(
+        &self,
+        group_id: i32,
+    ) -> Option<physical_expression::ActiveModel>;
 
     /// Add an expression to the memo table. If the expression already exists, it will return the existing group id and
     /// expr id. Otherwise, a new group and expr will be created.
-    async fn add_new_expr(&mut self, expr:Expression) -> (GroupId, ExprId);
+    async fn add_new_expr(&mut self, expr: Expression) -> (GroupId, ExprId);
 
     /// Add a new expression to an existing group. If the expression is a group, it will merge the two groups. Otherwise,
     /// it will add the expression to the group. Returns the expr id if the expression is not a group.
@@ -73,13 +84,13 @@ pub trait StorageLayer {
     async fn get_group(&self, group_id: GroupId) -> cascades_group::ActiveModel;
 
     /// Update the group winner.
-    async fn update_group_winner(&mut self, group_id: GroupId, latest_winner:Option<ExprId>);
+    async fn update_group_winner(&mut self, group_id: GroupId, latest_winner: Option<ExprId>);
 
     // The below functions can be overwritten by the memo table implementation if there
     // are more efficient way to retrieve the information.
 
     /// Get all expressions in the group.
-    async fn get_all_exprs_in_group(&self, group_id: GroupId) -> Vec<ExprId>; 
+    async fn get_all_exprs_in_group(&self, group_id: GroupId) -> Vec<ExprId>;
 
     /// Get winner info for a group id
     async fn get_group_info(&self, group_id: GroupId) -> &Option<ExprId>;
@@ -111,13 +122,11 @@ pub trait StorageLayer {
     //     //     return Ok(node);
     //     // }
     //     // bail!("no best group binding for group {}", group_id)
-    // }; 
-    
+    // };
 
     /// Get all bindings of a predicate group. Will panic if the group contains more than one bindings.
-    async fn get_predicate_binding(&self, group_id: GroupId) -> Option<Expression>; 
+    async fn get_predicate_binding(&self, group_id: GroupId) -> Option<Expression>;
 
     /// Get all bindings of a predicate group. Returns None if the group contains zero or more than one bindings.
     async fn try_get_predicate_binding(&self, group_id: GroupId) -> Option<Expression>;
-    
 }
