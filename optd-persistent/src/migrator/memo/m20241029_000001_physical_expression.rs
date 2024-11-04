@@ -1,4 +1,4 @@
-use super::cascades_group::CascadesGroup;
+use crate::migrator::memo::cascades_group::CascadesGroup;
 use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(DeriveIden)]

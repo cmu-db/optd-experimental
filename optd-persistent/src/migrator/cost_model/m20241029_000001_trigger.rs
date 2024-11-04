@@ -1,26 +1,15 @@
-/*
-Table cost {
-  id integer PK
-  expr_id integer [ref: > physical_expression.id]
-  epoch_id integer [ref: > event.epoch_id]
-  cost integer
-  valid boolean
-} */
-
-use super::event::Event;
-use super::physical_expression::PhysicalExpression;
+use crate::migrator::cost_model::table_metadata::TableMetadata;
 use sea_orm_migration::prelude::*;
-use sea_orm_migration::schema::pk_auto;
 use sea_orm_migration::schema::*;
 
 #[derive(Iden)]
-pub enum Cost {
+pub enum Trigger {
     Table,
     Id,
-    ExprId,
-    EpochId,
-    Cost,
-    Valid,
+    TableId,
+    Name,
+    ParentTriggerId,
+    Function,
 }
 
 #[derive(DeriveMigrationName)]
@@ -32,24 +21,24 @@ impl MigrationTrait for Migration {
         manager
             .create_table(
                 Table::create()
-                    .table(Cost::Table)
+                    .table(Trigger::Table)
                     .if_not_exists()
-                    .col(pk_auto(Cost::Id))
-                    .col(integer(Cost::ExprId))
-                    .col(integer(Cost::EpochId))
-                    .col(integer(Cost::Cost))
-                    .col(boolean(Cost::Valid))
+                    .col(pk_auto(Trigger::Id))
+                    .col(integer(Trigger::TableId))
+                    .col(string(Trigger::Name))
+                    .col(integer(Trigger::ParentTriggerId))
+                    .col(json(Trigger::Function))
                     .foreign_key(
                         ForeignKey::create()
-                            .from(Cost::Table, Cost::ExprId)
-                            .to(PhysicalExpression::Table, PhysicalExpression::Id)
+                            .from(Trigger::Table, Trigger::TableId)
+                            .to(TableMetadata::Table, TableMetadata::Id)
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
                     .foreign_key(
                         ForeignKey::create()
-                            .from(Cost::Table, Cost::EpochId)
-                            .to(Event::Table, Event::EpochId)
+                            .from(Trigger::Table, Trigger::ParentTriggerId)
+                            .to(Trigger::Table, Trigger::Id)
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
@@ -60,7 +49,7 @@ impl MigrationTrait for Migration {
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
-            .drop_table(Table::drop().table(Cost::Table).to_owned())
+            .drop_table(Table::drop().table(Trigger::Table).to_owned())
             .await
     }
 }

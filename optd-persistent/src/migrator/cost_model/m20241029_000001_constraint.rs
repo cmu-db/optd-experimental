@@ -11,8 +11,8 @@ Table constraint {
   check_src varchar // the expression tree for a check constraint, which provides a textual representation of the constraint expression
 } */
 
-use super::index::Index;
-use super::table_metadata::TableMetadata;
+use crate::migrator::cost_model::index::Index;
+use crate::migrator::cost_model::table_metadata::TableMetadata;
 use sea_orm_migration::prelude::*;
 use sea_orm_migration::schema::*;
 
@@ -51,15 +51,15 @@ impl MigrationTrait for Migration {
                             .from(Constraint::Table, Constraint::TableId)
                             .to(TableMetadata::Table, TableMetadata::Id)
                             .on_delete(ForeignKeyAction::Cascade)
-                            .on_update(ForeignKeyAction::Cascade),  
+                            .on_update(ForeignKeyAction::Cascade),
                     )
                     .foreign_key(
-                        ForeignKey::create()    
-                            .from(Constraint::Table, Constraint::IndexId) 
+                        ForeignKey::create()
+                            .from(Constraint::Table, Constraint::IndexId)
                             .to(Index::Table, Index::Id)
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
-                    )   
+                    )
                     .foreign_key(
                         ForeignKey::create()
                             .from(Constraint::Table, Constraint::ForeignRefId)

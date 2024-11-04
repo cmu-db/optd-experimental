@@ -1,4 +1,6 @@
-use super::{cascades_group::CascadesGroup, physical_expression::PhysicalExpression};
+use crate::migrator::memo::{
+    cascades_group::CascadesGroup, physical_expression::PhysicalExpression,
+};
 use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(DeriveIden)]

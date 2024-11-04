@@ -1,15 +1,18 @@
-use super::table_metadata::TableMetadata;
 use sea_orm_migration::prelude::*;
 use sea_orm_migration::schema::*;
 
+use crate::migrator::cost_model::table_metadata::TableMetadata;
+
 #[derive(Iden)]
-pub enum Trigger {
+pub enum TableAttribute {
     Table,
     Id,
     TableId,
     Name,
-    ParentTriggerId,
-    Function,
+    CompressionMethod,
+    Type,
+    BaseColNumber,
+    IsNotNull,
 }
 
 #[derive(DeriveMigrationName)]
@@ -21,24 +24,19 @@ impl MigrationTrait for Migration {
         manager
             .create_table(
                 Table::create()
-                    .table(Trigger::Table)
+                    .table(TableAttribute::Table)
                     .if_not_exists()
-                    .col(pk_auto(Trigger::Id))
-                    .col(integer(Trigger::TableId))
-                    .col(string(Trigger::Name))
-                    .col(integer(Trigger::ParentTriggerId))
-                    .col(json(Trigger::Function))
+                    .col(pk_auto(TableAttribute::Id))
+                    .col(integer(TableAttribute::TableId))
+                    .col(string(TableAttribute::Name))
+                    .col(char(TableAttribute::CompressionMethod))
+                    .col(integer(TableAttribute::Type))
+                    .col(integer(TableAttribute::BaseColNumber))
+                    .col(boolean(TableAttribute::IsNotNull))
                     .foreign_key(
                         ForeignKey::create()
-                            .from(Trigger::Table, Trigger::TableId)
+                            .from(TableAttribute::Table, TableAttribute::TableId)
                             .to(TableMetadata::Table, TableMetadata::Id)
-                            .on_delete(ForeignKeyAction::Cascade)
-                            .on_update(ForeignKeyAction::Cascade),
-                    )
-                    .foreign_key(
-                        ForeignKey::create()
-                            .from(Trigger::Table, Trigger::ParentTriggerId)
-                            .to(Trigger::Table, Trigger::Id)
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
@@ -49,7 +47,7 @@ impl MigrationTrait for Migration {
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
-            .drop_table(Table::drop().table(Trigger::Table).to_owned())
+            .drop_table(Table::drop().table(TableAttribute::Table).to_owned())
             .await
     }
 }

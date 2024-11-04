@@ -1,4 +1,4 @@
-use super::{cascades_group::CascadesGroup, logical_expression::LogicalExpression};
+use crate::migrator::memo::{cascades_group::CascadesGroup, logical_expression::LogicalExpression};
 use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(DeriveIden)]

@@ -1,12 +1,13 @@
-use super::database_metadata::DatabaseMetadata;
 use sea_orm_migration::prelude::*;
 use sea_orm_migration::schema::*;
 
+use crate::migrator::cost_model::namespace_metadata::NamespaceMetadata;
+
 #[derive(Iden)]
-pub enum NamespaceMetadata {
+pub enum TableMetadata {
     Table,
     Id,
-    DatabaseId,
+    SchemaId,
     Name,
     CreatedTime,
 }
@@ -20,16 +21,16 @@ impl MigrationTrait for Migration {
         manager
             .create_table(
                 Table::create()
-                    .table(NamespaceMetadata::Table)
+                    .table(TableMetadata::Table)
                     .if_not_exists()
-                    .col(pk_auto(NamespaceMetadata::Id))
-                    .col(integer(NamespaceMetadata::DatabaseId))
-                    .col(string(NamespaceMetadata::Name))
-                    .col(timestamp(NamespaceMetadata::CreatedTime))
+                    .col(pk_auto(TableMetadata::Id))
+                    .col(integer(TableMetadata::SchemaId))
+                    .col(string(TableMetadata::Name))
+                    .col(timestamp(TableMetadata::CreatedTime))
                     .foreign_key(
                         ForeignKey::create()
-                            .from(NamespaceMetadata::Table, NamespaceMetadata::DatabaseId)
-                            .to(DatabaseMetadata::Table, DatabaseMetadata::Id)
+                            .from(TableMetadata::Table, TableMetadata::SchemaId)
+                            .to(NamespaceMetadata::Table, NamespaceMetadata::Id)
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
@@ -40,7 +41,7 @@ impl MigrationTrait for Migration {
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
-            .drop_table(Table::drop().table(NamespaceMetadata::Table).to_owned())
+            .drop_table(Table::drop().table(TableMetadata::Table).to_owned())
             .await
     }
 }

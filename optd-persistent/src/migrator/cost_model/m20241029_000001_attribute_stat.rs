@@ -11,7 +11,7 @@ Table attribute_stat {
   Ref: attribute_stats.epoch_id > event.epoch_id
 } */
 
-use super::event::Event;
+use crate::migrator::cost_model::event::Event;
 use sea_orm_migration::prelude::*;
 use sea_orm_migration::schema::*;
 

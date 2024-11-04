@@ -13,7 +13,7 @@ Table index {
 }
  */
 
-use super::table_metadata::TableMetadata;
+use crate::migrator::cost_model::table_metadata::TableMetadata;
 use sea_orm_migration::prelude::*;
 use sea_orm_migration::schema::*;
 

@@ -1,7 +1,7 @@
-use super::cascades_group::CascadesGroup;
-use super::cost::Cost;
-use super::event::Event;
-use super::physical_expression::PhysicalExpression;
+use crate::migrator::cost_model::cost::Cost;
+use crate::migrator::cost_model::event::Event;
+use crate::migrator::memo::cascades_group::CascadesGroup;
+use crate::migrator::memo::physical_expression::PhysicalExpression;
 use sea_orm_migration::prelude::*;
 use sea_orm_migration::schema::*;
 
