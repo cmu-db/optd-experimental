@@ -5,8 +5,8 @@ Table attribute_stats_junction {
 }
  */
 
-use crate::migrator::catalog::table_attribute::Column;
-use crate::migrator::cost_model::attribute_stat::ColumnStatistic;
+use crate::migrator::catalog::column::Column;
+use crate::migrator::cost_model::column_statistic::ColumnStatistic;
 use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(Iden)]

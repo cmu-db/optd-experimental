@@ -1,4 +1,4 @@
-use crate::migrator::catalog::{constraint::Constraint, table_attribute::Column};
+use crate::migrator::catalog::{column::Column, constraint::Constraint};
 use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(Iden)]

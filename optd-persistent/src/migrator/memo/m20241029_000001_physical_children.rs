@@ -4,7 +4,7 @@ use crate::migrator::memo::{
 use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(DeriveIden)]
-pub enum PhysicalGroupJunction {
+pub enum PhysicalChildren {
     Table,
     PhysicalExpressionId,
     GroupId,
@@ -19,20 +19,20 @@ impl MigrationTrait for Migration {
         manager
             .create_table(
                 Table::create()
-                    .table(PhysicalGroupJunction::Table)
+                    .table(PhysicalChildren::Table)
                     .if_not_exists()
-                    .col(integer(PhysicalGroupJunction::PhysicalExpressionId))
-                    .col(integer(PhysicalGroupJunction::GroupId))
+                    .col(integer(PhysicalChildren::PhysicalExpressionId))
+                    .col(integer(PhysicalChildren::GroupId))
                     .primary_key(
                         Index::create()
-                            .col(PhysicalGroupJunction::PhysicalExpressionId)
-                            .col(PhysicalGroupJunction::GroupId),
+                            .col(PhysicalChildren::PhysicalExpressionId)
+                            .col(PhysicalChildren::GroupId),
                     )
                     .foreign_key(
                         ForeignKey::create()
                             .from(
-                                PhysicalGroupJunction::Table,
-                                PhysicalGroupJunction::PhysicalExpressionId,
+                                PhysicalChildren::Table,
+                                PhysicalChildren::PhysicalExpressionId,
                             )
                             .to(PhysicalExpression::Table, PhysicalExpression::Id)
                             .on_delete(ForeignKeyAction::Cascade)
@@ -40,7 +40,7 @@ impl MigrationTrait for Migration {
                     )
                     .foreign_key(
                         ForeignKey::create()
-                            .from(PhysicalGroupJunction::Table, PhysicalGroupJunction::GroupId)
+                            .from(PhysicalChildren::Table, PhysicalChildren::GroupId)
                             .to(CascadesGroup::Table, CascadesGroup::Id)
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
@@ -52,7 +52,7 @@ impl MigrationTrait for Migration {
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
-            .drop_table(Table::drop().table(PhysicalGroupJunction::Table).to_owned())
+            .drop_table(Table::drop().table(PhysicalChildren::Table).to_owned())
             .await
     }
 }

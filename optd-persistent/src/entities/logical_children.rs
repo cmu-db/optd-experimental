@@ -3,10 +3,10 @@
 use sea_orm::entity::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
-#[sea_orm(table_name = "physical_group_junction")]
+#[sea_orm(table_name = "logical_children")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
-    pub physical_expression_id: i32,
+    pub logical_expression_id: i32,
     #[sea_orm(primary_key, auto_increment = false)]
     pub group_id: i32,
 }
@@ -22,13 +22,13 @@ pub enum Relation {
     )]
     CascadesGroup,
     #[sea_orm(
-        belongs_to = "super::physical_expression::Entity",
-        from = "Column::PhysicalExpressionId",
-        to = "super::physical_expression::Column::Id",
+        belongs_to = "super::logical_expression::Entity",
+        from = "Column::GroupId",
+        to = "super::logical_expression::Column::Id",
         on_update = "Cascade",
         on_delete = "Cascade"
     )]
-    PhysicalExpression,
+    LogicalExpression,
 }
 
 impl Related<super::cascades_group::Entity> for Entity {
@@ -37,9 +37,9 @@ impl Related<super::cascades_group::Entity> for Entity {
     }
 }
 
-impl Related<super::physical_expression::Entity> for Entity {
+impl Related<super::logical_expression::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::PhysicalExpression.def()
+        Relation::LogicalExpression.def()
     }
 }
 

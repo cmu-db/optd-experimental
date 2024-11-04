@@ -25,8 +25,8 @@ pub enum Relation {
     CascadesGroup,
     #[sea_orm(has_many = "super::group_winner::Entity")]
     GroupWinner,
-    #[sea_orm(has_many = "super::physical_group_junction::Entity")]
-    PhysicalGroupJunction,
+    #[sea_orm(has_many = "super::physical_children::Entity")]
+    PhysicalChildren,
     #[sea_orm(has_many = "super::physical_property::Entity")]
     PhysicalProperty,
     #[sea_orm(has_many = "super::plan_cost::Entity")]
@@ -39,9 +39,9 @@ impl Related<super::group_winner::Entity> for Entity {
     }
 }
 
-impl Related<super::physical_group_junction::Entity> for Entity {
+impl Related<super::physical_children::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::PhysicalGroupJunction.def()
+        Relation::PhysicalChildren.def()
     }
 }
 
@@ -59,11 +59,11 @@ impl Related<super::plan_cost::Entity> for Entity {
 
 impl Related<super::cascades_group::Entity> for Entity {
     fn to() -> RelationDef {
-        super::physical_group_junction::Relation::CascadesGroup.def()
+        super::physical_children::Relation::CascadesGroup.def()
     }
     fn via() -> Option<RelationDef> {
         Some(
-            super::physical_group_junction::Relation::PhysicalExpression
+            super::physical_children::Relation::PhysicalExpression
                 .def()
                 .rev(),
         )

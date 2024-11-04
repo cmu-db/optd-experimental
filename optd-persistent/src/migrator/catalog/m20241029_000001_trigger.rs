@@ -27,18 +27,18 @@ impl MigrationTrait for Migration {
                     .col(integer(Trigger::TableId))
                     .foreign_key(
                         ForeignKey::create()
-                        .from(Trigger::Table, Trigger::TableId)
-                        .to(TableMetadata::Table, TableMetadata::Id)
-                        .on_delete(ForeignKeyAction::Cascade)
-                        .on_update(ForeignKeyAction::Cascade),
+                            .from(Trigger::Table, Trigger::TableId)
+                            .to(TableMetadata::Table, TableMetadata::Id)
+                            .on_delete(ForeignKeyAction::Cascade)
+                            .on_update(ForeignKeyAction::Cascade),
                     )
                     .col(integer(Trigger::ParentTriggerId))
                     .foreign_key(
                         ForeignKey::create()
-                        .from(Trigger::Table, Trigger::ParentTriggerId)
-                        .to(Trigger::Table, Trigger::Id)
-                        .on_delete(ForeignKeyAction::Cascade)
-                        .on_update(ForeignKeyAction::Cascade),
+                            .from(Trigger::Table, Trigger::ParentTriggerId)
+                            .to(Trigger::Table, Trigger::Id)
+                            .on_delete(ForeignKeyAction::Cascade)
+                            .on_update(ForeignKeyAction::Cascade),
                     )
                     .col(json(Trigger::Function))
                     .to_owned(),

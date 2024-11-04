@@ -47,7 +47,7 @@ async fn main() {
     .unwrap();
 
     // Create a link between the group and the logical expression in the junction table.
-    let _link = logical_group_junction::ActiveModel {
+    let _link = logical_children::ActiveModel {
         group_id: group.id.clone(),
         logical_expression_id: l_expr.id.clone(),
     }
