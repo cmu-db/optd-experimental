@@ -10,13 +10,8 @@ pub enum PhysicalGroupJunction {
     PhysicalExpressionId,
 }
 
+#[derive(DeriveMigrationName)]
 pub struct Migration;
-
-impl MigrationName for Migration {
-    fn name(&self) -> &str {
-        "m20241029_000001_physical_group_junction"
-    }
-}
 
 #[async_trait::async_trait]
 impl MigrationTrait for Migration {
