@@ -5,9 +5,9 @@ use sea_orm_migration::{prelude::*, schema::*};
 pub enum TableMetadata {
     Table,
     Id,
-    SchemaId,
     Name,
-    CreatedTime,
+    SchemaId,
+    CreationTime,
 }
 
 #[derive(DeriveMigrationName)]
@@ -22,9 +22,8 @@ impl MigrationTrait for Migration {
                     .table(TableMetadata::Table)
                     .if_not_exists()
                     .col(pk_auto(TableMetadata::Id))
-                    .col(integer(TableMetadata::SchemaId))
                     .col(string(TableMetadata::Name))
-                    .col(timestamp(TableMetadata::CreatedTime))
+                    .col(integer(TableMetadata::SchemaId))
                     .foreign_key(
                         ForeignKey::create()
                             .from(TableMetadata::Table, TableMetadata::SchemaId)
@@ -32,6 +31,7 @@ impl MigrationTrait for Migration {
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
+                    .col(timestamp(TableMetadata::CreationTime))
                     .to_owned(),
             )
             .await

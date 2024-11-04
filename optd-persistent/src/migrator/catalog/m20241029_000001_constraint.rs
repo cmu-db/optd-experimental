@@ -19,7 +19,7 @@ pub enum Constraint {
     Table,
     Id,
     Name,
-    ConstraintType,
+    VariantTag,
     TableId,
     IndexId,
     ForeignRefId,
@@ -39,11 +39,8 @@ impl MigrationTrait for Migration {
                     .if_not_exists()
                     .col(pk_auto(Constraint::Id))
                     .col(string(Constraint::Name))
-                    .col(integer(Constraint::ConstraintType))
+                    .col(integer(Constraint::VariantTag))
                     .col(integer(Constraint::TableId))
-                    .col(integer(Constraint::IndexId))
-                    .col(integer(Constraint::ForeignRefId))
-                    .col(string(Constraint::CheckSrc))
                     .foreign_key(
                         ForeignKey::create()
                             .from(Constraint::Table, Constraint::TableId)
@@ -51,6 +48,7 @@ impl MigrationTrait for Migration {
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
+                    .col(integer(Constraint::IndexId))
                     .foreign_key(
                         ForeignKey::create()
                             .from(Constraint::Table, Constraint::IndexId)
@@ -58,6 +56,7 @@ impl MigrationTrait for Migration {
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
+                    .col(integer(Constraint::ForeignRefId))
                     .foreign_key(
                         ForeignKey::create()
                             .from(Constraint::Table, Constraint::ForeignRefId)
@@ -65,6 +64,7 @@ impl MigrationTrait for Migration {
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
+                    .col(string(Constraint::CheckSrc))
                     .to_owned(),
             )
             .await

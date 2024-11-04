@@ -7,13 +7,15 @@ use sea_orm::entity::prelude::*;
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
-    pub schema_id: i32,
     pub name: String,
-    pub created_time: DateTimeUtc,
+    pub schema_id: i32,
+    pub creation_time: DateTimeUtc,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
+    #[sea_orm(has_many = "super::column::Entity")]
+    Column,
     #[sea_orm(has_many = "super::index::Entity")]
     Index,
     #[sea_orm(
@@ -24,10 +26,14 @@ pub enum Relation {
         on_delete = "Cascade"
     )]
     NamespaceMetadata,
-    #[sea_orm(has_many = "super::table_attribute::Entity")]
-    TableAttribute,
     #[sea_orm(has_many = "super::trigger::Entity")]
     Trigger,
+}
+
+impl Related<super::column::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Column.def()
+    }
 }
 
 impl Related<super::index::Entity> for Entity {
@@ -39,12 +45,6 @@ impl Related<super::index::Entity> for Entity {
 impl Related<super::namespace_metadata::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::NamespaceMetadata.def()
-    }
-}
-
-impl Related<super::table_attribute::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::TableAttribute.def()
     }
 }
 

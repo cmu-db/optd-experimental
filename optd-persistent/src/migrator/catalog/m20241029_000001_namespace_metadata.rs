@@ -5,9 +5,9 @@ use sea_orm_migration::{prelude::*, schema::*};
 pub enum NamespaceMetadata {
     Table,
     Id,
-    DatabaseId,
     Name,
-    CreatedTime,
+    DatabaseId,
+    CreationTime,
 }
 
 #[derive(DeriveMigrationName)]
@@ -22,9 +22,8 @@ impl MigrationTrait for Migration {
                     .table(NamespaceMetadata::Table)
                     .if_not_exists()
                     .col(pk_auto(NamespaceMetadata::Id))
-                    .col(integer(NamespaceMetadata::DatabaseId))
                     .col(string(NamespaceMetadata::Name))
-                    .col(timestamp(NamespaceMetadata::CreatedTime))
+                    .col(integer(NamespaceMetadata::DatabaseId))
                     .foreign_key(
                         ForeignKey::create()
                             .from(NamespaceMetadata::Table, NamespaceMetadata::DatabaseId)
@@ -32,6 +31,7 @@ impl MigrationTrait for Migration {
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
+                    .col(timestamp(NamespaceMetadata::CreationTime))
                     .to_owned(),
             )
             .await

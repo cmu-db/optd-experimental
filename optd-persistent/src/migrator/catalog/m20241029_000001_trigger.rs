@@ -5,8 +5,8 @@ use sea_orm_migration::{prelude::*, schema::*};
 pub enum Trigger {
     Table,
     Id,
-    TableId,
     Name,
+    TableId,
     ParentTriggerId,
     Function,
 }
@@ -23,24 +23,24 @@ impl MigrationTrait for Migration {
                     .table(Trigger::Table)
                     .if_not_exists()
                     .col(pk_auto(Trigger::Id))
-                    .col(integer(Trigger::TableId))
                     .col(string(Trigger::Name))
+                    .col(integer(Trigger::TableId))
+                    .foreign_key(
+                        ForeignKey::create()
+                        .from(Trigger::Table, Trigger::TableId)
+                        .to(TableMetadata::Table, TableMetadata::Id)
+                        .on_delete(ForeignKeyAction::Cascade)
+                        .on_update(ForeignKeyAction::Cascade),
+                    )
                     .col(integer(Trigger::ParentTriggerId))
+                    .foreign_key(
+                        ForeignKey::create()
+                        .from(Trigger::Table, Trigger::ParentTriggerId)
+                        .to(Trigger::Table, Trigger::Id)
+                        .on_delete(ForeignKeyAction::Cascade)
+                        .on_update(ForeignKeyAction::Cascade),
+                    )
                     .col(json(Trigger::Function))
-                    .foreign_key(
-                        ForeignKey::create()
-                            .from(Trigger::Table, Trigger::TableId)
-                            .to(TableMetadata::Table, TableMetadata::Id)
-                            .on_delete(ForeignKeyAction::Cascade)
-                            .on_update(ForeignKeyAction::Cascade),
-                    )
-                    .foreign_key(
-                        ForeignKey::create()
-                            .from(Trigger::Table, Trigger::ParentTriggerId)
-                            .to(Trigger::Table, Trigger::Id)
-                            .on_delete(ForeignKeyAction::Cascade)
-                            .on_update(ForeignKeyAction::Cascade),
-                    )
                     .to_owned(),
             )
             .await

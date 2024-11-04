@@ -44,6 +44,13 @@ impl MigrationTrait for Migration {
                     .if_not_exists()
                     .col(pk_auto(Index::Id))
                     .col(integer(Index::TableId))
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(Index::Table, Index::TableId)
+                            .to(TableMetadata::Table, TableMetadata::Id)
+                            .on_delete(ForeignKeyAction::Cascade)
+                            .on_update(ForeignKeyAction::Cascade),
+                    )
                     .col(string(Index::Name))
                     .col(integer(Index::NumberOfAttributes))
                     .col(boolean(Index::IsUnique))
@@ -52,13 +59,6 @@ impl MigrationTrait for Migration {
                     .col(boolean(Index::IsClustered))
                     .col(boolean(Index::IsExclusion))
                     .col(json(Index::Data))
-                    .foreign_key(
-                        ForeignKey::create()
-                            .from(Index::Table, Index::TableId)
-                            .to(TableMetadata::Table, TableMetadata::Id)
-                            .on_delete(ForeignKeyAction::Cascade)
-                            .on_update(ForeignKeyAction::Cascade),
-                    )
                     .to_owned(),
             )
             .await
