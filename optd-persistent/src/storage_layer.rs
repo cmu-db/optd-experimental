@@ -13,6 +13,8 @@ pub type GroupId = i32;
 pub type ExprId = i32;
 pub type EpochId = i32;
 
+pub type StorageResult<T> = Result<T, DbErr>;
+
 pub enum CatalogSource {
     Iceberg(),
 }
@@ -37,63 +39,75 @@ pub struct WinnerInfo {}
 
 pub trait StorageLayer {
     // TODO: Change EpochId to event::Model::epoch_id
-    async fn create_new_epoch(&self) -> EpochId;
+    async fn create_new_epoch(&self) -> StorageResult<EpochId>;
     async fn update_stats_from_catalog(
         &self,
         c: CatalogSource,
         epoch_id: EpochId,
-    ) -> Result<(), ()>;
+    ) -> StorageResult<()>;
     // i32 in `stats:i32` is a placeholder for the stats type
-    async fn update_stats(&self, stats: i32, epoch_id: EpochId) -> Result<(), ()>;
-    async fn store_cost(&self, expr_id: ExprId, cost: i32, epoch_id: EpochId) -> Result<(), ()>;
+    async fn update_stats(&self, stats: i32, epoch_id: EpochId) -> StorageResult<()>;
+    async fn store_cost(&self, expr_id: ExprId, cost: i32, epoch_id: EpochId) -> StorageResult<()>;
     // table_id, attr_id OR expr_id and return a vector?
     async fn get_stats_analysis(
         &self,
         table_id: i32,
         attr_id: Option<i32>,
         epoch_id: EpochId,
-    ) -> Option<i32>;
-    async fn get_stats(&self, table_id: i32, attr_id: Option<i32>) -> Option<i32>;
-    async fn get_cost_analysis(&self, expr_id: ExprId, epoch_id: EpochId) -> Option<i32>;
-    async fn get_cost(&self, expr_id: ExprId) -> Option<i32>;
+    ) -> StorageResult<Option<i32>>;
+    async fn get_stats(&self, table_id: i32, attr_id: Option<i32>) -> StorageResult<Option<i32>>;
+    async fn get_cost_analysis(
+        &self,
+        expr_id: ExprId,
+        epoch_id: EpochId,
+    ) -> StorageResult<Option<i32>>;
+    async fn get_cost(&self, expr_id: ExprId) -> StorageResult<Option<i32>>;
 
     async fn get_group_winner_from_group_id(
         &self,
         group_id: i32,
-    ) -> Option<physical_expression::ActiveModel>;
+    ) -> StorageResult<Option<physical_expression::ActiveModel>>;
 
     /// Add an expression to the memo table. If the expression already exists, it will return the existing group id and
     /// expr id. Otherwise, a new group and expr will be created.
-    async fn add_new_expr(&mut self, expr: Expression) -> (GroupId, ExprId);
+    async fn add_new_expr(&mut self, expr: Expression) -> StorageResult<(GroupId, ExprId)>;
 
     /// Add a new expression to an existing group. If the expression is a group, it will merge the two groups. Otherwise,
     /// it will add the expression to the group. Returns the expr id if the expression is not a group.
-    async fn add_expr_to_group(&mut self, expr: Expression, group_id: GroupId) -> Option<ExprId>;
+    async fn add_expr_to_group(
+        &mut self,
+        expr: Expression,
+        group_id: GroupId,
+    ) -> StorageResult<Option<ExprId>>;
 
     /// Get the group id of an expression.
     /// The group id is volatile, depending on whether the groups are merged.
-    async fn get_group_id(&self, expr_id: ExprId) -> GroupId;
+    async fn get_group_id(&self, expr_id: ExprId) -> StorageResult<GroupId>;
 
     /// Get the memoized representation of a node.
-    async fn get_expr_memoed(&self, expr_id: ExprId) -> Expression;
+    async fn get_expr_memoed(&self, expr_id: ExprId) -> StorageResult<Expression>;
 
     /// Get all groups IDs in the memo table.
-    async fn get_all_group_ids(&self) -> Vec<GroupId>;
+    async fn get_all_group_ids(&self) -> StorageResult<Vec<GroupId>>;
 
     /// Get a group by ID
-    async fn get_group(&self, group_id: GroupId) -> cascades_group::ActiveModel;
+    async fn get_group(&self, group_id: GroupId) -> StorageResult<cascades_group::ActiveModel>;
 
     /// Update the group winner.
-    async fn update_group_winner(&mut self, group_id: GroupId, latest_winner: Option<ExprId>);
+    async fn update_group_winner(
+        &mut self,
+        group_id: GroupId,
+        latest_winner: Option<ExprId>,
+    ) -> StorageResult<()>;
 
     // The below functions can be overwritten by the memo table implementation if there
     // are more efficient way to retrieve the information.
 
     /// Get all expressions in the group.
-    async fn get_all_exprs_in_group(&self, group_id: GroupId) -> Vec<ExprId>;
+    async fn get_all_exprs_in_group(&self, group_id: GroupId) -> StorageResult<Vec<ExprId>>;
 
     /// Get winner info for a group id
-    async fn get_group_info(&self, group_id: GroupId) -> &Option<ExprId>;
+    async fn get_group_info(&self, group_id: GroupId) -> StorageResult<&Option<ExprId>>;
 
     // TODO:
     /// Get the best group binding based on the cost
@@ -125,8 +139,11 @@ pub trait StorageLayer {
     // };
 
     /// Get all bindings of a predicate group. Will panic if the group contains more than one bindings.
-    async fn get_predicate_binding(&self, group_id: GroupId) -> Option<Expression>;
+    async fn get_predicate_binding(&self, group_id: GroupId) -> StorageResult<Option<Expression>>;
 
     /// Get all bindings of a predicate group. Returns None if the group contains zero or more than one bindings.
-    async fn try_get_predicate_binding(&self, group_id: GroupId) -> Option<Expression>;
+    async fn try_get_predicate_binding(
+        &self,
+        group_id: GroupId,
+    ) -> StorageResult<Option<Expression>>;
 }
