@@ -22,6 +22,8 @@ pub async fn migrate(db: &DatabaseConnection) -> Result<(), DbErr> {
     assert!(schema_manager.has_table("physical_expression").await?);
     assert!(schema_manager.has_table("physical_property").await?);
     assert!(schema_manager.has_table("physical_group_junction").await?);
+    assert!(schema_manager.has_table("event").await?);
+    assert!(schema_manager.has_table("cost").await?);
 
     Ok(())
 }
