@@ -1,3 +1,8 @@
+//! An entity representing a logical property of a Cascades group.
+//!
+//! TODO what exactly are we storing in here?
+//! TODO why is it linked to only cascades groups and not logical expressions?
+
 use crate::migrator::memo::cascades_group::CascadesGroup;
 use sea_orm_migration::{prelude::*, schema::*};
 
