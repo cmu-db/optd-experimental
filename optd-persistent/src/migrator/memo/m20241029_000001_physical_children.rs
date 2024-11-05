@@ -1,3 +1,15 @@
+//! An entity representing the [`cascades_group`] children of every [`physical_expression`].
+//!
+//! Formally, this entity is a junction which allows us to represent a many-to-many relationship
+//! between [`physical_expression`] and [`cascades_group`]. Expressions can have any number of child
+//! groups, and every group can be a child of many different expressions, hence the many-to-many
+//! relationship.
+//!
+//! See [`cascades_group`] for more details.
+//!
+//! [`cascades_group`]: super::cascades_group
+//! [`physical_expression`]: super::physical_expression
+
 use crate::migrator::memo::{
     cascades_group::CascadesGroup, physical_expression::PhysicalExpression,
 };
