@@ -40,16 +40,30 @@ impl StorageLayer for ORMManager {
         todo!()
     }
 
-    async fn get_stats_analysis(
+    async fn get_stats_for_table(
         &self,
         table_id: i32,
-        attr_id: Option<i32>,
-        epoch_id: storage_layer::EpochId,
+        stat_type: i32,
+        epoch_id: Option<EpochId>,
     ) -> StorageResult<Option<i32>> {
         todo!()
     }
 
-    async fn get_stats(&self, table_id: i32, attr_id: Option<i32>) -> StorageResult<Option<i32>> {
+    async fn get_stats_for_attr(
+        &self,
+        attr_id: i32,
+        stat_type: i32,
+        epoch_id: Option<EpochId>,
+    ) -> StorageResult<Option<i32>> {
+        todo!()
+    }
+
+    async fn get_stats_for_attrs(
+        &self,
+        attr_ids: Vec<i32>,
+        stat_type: i32,
+        epoch_id: Option<EpochId>,
+    ) -> StorageResult<Option<i32>> {
         todo!()
     }
 
