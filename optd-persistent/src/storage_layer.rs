@@ -39,7 +39,7 @@ pub struct WinnerInfo {}
 
 pub trait StorageLayer {
     // TODO: Change EpochId to event::Model::epoch_id
-    async fn create_new_epoch(&self) -> StorageResult<EpochId>;
+    async fn create_new_epoch(&mut self, source: String, data: String) -> StorageResult<EpochId>;
     async fn update_stats_from_catalog(
         &self,
         c: CatalogSource,

@@ -11,7 +11,7 @@ pub struct ORMManager {
 }
 
 impl StorageLayer for ORMManager {
-    async fn create_new_epoch(&self) -> StorageResult<storage_layer::EpochId> {
+    async fn create_new_epoch(&mut self, source: String, data: String) -> StorageResult<EpochId> {
         todo!()
     }
 
