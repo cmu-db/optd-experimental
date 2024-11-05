@@ -1,3 +1,6 @@
+//! Entities related to the memo table used for dynamic programming in the Cascades query
+//! optimization framework.
+
 pub(crate) mod m20241029_000001_cascades_group;
 pub(crate) mod m20241029_000001_group_winner;
 pub(crate) mod m20241029_000001_logical_children;
