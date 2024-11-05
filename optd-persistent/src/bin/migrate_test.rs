@@ -13,4 +13,11 @@ async fn main() {
     migrate(&db)
         .await
         .expect("Something went wrong during migration");
+
+    db.execute(sea_orm::Statement::from_string(
+        sea_orm::DatabaseBackend::Sqlite,
+        "PRAGMA foreign_keys = ON;".to_owned(),
+    ))
+    .await
+    .expect("Unable to enable foreign keys");
 }

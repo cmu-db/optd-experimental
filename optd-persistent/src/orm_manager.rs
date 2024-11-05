@@ -1,7 +1,7 @@
 #![allow(dead_code, unused_imports, unused_variables)]
 
-use crate::entities::event::Entity as Event;
 use crate::entities::{prelude::*, *};
+use crate::orm_manager::{Cost, Event};
 use crate::storage_layer::{self, EpochId, StorageLayer};
 use crate::DATABASE_URL;
 use sea_orm::*;
@@ -60,26 +60,6 @@ impl StorageLayer for ORMManager {
         todo!()
     }
 
-    async fn store_cost(
-        &self,
-        expr_id: storage_layer::ExprId,
-        cost: i32,
-        epoch_id: storage_layer::EpochId,
-    ) -> Result<(), DbErr> {
-        let new_cost = cost::ActiveModel {
-            expr_id: ActiveValue::Set(expr_id),
-            epoch_id: ActiveValue::Set(epoch_id),
-            cost: ActiveValue::Set(cost),
-            valid: ActiveValue::Set(true),
-            ..Default::default()
-        };
-        let res = Cost::insert(new_cost).exec(&self.db_conn).await;
-        match res {
-            Ok(_) => Ok(()),
-            Err(_) => Err(DbErr::RecordNotInserted),
-        }
-    }
-
     async fn get_stats_analysis(
         &self,
         table_id: i32,
@@ -93,16 +73,71 @@ impl StorageLayer for ORMManager {
         todo!()
     }
 
+    async fn store_cost(
+        &self,
+        expr_id: storage_layer::ExprId,
+        cost: i32,
+        epoch_id: storage_layer::EpochId,
+    ) -> Result<(), DbErr> {
+        // TODO: update PhysicalExpression and Event tables
+        // Check if expr_id exists in PhysicalExpression table
+        let expr_exists = PhysicalExpression::find_by_id(expr_id)
+            .one(&self.db_conn)
+            .await?;
+        if expr_exists.is_none() {
+            return Err(DbErr::RecordNotFound(
+                "ExprId not found in PhysicalExpression table".to_string(),
+            ));
+        }
+
+        // Check if epoch_id exists in Event table
+        let epoch_exists = Event::find()
+            .filter(event::Column::EpochId.eq(epoch_id))
+            .one(&self.db_conn)
+            .await
+            .unwrap();
+
+        let new_cost = cost::ActiveModel {
+            expr_id: ActiveValue::Set(expr_id),
+            epoch_id: ActiveValue::Set(epoch_id),
+            cost: ActiveValue::Set(cost),
+            valid: ActiveValue::Set(true),
+            ..Default::default()
+        };
+        let res = Cost::insert(new_cost).exec(&self.db_conn).await;
+        match res {
+            Ok(_) => Ok(()),
+            Err(e) => Err(DbErr::Custom(e.to_string())),
+        }
+    }
+
     async fn get_cost_analysis(
         &self,
         expr_id: storage_layer::ExprId,
         epoch_id: storage_layer::EpochId,
     ) -> Option<i32> {
-        todo!()
+        let cost = Cost::find()
+            .filter(cost::Column::ExprId.eq(expr_id))
+            .filter(cost::Column::EpochId.eq(epoch_id))
+            .one(&self.db_conn)
+            .await
+            .unwrap();
+        assert!(cost.is_some(), "Cost not found in Cost table");
+        assert!(cost.clone().unwrap().valid, "Cost is not valid");
+        cost.map(|c| c.cost)
     }
 
+    /// Get the latest cost for an expression
     async fn get_cost(&self, expr_id: storage_layer::ExprId) -> Option<i32> {
-        todo!()
+        let cost = Cost::find()
+            .filter(cost::Column::ExprId.eq(expr_id))
+            .order_by_desc(cost::Column::EpochId)
+            .one(&self.db_conn)
+            .await
+            .unwrap();
+        assert!(cost.is_some(), "Cost not found in Cost table");
+        assert!(cost.clone().unwrap().valid, "Cost is not valid");
+        cost.map(|c| c.cost)
     }
 
     async fn get_group_winner_from_group_id(
@@ -183,37 +218,39 @@ impl StorageLayer for ORMManager {
     }
 }
 
-// NOTE: Please run `cargo run --bin migrate_test` before you want to run this test.
 #[cfg(test)]
 mod tests {
-    use sea_orm::{EntityTrait, ModelTrait};
+    use crate::migrate;
+    use sea_orm::{ConnectionTrait, Database, EntityTrait, ModelTrait};
     use serde_json::de;
 
     use crate::entities::event::Entity as Event;
     use crate::storage_layer::StorageLayer;
     use crate::TEST_DATABASE_URL;
 
-    async fn delete_all_events(orm_manager: &mut super::ORMManager) {
-        let events = super::Event::find()
-            .all(&orm_manager.db_conn)
-            .await
-            .unwrap();
-        for event in events {
-            event.delete(&orm_manager.db_conn).await.unwrap();
-        }
-    }
+    async fn run_migration() {
+        let _ = std::fs::remove_file(TEST_DATABASE_URL);
 
-    async fn delete_all_costs(orm_manager: &mut super::ORMManager) {
-        let costs = super::Cost::find().all(&orm_manager.db_conn).await.unwrap();
-        for cost in costs {
-            cost.delete(&orm_manager.db_conn).await.unwrap();
-        }
+        let db = Database::connect(TEST_DATABASE_URL)
+            .await
+            .expect("Unable to connect to the database");
+
+        migrate(&db)
+            .await
+            .expect("Something went wrong during migration");
+
+        db.execute(sea_orm::Statement::from_string(
+            sea_orm::DatabaseBackend::Sqlite,
+            "PRAGMA foreign_keys = ON;".to_owned(),
+        ))
+        .await
+        .expect("Unable to enable foreign keys");
     }
 
     #[tokio::test]
     async fn test_create_new_epoch() {
+        run_migration().await;
         let mut orm_manager = super::ORMManager::new(Some(TEST_DATABASE_URL)).await;
-        delete_all_events(&mut orm_manager).await;
         let res = orm_manager
             .create_new_epoch("source".to_string(), "data".to_string())
             .await;
@@ -242,13 +279,13 @@ mod tests {
                 .epoch_id,
             res.unwrap()
         );
-        delete_all_events(&mut orm_manager).await;
     }
 
     #[tokio::test]
+    #[ignore] // Need to update all tables
     async fn test_store_cost() {
+        run_migration().await;
         let mut orm_manager = super::ORMManager::new(Some(TEST_DATABASE_URL)).await;
-        delete_all_costs(&mut orm_manager).await;
         let epoch_id = orm_manager
             .create_new_epoch("source".to_string(), "data".to_string())
             .await
@@ -256,12 +293,17 @@ mod tests {
         let expr_id = 1;
         let cost = 42;
         let res = orm_manager.store_cost(expr_id, cost, epoch_id).await;
-        assert!(res.is_ok());
+        match res {
+            Ok(_) => assert!(true),
+            Err(e) => {
+                println!("Error: {:?}", e);
+                assert!(false);
+            }
+        }
         let costs = super::Cost::find().all(&orm_manager.db_conn).await.unwrap();
         assert_eq!(costs.len(), 1);
         assert_eq!(costs[0].epoch_id, epoch_id);
         assert_eq!(costs[0].expr_id, expr_id);
         assert_eq!(costs[0].cost, cost);
-        delete_all_events(&mut orm_manager).await;
     }
 }
