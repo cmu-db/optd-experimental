@@ -1,4 +1,4 @@
-use crate::migrator::cost_model::{cost::PlanCost, event::Event};
+use crate::migrator::cost_model::{event::Event, plan_cost::PlanCost};
 use crate::migrator::memo::{
     cascades_group::CascadesGroup, physical_expression::PhysicalExpression,
 };
@@ -10,7 +10,7 @@ pub enum GroupWinner {
     Id,
     GroupId,
     PhysicalExpressionId,
-    Cost,
+    CostId,
     EpochId,
 }
 
@@ -42,10 +42,10 @@ impl MigrationTrait for Migration {
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
-                    .col(integer(GroupWinner::Cost))
+                    .col(integer(GroupWinner::CostId))
                     .foreign_key(
                         ForeignKey::create()
-                            .from(GroupWinner::Table, GroupWinner::Cost)
+                            .from(GroupWinner::Table, GroupWinner::CostId)
                             .to(PlanCost::Table, PlanCost::Id)
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),

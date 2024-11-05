@@ -22,7 +22,7 @@ impl MigratorTrait for Migrator {
             Box::new(cost_model::column_statistic::Migration),
             Box::new(cost_model::column_statistic_column_junction::Migration),
             Box::new(cost_model::event::Migration),
-            Box::new(cost_model::cost::Migration),
+            Box::new(cost_model::plan_cost::Migration),
             Box::new(memo::cascades_group::Migration),
             Box::new(memo::group_winner::Migration),
             Box::new(memo::logical_expression::Migration),

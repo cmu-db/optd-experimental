@@ -9,7 +9,7 @@ pub struct Model {
     pub id: i32,
     pub group_id: i32,
     pub physical_expression_id: i32,
-    pub cost: i32,
+    pub cost_id: i32,
     pub epoch_id: i32,
 }
 
@@ -41,7 +41,7 @@ pub enum Relation {
     PhysicalExpression,
     #[sea_orm(
         belongs_to = "super::plan_cost::Entity",
-        from = "Column::Cost",
+        from = "Column::CostId",
         to = "super::plan_cost::Column::Id",
         on_update = "Cascade",
         on_delete = "Cascade"
