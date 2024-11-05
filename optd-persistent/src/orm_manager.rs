@@ -2,7 +2,7 @@
 
 use crate::entities::{prelude::*, *};
 use crate::orm_manager::{Cost, Event};
-use crate::storage_layer::{self, EpochId, StorageLayer};
+use crate::storage_layer::{self, EpochId, StorageLayer, StorageResult};
 use crate::DATABASE_URL;
 use sea_orm::*;
 use sqlx::types::chrono::Utc;
@@ -31,7 +31,7 @@ impl StorageLayer for ORMManager {
         &mut self,
         source: String,
         data: String,
-    ) -> Result<storage_layer::EpochId, ()> {
+    ) -> StorageResult<storage_layer::EpochId> {
         let new_event = event::ActiveModel {
             source_variant: sea_orm::ActiveValue::Set(source),
             create_timestamp: sea_orm::ActiveValue::Set(Utc::now()),
@@ -39,24 +39,25 @@ impl StorageLayer for ORMManager {
             ..Default::default()
         };
         let res = Event::insert(new_event).exec(&self.db_conn).await;
-        match res {
-            Ok(insert_res) => {
-                self.latest_epoch_id = insert_res.last_insert_id;
-                Ok(self.latest_epoch_id)
-            }
-            Err(_) => Err(()),
-        }
+        res.and_then(|insert_res| {
+            self.latest_epoch_id = insert_res.last_insert_id;
+            Ok(self.latest_epoch_id)
+        })
     }
 
     async fn update_stats_from_catalog(
         &self,
         c: storage_layer::CatalogSource,
         epoch_id: storage_layer::EpochId,
-    ) -> Result<(), ()> {
+    ) -> StorageResult<()> {
         todo!()
     }
 
-    async fn update_stats(&self, stats: i32, epoch_id: storage_layer::EpochId) -> Result<(), ()> {
+    async fn update_stats(
+        &self,
+        stats: i32,
+        epoch_id: storage_layer::EpochId,
+    ) -> StorageResult<()> {
         todo!()
     }
 
@@ -65,11 +66,11 @@ impl StorageLayer for ORMManager {
         table_id: i32,
         attr_id: Option<i32>,
         epoch_id: storage_layer::EpochId,
-    ) -> Option<i32> {
+    ) -> StorageResult<Option<i32>> {
         todo!()
     }
 
-    async fn get_stats(&self, table_id: i32, attr_id: Option<i32>) -> Option<i32> {
+    async fn get_stats(&self, table_id: i32, attr_id: Option<i32>) -> StorageResult<Option<i32>> {
         todo!()
     }
 
@@ -78,7 +79,7 @@ impl StorageLayer for ORMManager {
         expr_id: storage_layer::ExprId,
         cost: i32,
         epoch_id: storage_layer::EpochId,
-    ) -> Result<(), DbErr> {
+    ) -> StorageResult<()> {
         // TODO: update PhysicalExpression and Event tables
         // Check if expr_id exists in PhysicalExpression table
         let expr_exists = PhysicalExpression::find_by_id(expr_id)
@@ -104,53 +105,47 @@ impl StorageLayer for ORMManager {
             valid: ActiveValue::Set(true),
             ..Default::default()
         };
-        let res = Cost::insert(new_cost).exec(&self.db_conn).await;
-        match res {
-            Ok(_) => Ok(()),
-            Err(e) => Err(DbErr::Custom(e.to_string())),
-        }
+        Cost::insert(new_cost).exec(&self.db_conn).await.map(|_| ())
     }
 
     async fn get_cost_analysis(
         &self,
         expr_id: storage_layer::ExprId,
         epoch_id: storage_layer::EpochId,
-    ) -> Option<i32> {
+    ) -> StorageResult<Option<i32>> {
         let cost = Cost::find()
             .filter(cost::Column::ExprId.eq(expr_id))
             .filter(cost::Column::EpochId.eq(epoch_id))
             .one(&self.db_conn)
-            .await
-            .unwrap();
+            .await?;
         assert!(cost.is_some(), "Cost not found in Cost table");
         assert!(cost.clone().unwrap().valid, "Cost is not valid");
-        cost.map(|c| c.cost)
+        Ok(cost.map(|c| c.cost))
     }
 
     /// Get the latest cost for an expression
-    async fn get_cost(&self, expr_id: storage_layer::ExprId) -> Option<i32> {
+    async fn get_cost(&self, expr_id: storage_layer::ExprId) -> StorageResult<Option<i32>> {
         let cost = Cost::find()
             .filter(cost::Column::ExprId.eq(expr_id))
             .order_by_desc(cost::Column::EpochId)
             .one(&self.db_conn)
-            .await
-            .unwrap();
+            .await?;
         assert!(cost.is_some(), "Cost not found in Cost table");
         assert!(cost.clone().unwrap().valid, "Cost is not valid");
-        cost.map(|c| c.cost)
+        Ok(cost.map(|c| c.cost))
     }
 
     async fn get_group_winner_from_group_id(
         &self,
         group_id: i32,
-    ) -> Option<physical_expression::ActiveModel> {
+    ) -> StorageResult<Option<physical_expression::ActiveModel>> {
         todo!()
     }
 
     async fn add_new_expr(
         &mut self,
         expr: storage_layer::Expression,
-    ) -> (storage_layer::GroupId, storage_layer::ExprId) {
+    ) -> StorageResult<(storage_layer::GroupId, storage_layer::ExprId)> {
         todo!()
     }
 
@@ -158,26 +153,32 @@ impl StorageLayer for ORMManager {
         &mut self,
         expr: storage_layer::Expression,
         group_id: storage_layer::GroupId,
-    ) -> Option<storage_layer::ExprId> {
+    ) -> StorageResult<Option<storage_layer::ExprId>> {
         todo!()
     }
 
-    async fn get_group_id(&self, expr_id: storage_layer::ExprId) -> storage_layer::GroupId {
+    async fn get_group_id(
+        &self,
+        expr_id: storage_layer::ExprId,
+    ) -> StorageResult<storage_layer::GroupId> {
         todo!()
     }
 
-    async fn get_expr_memoed(&self, expr_id: storage_layer::ExprId) -> storage_layer::Expression {
+    async fn get_expr_memoed(
+        &self,
+        expr_id: storage_layer::ExprId,
+    ) -> StorageResult<storage_layer::Expression> {
         todo!()
     }
 
-    async fn get_all_group_ids(&self) -> Vec<storage_layer::GroupId> {
+    async fn get_all_group_ids(&self) -> StorageResult<Vec<storage_layer::GroupId>> {
         todo!()
     }
 
     async fn get_group(
         &self,
         group_id: storage_layer::GroupId,
-    ) -> crate::entities::cascades_group::ActiveModel {
+    ) -> StorageResult<crate::entities::cascades_group::ActiveModel> {
         todo!()
     }
 
@@ -185,35 +186,35 @@ impl StorageLayer for ORMManager {
         &mut self,
         group_id: storage_layer::GroupId,
         latest_winner: Option<storage_layer::ExprId>,
-    ) {
+    ) -> StorageResult<()> {
         todo!()
     }
 
     async fn get_all_exprs_in_group(
         &self,
         group_id: storage_layer::GroupId,
-    ) -> Vec<storage_layer::ExprId> {
+    ) -> StorageResult<Vec<storage_layer::ExprId>> {
         todo!()
     }
 
     async fn get_group_info(
         &self,
         group_id: storage_layer::GroupId,
-    ) -> &Option<storage_layer::ExprId> {
+    ) -> StorageResult<&Option<storage_layer::ExprId>> {
         todo!()
     }
 
     async fn get_predicate_binding(
         &self,
         group_id: storage_layer::GroupId,
-    ) -> Option<storage_layer::Expression> {
+    ) -> StorageResult<Option<storage_layer::Expression>> {
         todo!()
     }
 
     async fn try_get_predicate_binding(
         &self,
         group_id: storage_layer::GroupId,
-    ) -> Option<storage_layer::Expression> {
+    ) -> StorageResult<Option<storage_layer::Expression>> {
         todo!()
     }
 }
