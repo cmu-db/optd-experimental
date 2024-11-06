@@ -20,7 +20,7 @@ Table table_metadata {
   created_time timestamp
 }
 
-Table table_attribute {
+Table attribute {
   id integer PK // global index
   table_id integer [ref: > table_metadata.id]
   name varchar
@@ -30,7 +30,7 @@ Table table_attribute {
   is_not_null boolean // physical property
 }
 
-Table attribute_statistic {
+Table statistic {
   id integer PK
   name varchar
   table_id integer
@@ -39,8 +39,8 @@ Table attribute_statistic {
   number_of_attributes integer
   statistic_type integer // Should we make another table to explain the type mapping?
   statistic_value float
-  Ref: attribute_statistic.epoch_id > event.epoch_id
-  Ref: attribute_statistic.table_id > table_metadata.id
+  Ref: statistic.epoch_id > event.epoch_id
+  Ref: statistic.table_id > table_metadata.id
 }
 
 Table event {
@@ -89,7 +89,7 @@ Table trigger {
   function json
 }
 
-// Not-null is handled directly in `table_attribute`. See `is_not_null` field.
+// Not-null is handled directly in `attribute`. See `is_not_null` field.
 // Constraint trigger is handled directly in `trigger`.
 Table constraint {
   id integer PK
@@ -102,20 +102,20 @@ Table constraint {
 }
 
 // The constrained attributes (columns) if a constraint is a table constraint (including foreign keys, but not constraint triggers)
-Table constraint_attribute_junction {
+Table attribute_constraint_junction {
+  attribute_id integer [ref: > attribute.id]
   constraint_id integer [ref: > constraint.id]
-  attr_id integer [ref: > table_attribute.id]
 }
 
 // The referenced attributes (columns) if the constraint is a foreign key
 Table foreign_constraint_ref_attribute_junction {
   constraint_id integer [ref: > constraint.id]
-  attr_id integer [ref: > table_attribute.id]
+  attribute_id integer [ref: > attribute.id]
 }
 
-Table attribute_stats_junction {
-  attr_id integer [ref: > table_attribute.id]
-  stats_id integer [ref: > attribute_stats.id]
+Table statistic_attribute_junction {
+  statistic_id integer [ref: > statistic.id]
+  attribute_id integer [ref: > attribute.id]
 }
 
 // Logical expressions and groups

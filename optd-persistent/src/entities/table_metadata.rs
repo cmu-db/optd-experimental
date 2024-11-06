@@ -16,8 +16,6 @@ pub struct Model {
 pub enum Relation {
     #[sea_orm(has_many = "super::attribute::Entity")]
     Attribute,
-    #[sea_orm(has_many = "super::attribute_statistic::Entity")]
-    AttributeStatistic,
     #[sea_orm(has_many = "super::index::Entity")]
     Index,
     #[sea_orm(
@@ -28,6 +26,8 @@ pub enum Relation {
         on_delete = "Cascade"
     )]
     NamespaceMetadata,
+    #[sea_orm(has_many = "super::statistic::Entity")]
+    Statistic,
     #[sea_orm(has_many = "super::trigger::Entity")]
     Trigger,
 }
@@ -35,12 +35,6 @@ pub enum Relation {
 impl Related<super::attribute::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Attribute.def()
-    }
-}
-
-impl Related<super::attribute_statistic::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::AttributeStatistic.def()
     }
 }
 
@@ -53,6 +47,12 @@ impl Related<super::index::Entity> for Entity {
 impl Related<super::namespace_metadata::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::NamespaceMetadata.def()
+    }
+}
+
+impl Related<super::statistic::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Statistic.def()
     }
 }
 

@@ -1,5 +1,5 @@
 /*
-Table attribute_statistic {
+Table statistic {
   id integer PK
   name varchar
   table_id integer
@@ -8,8 +8,8 @@ Table attribute_statistic {
   number_of_attributes integer
   statistic_type integer // Should we make another table to explain the type mapping?
   statistic_value float
-  Ref: attribute_statistic.epoch_id > event.epoch_id
-  Ref: attribute_statistic.table_id > table_metadata.id
+  Ref: statistic.epoch_id > event.epoch_id
+  Ref: statistic.table_id > table_metadata.id
 } */
 
 use crate::migrator::{
@@ -18,7 +18,7 @@ use crate::migrator::{
 use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(Iden)]
-pub enum AttributeStatistic {
+pub enum Statistic {
     Table,
     Id,
     Name,
@@ -39,30 +39,30 @@ impl MigrationTrait for Migration {
         manager
             .create_table(
                 Table::create()
-                    .table(AttributeStatistic::Table)
+                    .table(Statistic::Table)
                     .if_not_exists()
-                    .col(pk_auto(AttributeStatistic::Id))
-                    .col(string(AttributeStatistic::Name))
-                    .col(integer(AttributeStatistic::TableId))
+                    .col(pk_auto(Statistic::Id))
+                    .col(string(Statistic::Name))
+                    .col(integer(Statistic::TableId))
                     .foreign_key(
                         ForeignKey::create()
-                            .from(AttributeStatistic::Table, AttributeStatistic::TableId)
+                            .from(Statistic::Table, Statistic::TableId)
                             .to(TableMetadata::Table, TableMetadata::Id)
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
-                    .col(integer(AttributeStatistic::EpochId))
+                    .col(integer(Statistic::EpochId))
                     .foreign_key(
                         ForeignKey::create()
-                            .from(AttributeStatistic::Table, AttributeStatistic::EpochId)
+                            .from(Statistic::Table, Statistic::EpochId)
                             .to(Event::Table, Event::EpochId)
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
-                    .col(timestamp(AttributeStatistic::CreatedTime))
-                    .col(integer(AttributeStatistic::NumberOfAttributes))
-                    .col(integer(AttributeStatistic::StatisticType))
-                    .col(float(AttributeStatistic::StatisticValue))
+                    .col(timestamp(Statistic::CreatedTime))
+                    .col(integer(Statistic::NumberOfAttributes))
+                    .col(integer(Statistic::StatisticType))
+                    .col(float(Statistic::StatisticValue))
                     .to_owned(),
             )
             .await
@@ -70,7 +70,7 @@ impl MigrationTrait for Migration {
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
-            .drop_table(Table::drop().table(AttributeStatistic::Table).to_owned())
+            .drop_table(Table::drop().table(Statistic::Table).to_owned())
             .await
     }
 }

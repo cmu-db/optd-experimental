@@ -3,10 +3,10 @@
 use sea_orm::entity::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
-#[sea_orm(table_name = "attribute_statistic_to_attribute_junction")]
+#[sea_orm(table_name = "statistic_to_attribute_junction")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
-    pub attribute_statistic_id: i32,
+    pub statistic_id: i32,
     #[sea_orm(primary_key, auto_increment = false)]
     pub attribute_id: i32,
 }
@@ -22,13 +22,13 @@ pub enum Relation {
     )]
     Attribute,
     #[sea_orm(
-        belongs_to = "super::attribute_statistic::Entity",
-        from = "Column::AttributeStatisticId",
-        to = "super::attribute_statistic::Column::Id",
+        belongs_to = "super::statistic::Entity",
+        from = "Column::StatisticId",
+        to = "super::statistic::Column::Id",
         on_update = "Cascade",
         on_delete = "Cascade"
     )]
-    AttributeStatistic,
+    Statistic,
 }
 
 impl Related<super::attribute::Entity> for Entity {
@@ -37,9 +37,9 @@ impl Related<super::attribute::Entity> for Entity {
     }
 }
 
-impl Related<super::attribute_statistic::Entity> for Entity {
+impl Related<super::statistic::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::AttributeStatistic.def()
+        Relation::Statistic.def()
     }
 }
 

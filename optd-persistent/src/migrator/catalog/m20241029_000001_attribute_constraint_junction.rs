@@ -1,8 +1,8 @@
 /*
 // The constrained attributes (columns) if a constraint is a table constraint (including foreign keys, but not constraint triggers)
-Table constraint_attribute_junction {
+Table attribute_constraint_junction {
+  attribute_id integer [ref: > attribute.id]
   constraint_id integer [ref: > constraint.id]
-  attr_id integer [ref: > table_attribute.id]
 }
 */
 

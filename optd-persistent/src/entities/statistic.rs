@@ -3,7 +3,7 @@
 use sea_orm::entity::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
-#[sea_orm(table_name = "attribute_statistic")]
+#[sea_orm(table_name = "statistic")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
@@ -19,8 +19,6 @@ pub struct Model {
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
-    #[sea_orm(has_many = "super::attribute_statistic_to_attribute_junction::Entity")]
-    AttributeStatisticToAttributeJunction,
     #[sea_orm(
         belongs_to = "super::event::Entity",
         from = "Column::EpochId",
@@ -29,6 +27,8 @@ pub enum Relation {
         on_delete = "Cascade"
     )]
     Event,
+    #[sea_orm(has_many = "super::statistic_to_attribute_junction::Entity")]
+    StatisticToAttributeJunction,
     #[sea_orm(
         belongs_to = "super::table_metadata::Entity",
         from = "Column::TableId",
@@ -39,15 +39,15 @@ pub enum Relation {
     TableMetadata,
 }
 
-impl Related<super::attribute_statistic_to_attribute_junction::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::AttributeStatisticToAttributeJunction.def()
-    }
-}
-
 impl Related<super::event::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Event.def()
+    }
+}
+
+impl Related<super::statistic_to_attribute_junction::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::StatisticToAttributeJunction.def()
     }
 }
 
@@ -59,11 +59,11 @@ impl Related<super::table_metadata::Entity> for Entity {
 
 impl Related<super::attribute::Entity> for Entity {
     fn to() -> RelationDef {
-        super::attribute_statistic_to_attribute_junction::Relation::Attribute.def()
+        super::statistic_to_attribute_junction::Relation::Attribute.def()
     }
     fn via() -> Option<RelationDef> {
         Some(
-            super::attribute_statistic_to_attribute_junction::Relation::AttributeStatistic
+            super::statistic_to_attribute_junction::Relation::Statistic
                 .def()
                 .rev(),
         )
