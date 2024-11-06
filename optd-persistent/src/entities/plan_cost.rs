@@ -3,26 +3,18 @@
 use sea_orm::entity::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
-#[sea_orm(table_name = "group_winner")]
+#[sea_orm(table_name = "plan_cost")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
-    pub group_id: i32,
     pub physical_expression_id: i32,
-    pub cost_id: i32,
     pub epoch_id: i32,
+    pub cost: i32,
+    pub is_valid: bool,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
-    #[sea_orm(
-        belongs_to = "super::cascades_group::Entity",
-        from = "Column::GroupId",
-        to = "super::cascades_group::Column::Id",
-        on_update = "Cascade",
-        on_delete = "Cascade"
-    )]
-    CascadesGroup,
     #[sea_orm(
         belongs_to = "super::event::Entity",
         from = "Column::EpochId",
@@ -31,6 +23,8 @@ pub enum Relation {
         on_delete = "Cascade"
     )]
     Event,
+    #[sea_orm(has_many = "super::group_winner::Entity")]
+    GroupWinner,
     #[sea_orm(
         belongs_to = "super::physical_expression::Entity",
         from = "Column::PhysicalExpressionId",
@@ -39,20 +33,6 @@ pub enum Relation {
         on_delete = "Cascade"
     )]
     PhysicalExpression,
-    #[sea_orm(
-        belongs_to = "super::plan_cost::Entity",
-        from = "Column::CostId",
-        to = "super::plan_cost::Column::Id",
-        on_update = "Cascade",
-        on_delete = "Cascade"
-    )]
-    PlanCost,
-}
-
-impl Related<super::cascades_group::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::CascadesGroup.def()
-    }
 }
 
 impl Related<super::event::Entity> for Entity {
@@ -61,15 +41,15 @@ impl Related<super::event::Entity> for Entity {
     }
 }
 
-impl Related<super::physical_expression::Entity> for Entity {
+impl Related<super::group_winner::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::PhysicalExpression.def()
+        Relation::GroupWinner.def()
     }
 }
 
-impl Related<super::plan_cost::Entity> for Entity {
+impl Related<super::physical_expression::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::PlanCost.def()
+        Relation::PhysicalExpression.def()
     }
 }
 

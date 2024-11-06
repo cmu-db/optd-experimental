@@ -7,8 +7,8 @@ use sea_orm::entity::prelude::*;
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
-    pub table_id: i32,
     pub name: String,
+    pub table_id: i32,
     pub parent_trigger_id: i32,
     pub function: Json,
 }

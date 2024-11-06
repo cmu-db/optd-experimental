@@ -32,13 +32,14 @@ async fn main() {
 
     // Create a new logical expression.
     let l_expr = logical_expression::ActiveModel {
+        group_id: group.id.clone(),
         fingerprint: ActiveValue::Set(42), // Example fingerprint
+        variant_tag: ActiveValue::Set(1),  // Example variant tag
         data: ActiveValue::Set(json!({ // Example operator
             "type": "Scan",
             "table": "lineitem",
             "predicate": "l_quantity < 10",
         })),
-        group_id: group.id.clone(),
         ..Default::default()
     }
     .save(&db)
@@ -46,7 +47,7 @@ async fn main() {
     .unwrap();
 
     // Create a link between the group and the logical expression in the junction table.
-    let _link = logical_group_junction::ActiveModel {
+    let _link = logical_children::ActiveModel {
         group_id: group.id.clone(),
         logical_expression_id: l_expr.id.clone(),
     }

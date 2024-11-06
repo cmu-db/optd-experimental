@@ -2,24 +2,24 @@
 
 pub mod prelude;
 
-pub mod attribute_stat;
-pub mod attribute_stats_junction;
+pub mod attribute;
+pub mod attribute_constraint_junction;
+pub mod attribute_foreign_constraint_junction;
 pub mod cascades_group;
 pub mod constraint;
-pub mod constraint_attribute_junction;
-pub mod cost;
 pub mod database_metadata;
 pub mod event;
-pub mod foreign_constraint_ref_attribute_junction;
 pub mod group_winner;
 pub mod index;
+pub mod logical_children;
 pub mod logical_expression;
-pub mod logical_group_junction;
 pub mod logical_property;
 pub mod namespace_metadata;
+pub mod physical_children;
 pub mod physical_expression;
-pub mod physical_group_junction;
 pub mod physical_property;
-pub mod table_attribute;
+pub mod plan_cost;
+pub mod statistic;
+pub mod statistic_to_attribute_junction;
 pub mod table_metadata;
 pub mod trigger;
