@@ -60,7 +60,7 @@ pub trait StorageLayer {
         table_id: i32,
         stat_type: i32,
         epoch_id: Option<EpochId>,
-    ) -> StorageResult<Option<i32>>;
+    ) -> StorageResult<Option<f32>>;
 
     /// Get the statistics for a given attribute.
     ///
@@ -70,7 +70,7 @@ pub trait StorageLayer {
         attr_id: i32,
         stat_type: i32,
         epoch_id: Option<EpochId>,
-    ) -> StorageResult<Option<i32>>;
+    ) -> StorageResult<Option<f32>>;
 
     /// Get the joint statistics for a list of attributes.
     ///
@@ -80,7 +80,7 @@ pub trait StorageLayer {
         attr_ids: Vec<i32>,
         stat_type: i32,
         epoch_id: Option<EpochId>,
-    ) -> StorageResult<Option<i32>>;
+    ) -> StorageResult<Option<f32>>;
 
     async fn get_cost_analysis(
         &self,

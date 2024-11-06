@@ -103,7 +103,7 @@ impl StorageLayer for ORMManager {
         table_id: i32,
         stat_type: i32,
         epoch_id: Option<EpochId>,
-    ) -> StorageResult<Option<i32>> {
+    ) -> StorageResult<Option<f32>> {
         todo!()
     }
 
@@ -112,7 +112,7 @@ impl StorageLayer for ORMManager {
         attr_id: i32,
         stat_type: i32,
         epoch_id: Option<EpochId>,
-    ) -> StorageResult<Option<i32>> {
+    ) -> StorageResult<Option<f32>> {
         todo!()
     }
 
@@ -121,7 +121,7 @@ impl StorageLayer for ORMManager {
         attr_ids: Vec<i32>,
         stat_type: i32,
         epoch_id: Option<EpochId>,
-    ) -> StorageResult<Option<i32>> {
+    ) -> StorageResult<Option<f32>> {
         todo!()
     }
 
