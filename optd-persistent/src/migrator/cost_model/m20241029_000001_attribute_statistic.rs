@@ -1,14 +1,15 @@
 /*
-Table attribute_stat {
+Table attribute_statistic {
   id integer PK
-  number_of_attributes integer // do we need it?
-  data json // stores the related table id and attribute ids
-  epoch_id integer
   name varchar
+  table_id integer
+  epoch_id integer
   created_time timestamp
-  stats_type integer // Should we make another table to explain the type mapping?
-  stats_value integer // Can we represent every stats value into integer?
-  Ref: attribute_stats.epoch_id > event.epoch_id
+  number_of_attributes integer
+  statistic_type integer // Should we make another table to explain the type mapping?
+  statistic_value float
+  Ref: attribute_statistic.epoch_id > event.epoch_id
+  Ref: attribute_statistic.table_id > table_metadata.id
 } */
 
 use crate::migrator::{
