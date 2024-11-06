@@ -13,6 +13,9 @@ mod migrator;
 pub mod cost_model;
 pub use cost_model::interface::CostModelStorageLayer;
 
+mod memo;
+pub use memo::interface::Memo;
+
 /// The filename of the SQLite database for migration.
 pub const DATABASE_FILENAME: &str = "sqlite.db";
 /// The URL of the SQLite database for migration.
@@ -39,8 +42,6 @@ fn get_sqlite_url(file: &str) -> String {
     format!("sqlite:{}?mode=rwc", file)
 }
 
-pub type StorageResult<T> = Result<T, BackendError>;
-
 #[derive(Debug)]
 pub enum CostModelError {
     // TODO: Add more error types
@@ -48,9 +49,22 @@ pub enum CostModelError {
     VersionedStatisticNotFound,
 }
 
+/// TODO convert this to `thiserror`
+#[derive(Debug)]
+/// The different kinds of errors that might occur while running operations on a memo table.
+pub enum MemoError {
+    UnknownGroup,
+    UnknownLogicalExpression,
+    UnknownPhysicalExpression,
+    InvalidExpression,
+    Database(DbErr),
+}
+
+/// TODO convert this to `thiserror`
 #[derive(Debug)]
 pub enum BackendError {
     CostModel(CostModelError),
+    Memo(MemoError),
     Database(DbErr),
     // TODO: Add other variants as needed for different error types
 }
@@ -61,11 +75,26 @@ impl From<CostModelError> for BackendError {
     }
 }
 
+impl From<MemoError> for BackendError {
+    fn from(value: MemoError) -> Self {
+        BackendError::Memo(value)
+    }
+}
+
 impl From<DbErr> for BackendError {
     fn from(value: DbErr) -> Self {
         BackendError::Database(value)
     }
 }
+
+impl From<DbErr> for MemoError {
+    fn from(value: DbErr) -> Self {
+        MemoError::Database(value)
+    }
+}
+
+/// A type alias for a result with [`BackendError`] as the error type.
+pub type StorageResult<T> = Result<T, BackendError>;
 
 pub struct BackendManager {
     db: DatabaseConnection,
