@@ -85,6 +85,11 @@ impl StorageLayer for ORMManager {
             .one(&self.db_conn)
             .await
             .unwrap();
+        if epoch_exists.is_none() {
+            return Err(DbErr::RecordNotFound(
+                "EpochId not found in Event table".to_string(),
+            ));
+        }
 
         let new_cost = plan_cost::ActiveModel {
             physical_expression_id: ActiveValue::Set(expr_id),
