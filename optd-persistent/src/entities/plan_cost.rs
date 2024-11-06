@@ -9,7 +9,7 @@ pub struct Model {
     pub id: i32,
     pub physical_expression_id: i32,
     pub epoch_id: i32,
-    pub cost_id: i32,
+    pub cost: i32,
     pub is_valid: bool,
 }
 
