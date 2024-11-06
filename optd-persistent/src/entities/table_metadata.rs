@@ -16,6 +16,8 @@ pub struct Model {
 pub enum Relation {
     #[sea_orm(has_many = "super::attribute::Entity")]
     Attribute,
+    #[sea_orm(has_many = "super::attribute_statistic::Entity")]
+    AttributeStatistic,
     #[sea_orm(has_many = "super::index::Entity")]
     Index,
     #[sea_orm(
@@ -33,6 +35,12 @@ pub enum Relation {
 impl Related<super::attribute::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Attribute.def()
+    }
+}
+
+impl Related<super::attribute_statistic::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::AttributeStatistic.def()
     }
 }
 

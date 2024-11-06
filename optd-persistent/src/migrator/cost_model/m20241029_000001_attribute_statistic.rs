@@ -11,7 +11,9 @@ Table attribute_stat {
   Ref: attribute_stats.epoch_id > event.epoch_id
 } */
 
-use crate::migrator::cost_model::event::Event;
+use crate::migrator::{
+    catalog::m20241029_000001_table_metadata::TableMetadata, cost_model::event::Event,
+};
 use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(Iden)]
@@ -19,6 +21,7 @@ pub enum AttributeStatistic {
     Table,
     Id,
     Name,
+    TableId,
     EpochId,
     CreatedTime,
     NumberOfAttributes,
@@ -39,6 +42,14 @@ impl MigrationTrait for Migration {
                     .if_not_exists()
                     .col(pk_auto(AttributeStatistic::Id))
                     .col(string(AttributeStatistic::Name))
+                    .col(integer(AttributeStatistic::TableId))
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(AttributeStatistic::Table, AttributeStatistic::TableId)
+                            .to(TableMetadata::Table, TableMetadata::Id)
+                            .on_delete(ForeignKeyAction::Cascade)
+                            .on_update(ForeignKeyAction::Cascade),
+                    )
                     .col(integer(AttributeStatistic::EpochId))
                     .foreign_key(
                         ForeignKey::create()
@@ -50,7 +61,7 @@ impl MigrationTrait for Migration {
                     .col(timestamp(AttributeStatistic::CreatedTime))
                     .col(integer(AttributeStatistic::NumberOfAttributes))
                     .col(integer(AttributeStatistic::StatisticType))
-                    .col(integer(AttributeStatistic::StatisticValue))
+                    .col(float(AttributeStatistic::StatisticValue))
                     .to_owned(),
             )
             .await
