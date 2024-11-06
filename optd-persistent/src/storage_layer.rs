@@ -87,6 +87,7 @@ pub trait StorageLayer {
         expr_id: ExprId,
         epoch_id: EpochId,
     ) -> StorageResult<Option<i32>>;
+
     async fn get_cost(&self, expr_id: ExprId) -> StorageResult<Option<i32>>;
 
     async fn get_group_winner_from_group_id(
