@@ -2,15 +2,16 @@
 Table statistic {
   id integer PK
   name varchar
-  table_id integer
+  table_id integer // 0 if not a table statistic
   epoch_id integer
   created_time timestamp
-  number_of_attributes integer
+  number_of_attributes integer // 0 if a table constraint
   statistic_type integer // Should we make another table to explain the type mapping?
   statistic_value float
   Ref: statistic.epoch_id > event.epoch_id
   Ref: statistic.table_id > table_metadata.id
-} */
+}
+*/
 
 use crate::migrator::{
     catalog::m20241029_000001_table_metadata::TableMetadata, cost_model::event::Event,
