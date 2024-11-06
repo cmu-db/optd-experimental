@@ -1,14 +1,6 @@
-/*
-Table plan_cost {
-  id integer PK
-  physical_expression_id integer [ref: > physical_expression.id]
-  epoch_id integer [ref: > event.epoch_id]
-  cost integer
-  // Whether the cost is valid or not. If the latest cost for an expr is invalid, then we need to recompute the cost.
-  // We need to invalidate the cost when the related stats are updated.
-  is_valid boolean
-}
-*/
+//! When a statistic is updated, then all the related costs should be invalidated. (IsValid is set to false)
+//! This design (using IsValid flag) is based on the assumption that update_stats will not be called very frequently.
+//! It favors the compute_cost performance over the update_stats performance.
 
 use crate::migrator::cost_model::event::Event;
 use crate::migrator::memo::physical_expression::PhysicalExpression;
@@ -21,6 +13,8 @@ pub enum PlanCost {
     PhysicalExpressionId,
     EpochId,
     Cost,
+    // Whether the cost is valid or not. If the latest cost for an expr is invalid, then we need to recompute the cost.
+    // We need to invalidate the cost when the related stats are updated.
     IsValid,
 }
 

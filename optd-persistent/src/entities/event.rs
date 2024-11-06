@@ -18,8 +18,8 @@ pub enum Relation {
     GroupWinner,
     #[sea_orm(has_many = "super::plan_cost::Entity")]
     PlanCost,
-    #[sea_orm(has_many = "super::statistic::Entity")]
-    Statistic,
+    #[sea_orm(has_many = "super::versioned_statistic::Entity")]
+    VersionedStatistic,
 }
 
 impl Related<super::group_winner::Entity> for Entity {
@@ -34,9 +34,9 @@ impl Related<super::plan_cost::Entity> for Entity {
     }
 }
 
-impl Related<super::statistic::Entity> for Entity {
+impl Related<super::versioned_statistic::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::Statistic.def()
+        Relation::VersionedStatistic.def()
     }
 }
 

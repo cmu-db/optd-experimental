@@ -2,31 +2,23 @@
 
 use sea_orm::entity::prelude::*;
 
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
 #[sea_orm(table_name = "statistic")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
     pub name: String,
     pub table_id: i32,
-    pub epoch_id: i32,
     pub created_time: DateTimeUtc,
     pub number_of_attributes: i32,
     pub statistic_type: i32,
-    #[sea_orm(column_type = "Float")]
-    pub statistic_value: f32,
+    pub description: String,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
-    #[sea_orm(
-        belongs_to = "super::event::Entity",
-        from = "Column::EpochId",
-        to = "super::event::Column::EpochId",
-        on_update = "Cascade",
-        on_delete = "Cascade"
-    )]
-    Event,
+    #[sea_orm(has_many = "super::physical_expression_to_statistic_junction::Entity")]
+    PhysicalExpressionToStatisticJunction,
     #[sea_orm(has_many = "super::statistic_to_attribute_junction::Entity")]
     StatisticToAttributeJunction,
     #[sea_orm(
@@ -37,11 +29,13 @@ pub enum Relation {
         on_delete = "Cascade"
     )]
     TableMetadata,
+    #[sea_orm(has_many = "super::versioned_statistic::Entity")]
+    VersionedStatistic,
 }
 
-impl Related<super::event::Entity> for Entity {
+impl Related<super::physical_expression_to_statistic_junction::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::Event.def()
+        Relation::PhysicalExpressionToStatisticJunction.def()
     }
 }
 
@@ -57,6 +51,12 @@ impl Related<super::table_metadata::Entity> for Entity {
     }
 }
 
+impl Related<super::versioned_statistic::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::VersionedStatistic.def()
+    }
+}
+
 impl Related<super::attribute::Entity> for Entity {
     fn to() -> RelationDef {
         super::statistic_to_attribute_junction::Relation::Attribute.def()
@@ -64,6 +64,19 @@ impl Related<super::attribute::Entity> for Entity {
     fn via() -> Option<RelationDef> {
         Some(
             super::statistic_to_attribute_junction::Relation::Statistic
+                .def()
+                .rev(),
+        )
+    }
+}
+
+impl Related<super::physical_expression::Entity> for Entity {
+    fn to() -> RelationDef {
+        super::physical_expression_to_statistic_junction::Relation::PhysicalExpression.def()
+    }
+    fn via() -> Option<RelationDef> {
+        Some(
+            super::physical_expression_to_statistic_junction::Relation::Statistic
                 .def()
                 .rev(),
         )

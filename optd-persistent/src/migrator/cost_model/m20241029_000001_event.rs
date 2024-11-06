@@ -1,3 +1,6 @@
+//! Every time we insert/update statistics, we need to insert a new
+//! row into this table to record the event.
+
 use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(Iden)]
