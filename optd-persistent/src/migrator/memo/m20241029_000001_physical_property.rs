@@ -1,3 +1,8 @@
+//! An entity representing a physical property of a physical expression in the Cascades framework.
+//!
+//! TODO what exactly are we storing in here?
+//! TODO why is it linked to only physical expressions and not cascades groups?
+
 use crate::migrator::memo::physical_expression::PhysicalExpression;
 use sea_orm_migration::{prelude::*, schema::*};
 

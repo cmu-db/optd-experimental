@@ -1,3 +1,15 @@
+//! An entity representing the [`cascades_group`] children of every [`logical_expression`].
+//!
+//! Formally, this entity is a junction which allows us to represent a many-to-many relationship
+//! between [`logical_expression`] and [`cascades_group`]. Expressions can have any number of child
+//! groups, and every group can be a child of many different expressions, hence the many-to-many
+//! relationship.
+//!
+//! See [`cascades_group`] for more details.
+//!
+//! [`cascades_group`]: super::cascades_group
+//! [`logical_expression`]: super::logical_expression
+
 use crate::migrator::memo::{cascades_group::CascadesGroup, logical_expression::LogicalExpression};
 use sea_orm_migration::{prelude::*, schema::*};
 
