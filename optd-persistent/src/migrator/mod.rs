@@ -33,6 +33,10 @@ impl MigratorTrait for Migrator {
             Box::new(memo::physical_expression::Migration),
             Box::new(memo::physical_children::Migration),
             Box::new(memo::physical_property::Migration),
+            Box::new(memo::predicate::Migration),
+            Box::new(memo::predicate_children::Migration),
+            Box::new(memo::predicate_logical_expression_junction::Migration),
+            Box::new(memo::predicate_physical_expression_junction::Migration),
         ]
     }
 }

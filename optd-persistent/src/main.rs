@@ -17,6 +17,17 @@ use optd_persistent::DATABASE_URL;
 
 #[tokio::main]
 async fn main() {
+    basic_demo().await;
+    memo_demo().await;
+}
+
+async fn memo_demo() {
+    let _db = Database::connect(DATABASE_URL).await.unwrap();
+
+    todo!()
+}
+
+async fn basic_demo() {
     let db = Database::connect(DATABASE_URL).await.unwrap();
 
     // Create a new `CascadesGroup`.
