@@ -33,14 +33,18 @@ Table attribute {
 Table statistic {
   id integer PK
   name varchar
-  table_id integer // 0 if not a table statistic
-  epoch_id integer
+  table_id integer [ref: > table_metadata.id] // 0 if not a table statistic
   created_time timestamp
   number_of_attributes integer // 0 if a table constraint
   statistic_type integer // Should we make another table to explain the type mapping?
+  data varchar // Store the content of this statistic, to support quick lookup
+}
+
+Table versioned_statistic {
+  id integer PK
+  epoch_id integer [ref: > event.epoch_id]
+  statistic_id integer [ref: > statistic.id]
   statistic_value float
-  Ref: statistic.epoch_id > event.epoch_id
-  Ref: statistic.table_id > table_metadata.id
 }
 
 Table event {
@@ -116,6 +120,11 @@ Table attribute_foreign_constraint_junction {
 Table statistic_attribute_junction {
   statistic_id integer [ref: > statistic.id]
   attribute_id integer [ref: > attribute.id]
+}
+
+Table physical_expression_statistics_junction {
+  physical_expression_id integer [ref: > physical_expression.id]
+  statistic_id integer [ref: > statistic.id]
 }
 
 // Logical expressions and groups
