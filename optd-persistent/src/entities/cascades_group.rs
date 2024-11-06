@@ -16,22 +16,22 @@ pub struct Model {
 pub enum Relation {
     #[sea_orm(has_many = "super::group_winner::Entity")]
     GroupWinner,
+    #[sea_orm(has_many = "super::logical_children::Entity")]
+    LogicalChildren,
     #[sea_orm(has_many = "super::logical_expression::Entity")]
     LogicalExpression,
-    #[sea_orm(has_many = "super::logical_group_junction::Entity")]
-    LogicalGroupJunction,
     #[sea_orm(has_many = "super::logical_property::Entity")]
     LogicalProperty,
+    #[sea_orm(has_many = "super::physical_children::Entity")]
+    PhysicalChildren,
     #[sea_orm(
         belongs_to = "super::physical_expression::Entity",
         from = "Column::LatestWinner",
         to = "super::physical_expression::Column::Id",
         on_update = "Cascade",
-        on_delete = "Cascade"
+        on_delete = "SetNull"
     )]
     PhysicalExpression,
-    #[sea_orm(has_many = "super::physical_group_junction::Entity")]
-    PhysicalGroupJunction,
 }
 
 impl Related<super::group_winner::Entity> for Entity {
@@ -40,9 +40,9 @@ impl Related<super::group_winner::Entity> for Entity {
     }
 }
 
-impl Related<super::logical_group_junction::Entity> for Entity {
+impl Related<super::logical_children::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::LogicalGroupJunction.def()
+        Relation::LogicalChildren.def()
     }
 }
 
@@ -52,32 +52,28 @@ impl Related<super::logical_property::Entity> for Entity {
     }
 }
 
-impl Related<super::physical_group_junction::Entity> for Entity {
+impl Related<super::physical_children::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::PhysicalGroupJunction.def()
+        Relation::PhysicalChildren.def()
     }
 }
 
 impl Related<super::logical_expression::Entity> for Entity {
     fn to() -> RelationDef {
-        super::logical_group_junction::Relation::LogicalExpression.def()
+        super::logical_children::Relation::LogicalExpression.def()
     }
     fn via() -> Option<RelationDef> {
-        Some(
-            super::logical_group_junction::Relation::CascadesGroup
-                .def()
-                .rev(),
-        )
+        Some(super::logical_children::Relation::CascadesGroup.def().rev())
     }
 }
 
 impl Related<super::physical_expression::Entity> for Entity {
     fn to() -> RelationDef {
-        super::physical_group_junction::Relation::PhysicalExpression.def()
+        super::physical_children::Relation::PhysicalExpression.def()
     }
     fn via() -> Option<RelationDef> {
         Some(
-            super::physical_group_junction::Relation::CascadesGroup
+            super::physical_children::Relation::CascadesGroup
                 .def()
                 .rev(),
         )

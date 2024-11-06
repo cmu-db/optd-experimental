@@ -1,7 +1,7 @@
 #![allow(dead_code, unused_imports, unused_variables)]
 
 use crate::entities::{prelude::*, *};
-use crate::orm_manager::{Cost, Event};
+use crate::orm_manager::{Event, PlanCost};
 use crate::storage_layer::{self, EpochId, StorageLayer, StorageResult};
 use crate::DATABASE_URL;
 use sea_orm::*;
@@ -34,7 +34,7 @@ impl StorageLayer for ORMManager {
     ) -> StorageResult<storage_layer::EpochId> {
         let new_event = event::ActiveModel {
             source_variant: sea_orm::ActiveValue::Set(source),
-            create_timestamp: sea_orm::ActiveValue::Set(Utc::now()),
+            timestamp: sea_orm::ActiveValue::Set(Utc::now()),
             data: sea_orm::ActiveValue::Set(sea_orm::JsonValue::String(data)),
             ..Default::default()
         };
@@ -85,14 +85,17 @@ impl StorageLayer for ORMManager {
             .await
             .unwrap();
 
-        let new_cost = cost::ActiveModel {
-            expr_id: ActiveValue::Set(expr_id),
+        let new_cost = plan_cost::ActiveModel {
+            physical_expression_id: ActiveValue::Set(expr_id),
             epoch_id: ActiveValue::Set(epoch_id),
             cost: ActiveValue::Set(cost),
-            valid: ActiveValue::Set(true),
+            is_valid: ActiveValue::Set(true),
             ..Default::default()
         };
-        Cost::insert(new_cost).exec(&self.db_conn).await.map(|_| ())
+        PlanCost::insert(new_cost)
+            .exec(&self.db_conn)
+            .await
+            .map(|_| ())
     }
 
     async fn get_stats_for_table(
@@ -127,25 +130,25 @@ impl StorageLayer for ORMManager {
         expr_id: storage_layer::ExprId,
         epoch_id: storage_layer::EpochId,
     ) -> StorageResult<Option<i32>> {
-        let cost = Cost::find()
-            .filter(cost::Column::ExprId.eq(expr_id))
-            .filter(cost::Column::EpochId.eq(epoch_id))
+        let cost = PlanCost::find()
+            .filter(plan_cost::Column::PhysicalExpressionId.eq(expr_id))
+            .filter(plan_cost::Column::EpochId.eq(epoch_id))
             .one(&self.db_conn)
             .await?;
         assert!(cost.is_some(), "Cost not found in Cost table");
-        assert!(cost.clone().unwrap().valid, "Cost is not valid");
+        assert!(cost.clone().unwrap().is_valid, "Cost is not valid");
         Ok(cost.map(|c| c.cost))
     }
 
     /// Get the latest cost for an expression
     async fn get_cost(&self, expr_id: storage_layer::ExprId) -> StorageResult<Option<i32>> {
-        let cost = Cost::find()
-            .filter(cost::Column::ExprId.eq(expr_id))
-            .order_by_desc(cost::Column::EpochId)
+        let cost = PlanCost::find()
+            .filter(plan_cost::Column::PhysicalExpressionId.eq(expr_id))
+            .order_by_desc(plan_cost::Column::EpochId)
             .one(&self.db_conn)
             .await?;
         assert!(cost.is_some(), "Cost not found in Cost table");
-        assert!(cost.clone().unwrap().valid, "Cost is not valid");
+        assert!(cost.clone().unwrap().is_valid, "Cost is not valid");
         Ok(cost.map(|c| c.cost))
     }
 
@@ -315,10 +318,13 @@ mod tests {
                 assert!(false);
             }
         }
-        let costs = super::Cost::find().all(&orm_manager.db_conn).await.unwrap();
+        let costs = super::PlanCost::find()
+            .all(&orm_manager.db_conn)
+            .await
+            .unwrap();
         assert_eq!(costs.len(), 1);
         assert_eq!(costs[0].epoch_id, epoch_id);
-        assert_eq!(costs[0].expr_id, expr_id);
+        assert_eq!(costs[0].physical_expression_id, expr_id);
         assert_eq!(costs[0].cost, cost);
     }
 }
