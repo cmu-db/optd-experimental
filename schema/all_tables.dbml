@@ -108,9 +108,9 @@ Table attribute_constraint_junction {
 }
 
 // The referenced attributes (columns) if the constraint is a foreign key
-Table foreign_constraint_ref_attribute_junction {
-  constraint_id integer [ref: > constraint.id]
+Table attribute_foreign_constraint_junction {
   attribute_id integer [ref: > attribute.id]
+  constraint_id integer [ref: > constraint.id]
 }
 
 Table statistic_attribute_junction {
