@@ -1,11 +1,14 @@
 /*
-Table cost {
+Table plan_cost {
   id integer PK
-  expr_id integer [ref: > physical_expression.id]
+  physical_expression_id integer [ref: > physical_expression.id]
   epoch_id integer [ref: > event.epoch_id]
   cost integer
-  valid boolean
-} */
+  // Whether the cost is valid or not. If the latest cost for an expr is invalid, then we need to recompute the cost.
+  // We need to invalidate the cost when the related stats are updated.
+  is_valid boolean
+}
+*/
 
 use crate::migrator::cost_model::event::Event;
 use crate::migrator::memo::physical_expression::PhysicalExpression;
@@ -17,7 +20,7 @@ pub enum PlanCost {
     Id,
     PhysicalExpressionId,
     EpochId,
-    CostId,
+    Cost,
     IsValid,
 }
 
@@ -49,7 +52,7 @@ impl MigrationTrait for Migration {
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
-                    .col(integer(PlanCost::CostId))
+                    .col(integer(PlanCost::Cost))
                     .col(boolean(PlanCost::IsValid))
                     .to_owned(),
             )

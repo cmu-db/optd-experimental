@@ -50,14 +50,14 @@ Table event {
   data json
 }
 
-Table cost {
+Table plan_cost {
   id integer PK
-  expr_id integer [ref: > physical_expression.id]
+  physical_expression_id integer [ref: > physical_expression.id]
   epoch_id integer [ref: > event.epoch_id]
   cost integer
   // Whether the cost is valid or not. If the latest cost for an expr is invalid, then we need to recompute the cost.
   // We need to invalidate the cost when the related stats are updated.
-  valid boolean
+  is_valid boolean
 }
 
 Table index {
@@ -174,7 +174,7 @@ Table group_winner {
   id integer [pk]
   group_id integer [ref: > cascades_group.id]
   physical_expression_id integer [ref: > physical_expression.id]
-  cost integer
+  cost_id integer [ref: > plan_cost.id]
   epoch_id integer [ref: > event.epoch_id]
 }
 
