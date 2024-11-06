@@ -1,7 +1,7 @@
 /*
 Table statistic_attribute_junction {
   statistic_id integer [ref: > statistic.id]
-  attribute_id integer [ref: > table_attribute.id]
+  attribute_id integer [ref: > attribute.id]
 }
  */
 
