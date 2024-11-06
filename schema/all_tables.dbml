@@ -122,7 +122,7 @@ Table statistic_to_attribute_junction {
   attribute_id integer [ref: > attribute.id]
 }
 
-Table physical_expression_to_statistics_junction {
+Table physical_expression_to_statistic_junction {
   physical_expression_id integer [ref: > physical_expression.id]
   statistic_id integer [ref: > statistic.id]
 }
