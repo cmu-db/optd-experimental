@@ -5,6 +5,7 @@ use crate::orm_manager::{Event, PlanCost};
 use crate::storage_layer::{self, EpochId, StorageLayer, StorageResult};
 use crate::DATABASE_URL;
 use sea_orm::*;
+use sea_query::Expr;
 use sqlx::types::chrono::Utc;
 
 pub struct ORMManager {
@@ -32,7 +33,17 @@ impl StorageLayer for ORMManager {
         source: String,
         data: String,
     ) -> StorageResult<storage_layer::EpochId> {
-        todo!()
+        let new_event = event::ActiveModel {
+            source_variant: sea_orm::ActiveValue::Set(source),
+            timestamp: sea_orm::ActiveValue::Set(Utc::now()),
+            data: sea_orm::ActiveValue::Set(sea_orm::JsonValue::String(data)),
+            ..Default::default()
+        };
+        let res = Event::insert(new_event).exec(&self.db_conn).await;
+        res.and_then(|insert_res| {
+            self.latest_epoch_id = insert_res.last_insert_id;
+            Ok(self.latest_epoch_id)
+        })
     }
 
     async fn update_stats_from_catalog(
@@ -57,7 +68,35 @@ impl StorageLayer for ORMManager {
         cost: i32,
         epoch_id: storage_layer::EpochId,
     ) -> StorageResult<()> {
-        todo!()
+        // TODO: update PhysicalExpression and Event tables
+        // Check if expr_id exists in PhysicalExpression table
+        let expr_exists = PhysicalExpression::find_by_id(expr_id)
+            .one(&self.db_conn)
+            .await?;
+        if expr_exists.is_none() {
+            return Err(DbErr::RecordNotFound(
+                "ExprId not found in PhysicalExpression table".to_string(),
+            ));
+        }
+
+        // Check if epoch_id exists in Event table
+        let epoch_exists = Event::find()
+            .filter(event::Column::EpochId.eq(epoch_id))
+            .one(&self.db_conn)
+            .await
+            .unwrap();
+
+        let new_cost = plan_cost::ActiveModel {
+            physical_expression_id: ActiveValue::Set(expr_id),
+            epoch_id: ActiveValue::Set(epoch_id),
+            cost: ActiveValue::Set(cost),
+            is_valid: ActiveValue::Set(true),
+            ..Default::default()
+        };
+        PlanCost::insert(new_cost)
+            .exec(&self.db_conn)
+            .await
+            .map(|_| ())
     }
 
     async fn get_stats_for_table(
@@ -66,7 +105,23 @@ impl StorageLayer for ORMManager {
         stat_type: i32,
         epoch_id: Option<EpochId>,
     ) -> StorageResult<Option<f32>> {
-        todo!()
+        match epoch_id {
+            Some(epoch_id) => Statistic::find()
+                .filter(statistic::Column::TableId.eq(table_id))
+                .filter(statistic::Column::StatisticType.eq(stat_type))
+                .filter(statistic::Column::EpochId.eq(epoch_id))
+                .one(&self.db_conn)
+                .await
+                .map(|stat| stat.map(|s| s.statistic_value)),
+
+            None => Statistic::find()
+                .filter(statistic::Column::TableId.eq(table_id))
+                .filter(statistic::Column::StatisticType.eq(stat_type))
+                .order_by_desc(statistic::Column::EpochId)
+                .one(&self.db_conn)
+                .await
+                .map(|stat| stat.map(|s| s.statistic_value)),
+        }
     }
 
     async fn get_stats_for_attr(
@@ -75,7 +130,27 @@ impl StorageLayer for ORMManager {
         stat_type: i32,
         epoch_id: Option<EpochId>,
     ) -> StorageResult<Option<f32>> {
-        todo!()
+        match epoch_id {
+            Some(epoch_id) => Statistic::find()
+                .filter(statistic::Column::NumberOfAttributes.eq(1))
+                .filter(statistic::Column::StatisticType.eq(stat_type))
+                .filter(statistic::Column::EpochId.eq(epoch_id))
+                .inner_join(statistic_to_attribute_junction::Entity)
+                .filter(statistic_to_attribute_junction::Column::AttributeId.eq(attr_id))
+                .one(&self.db_conn)
+                .await
+                .map(|stat| stat.map(|s| s.statistic_value)),
+
+            None => Statistic::find()
+                .filter(statistic::Column::NumberOfAttributes.eq(1))
+                .filter(statistic::Column::StatisticType.eq(stat_type))
+                .inner_join(statistic_to_attribute_junction::Entity)
+                .filter(statistic_to_attribute_junction::Column::AttributeId.eq(attr_id))
+                .order_by_desc(statistic::Column::EpochId)
+                .one(&self.db_conn)
+                .await
+                .map(|stat| stat.map(|s| s.statistic_value)),
+        }
     }
 
     async fn get_stats_for_attrs(
@@ -84,7 +159,32 @@ impl StorageLayer for ORMManager {
         stat_type: i32,
         epoch_id: Option<EpochId>,
     ) -> StorageResult<Option<f32>> {
-        todo!()
+        let attr_count = attr_ids.len() as i32;
+        match epoch_id {
+            Some(epoch_id) => Statistic::find()
+                .filter(statistic::Column::NumberOfAttributes.eq(attr_count))
+                .filter(statistic::Column::StatisticType.eq(stat_type))
+                .filter(statistic::Column::EpochId.eq(epoch_id))
+                .inner_join(statistic_to_attribute_junction::Entity)
+                .filter(statistic_to_attribute_junction::Column::AttributeId.is_in(attr_ids))
+                .group_by(statistic::Column::Id)
+                .having(Expr::col(statistic::Column::Name).count().eq(attr_count))
+                .one(&self.db_conn)
+                .await
+                .map(|stat| stat.map(|s| s.statistic_value)),
+
+            None => Statistic::find()
+                .filter(statistic::Column::NumberOfAttributes.eq(attr_count))
+                .filter(statistic::Column::StatisticType.eq(stat_type))
+                .inner_join(statistic_to_attribute_junction::Entity)
+                .filter(statistic_to_attribute_junction::Column::AttributeId.is_in(attr_ids))
+                .group_by(statistic::Column::Id)
+                .having(Expr::col(statistic::Column::Name).count().eq(attr_count))
+                .order_by_desc(statistic::Column::EpochId)
+                .one(&self.db_conn)
+                .await
+                .map(|stat| stat.map(|s| s.statistic_value)),
+        }
     }
 
     async fn get_cost_analysis(
@@ -92,12 +192,26 @@ impl StorageLayer for ORMManager {
         expr_id: storage_layer::ExprId,
         epoch_id: storage_layer::EpochId,
     ) -> StorageResult<Option<i32>> {
-        todo!()
+        let cost = PlanCost::find()
+            .filter(plan_cost::Column::PhysicalExpressionId.eq(expr_id))
+            .filter(plan_cost::Column::EpochId.eq(epoch_id))
+            .one(&self.db_conn)
+            .await?;
+        assert!(cost.is_some(), "Cost not found in Cost table");
+        assert!(cost.clone().unwrap().is_valid, "Cost is not valid");
+        Ok(cost.map(|c| c.cost))
     }
 
     /// Get the latest cost for an expression
     async fn get_cost(&self, expr_id: storage_layer::ExprId) -> StorageResult<Option<i32>> {
-        todo!()
+        let cost = PlanCost::find()
+            .filter(plan_cost::Column::PhysicalExpressionId.eq(expr_id))
+            .order_by_desc(plan_cost::Column::EpochId)
+            .one(&self.db_conn)
+            .await?;
+        assert!(cost.is_some(), "Cost not found in Cost table");
+        assert!(cost.clone().unwrap().is_valid, "Cost is not valid");
+        Ok(cost.map(|c| c.cost))
     }
 
     async fn get_group_winner_from_group_id(
@@ -181,5 +295,98 @@ impl StorageLayer for ORMManager {
         group_id: storage_layer::GroupId,
     ) -> StorageResult<Option<storage_layer::Expression>> {
         todo!()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::migrate;
+    use sea_orm::{ConnectionTrait, Database, EntityTrait, ModelTrait};
+    use serde_json::de;
+
+    use crate::entities::event::Entity as Event;
+    use crate::storage_layer::StorageLayer;
+    use crate::TEST_DATABASE_URL;
+
+    async fn run_migration() {
+        let _ = std::fs::remove_file(TEST_DATABASE_URL);
+
+        let db = Database::connect(TEST_DATABASE_URL)
+            .await
+            .expect("Unable to connect to the database");
+
+        migrate(&db)
+            .await
+            .expect("Something went wrong during migration");
+
+        db.execute(sea_orm::Statement::from_string(
+            sea_orm::DatabaseBackend::Sqlite,
+            "PRAGMA foreign_keys = ON;".to_owned(),
+        ))
+        .await
+        .expect("Unable to enable foreign keys");
+    }
+
+    #[tokio::test]
+    async fn test_create_new_epoch() {
+        run_migration().await;
+        let mut orm_manager = super::ORMManager::new(Some(TEST_DATABASE_URL)).await;
+        let res = orm_manager
+            .create_new_epoch("source".to_string(), "data".to_string())
+            .await;
+        println!("{:?}", res);
+        assert!(res.is_ok());
+        assert_eq!(
+            super::Event::find()
+                .all(&orm_manager.db_conn)
+                .await
+                .unwrap()
+                .len(),
+            1
+        );
+        println!(
+            "{:?}",
+            super::Event::find()
+                .all(&orm_manager.db_conn)
+                .await
+                .unwrap()[0]
+        );
+        assert_eq!(
+            super::Event::find()
+                .all(&orm_manager.db_conn)
+                .await
+                .unwrap()[0]
+                .epoch_id,
+            res.unwrap()
+        );
+    }
+
+    #[tokio::test]
+    #[ignore] // Need to update all tables
+    async fn test_store_cost() {
+        run_migration().await;
+        let mut orm_manager = super::ORMManager::new(Some(TEST_DATABASE_URL)).await;
+        let epoch_id = orm_manager
+            .create_new_epoch("source".to_string(), "data".to_string())
+            .await
+            .unwrap();
+        let expr_id = 1;
+        let cost = 42;
+        let res = orm_manager.store_cost(expr_id, cost, epoch_id).await;
+        match res {
+            Ok(_) => assert!(true),
+            Err(e) => {
+                println!("Error: {:?}", e);
+                assert!(false);
+            }
+        }
+        let costs = super::PlanCost::find()
+            .all(&orm_manager.db_conn)
+            .await
+            .unwrap();
+        assert_eq!(costs.len(), 1);
+        assert_eq!(costs[0].epoch_id, epoch_id);
+        assert_eq!(costs[0].physical_expression_id, expr_id);
+        assert_eq!(costs[0].cost, cost);
     }
 }
