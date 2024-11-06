@@ -12,7 +12,7 @@ pub struct Model {
     pub created_time: DateTimeUtc,
     pub number_of_attributes: i32,
     pub statistic_type: i32,
-    pub data: String,
+    pub description: String,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

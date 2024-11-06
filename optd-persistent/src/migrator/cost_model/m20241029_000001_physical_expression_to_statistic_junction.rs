@@ -1,3 +1,11 @@
+//! This table stores for a physical expression, which statistics are used, so we
+//! don't need to compute it again. It is especially useful for update_stats, where
+//! we need to invalidate all the costs based on the physical_expression_id, so we
+//! need to use this table to get the physical_expression_id via statistic_id.
+//!
+//! **NOTE:** When we compute the cost for a physical expression, we should also
+//! insert related mappings into this table.
+
 use crate::migrator::cost_model::statistic::Statistic;
 use crate::migrator::memo::physical_expression::PhysicalExpression;
 

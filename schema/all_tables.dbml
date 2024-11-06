@@ -37,7 +37,7 @@ Table statistic {
   created_time timestamp
   number_of_attributes integer // 0 if a table statistic
   statistic_type integer // Should we make another table to explain the type mapping?
-  data varchar // Store the sorted attribute ids of this statistic, to support quick lookup (OR we can use junction table to look up)
+  description varchar // Store the sorted attribute ids of this statistic, to support quick lookup (OR we can use junction table to look up)
 }
 
 Table versioned_statistic {

@@ -1,3 +1,7 @@
+//! This table stores the versioned statistics. It includes all the histories of the statistics.
+//!
+//! If a statistic is updated/inserted, please insert one new row into this table.
+
 use crate::migrator::cost_model::{event::Event, statistic::Statistic};
 use sea_orm_migration::{prelude::*, schema::*};
 
@@ -6,6 +10,7 @@ pub enum VersionedStatistic {
     Table,
     Id,
     EpochId,
+    // Real statistic id.
     StatisticId,
     StatisticValue,
 }
