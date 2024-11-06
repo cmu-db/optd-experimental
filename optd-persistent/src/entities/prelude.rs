@@ -3,8 +3,6 @@
 pub use super::attribute::Entity as Attribute;
 pub use super::attribute_constraint_junction::Entity as AttributeConstraintJunction;
 pub use super::attribute_foreign_constraint_junction::Entity as AttributeForeignConstraintJunction;
-pub use super::attribute_statistic::Entity as AttributeStatistic;
-pub use super::attribute_statistic_to_attribute_junction::Entity as AttributeStatisticToAttributeJunction;
 pub use super::cascades_group::Entity as CascadesGroup;
 pub use super::constraint::Entity as Constraint;
 pub use super::database_metadata::Entity as DatabaseMetadata;
@@ -19,5 +17,7 @@ pub use super::physical_children::Entity as PhysicalChildren;
 pub use super::physical_expression::Entity as PhysicalExpression;
 pub use super::physical_property::Entity as PhysicalProperty;
 pub use super::plan_cost::Entity as PlanCost;
+pub use super::statistic::Entity as Statistic;
+pub use super::statistic_to_attribute_junction::Entity as StatisticToAttributeJunction;
 pub use super::table_metadata::Entity as TableMetadata;
 pub use super::trigger::Entity as Trigger;

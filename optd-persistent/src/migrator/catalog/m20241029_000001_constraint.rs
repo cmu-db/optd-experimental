@@ -1,5 +1,5 @@
 /*
-// Not-null is handled directly in `table_attribute`. See `is_not_null` field.
+// Not-null is handled directly in `attribute`. See `is_not_null` field.
 // Constraint trigger is handled directly in `trigger`.
 Table constraint {
   id integer PK

@@ -1,18 +1,18 @@
 /*
-Table attribute_stats_junction {
-  attr_id integer [ref: > table_attribute.id]
-  stats_id integer [ref: > attribute_stats.id]
+Table statistic_attribute_junction {
+  statistic_id integer [ref: > statistic.id]
+  attribute_id integer [ref: > attribute.id]
 }
  */
 
 use crate::migrator::catalog::attribute::Attribute;
-use crate::migrator::cost_model::attribute_statistic::AttributeStatistic;
+use crate::migrator::cost_model::statistic::Statistic;
 use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(Iden)]
-pub enum AttributeStatisticToAttributeJunction {
+pub enum StatisticToAttributeJunction {
     Table,
-    AttributeStatisticId,
+    StatisticId,
     AttributeId,
 }
 
@@ -25,32 +25,30 @@ impl MigrationTrait for Migration {
         manager
             .create_table(
                 Table::create()
-                    .table(AttributeStatisticToAttributeJunction::Table)
+                    .table(StatisticToAttributeJunction::Table)
                     .if_not_exists()
-                    .col(integer(
-                        AttributeStatisticToAttributeJunction::AttributeStatisticId,
-                    ))
-                    .col(integer(AttributeStatisticToAttributeJunction::AttributeId))
+                    .col(integer(StatisticToAttributeJunction::StatisticId))
+                    .col(integer(StatisticToAttributeJunction::AttributeId))
                     .primary_key(
                         Index::create()
-                            .col(AttributeStatisticToAttributeJunction::AttributeStatisticId)
-                            .col(AttributeStatisticToAttributeJunction::AttributeId),
+                            .col(StatisticToAttributeJunction::StatisticId)
+                            .col(StatisticToAttributeJunction::AttributeId),
                     )
                     .foreign_key(
                         ForeignKey::create()
                             .from(
-                                AttributeStatisticToAttributeJunction::Table,
-                                AttributeStatisticToAttributeJunction::AttributeStatisticId,
+                                StatisticToAttributeJunction::Table,
+                                StatisticToAttributeJunction::StatisticId,
                             )
-                            .to(AttributeStatistic::Table, AttributeStatistic::Id)
+                            .to(Statistic::Table, Statistic::Id)
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
                     .foreign_key(
                         ForeignKey::create()
                             .from(
-                                AttributeStatisticToAttributeJunction::Table,
-                                AttributeStatisticToAttributeJunction::AttributeId,
+                                StatisticToAttributeJunction::Table,
+                                StatisticToAttributeJunction::AttributeId,
                             )
                             .to(Attribute::Table, Attribute::Id)
                             .on_delete(ForeignKeyAction::Cascade)
@@ -65,7 +63,7 @@ impl MigrationTrait for Migration {
         manager
             .drop_table(
                 Table::drop()
-                    .table(AttributeStatisticToAttributeJunction::Table)
+                    .table(StatisticToAttributeJunction::Table)
                     .to_owned(),
             )
             .await

@@ -26,6 +26,8 @@ pub enum Relation {
         on_delete = "Cascade"
     )]
     NamespaceMetadata,
+    #[sea_orm(has_many = "super::statistic::Entity")]
+    Statistic,
     #[sea_orm(has_many = "super::trigger::Entity")]
     Trigger,
 }
@@ -45,6 +47,12 @@ impl Related<super::index::Entity> for Entity {
 impl Related<super::namespace_metadata::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::NamespaceMetadata.def()
+    }
+}
+
+impl Related<super::statistic::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Statistic.def()
     }
 }
 
