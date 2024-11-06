@@ -238,10 +238,13 @@ impl CostModelStorageLayer for BackendManager {
                         match res {
                             Ok(insert_res) => insert_res.last_insert_id,
                             Err(_) => {
-                                return Err(BackendError::BackendError(format!(
-                                    "failed to insert statistic {:?} into statistic table",
-                                    stat
-                                )))
+                                return Err(BackendError::CostModel(
+                                    format!(
+                                        "failed to insert statistic {:?} into statistic table",
+                                        stat
+                                    )
+                                    .into(),
+                                ))
                             }
                         }
                     }
@@ -450,10 +453,13 @@ impl CostModelStorageLayer for BackendManager {
             .collect::<Vec<_>>();
 
         if attr_ids.len() != attr_base_indices.len() {
-            return Err(BackendError::BackendError(format!(
-                "Not all attributes found for table_id {} and base indices {:?}",
-                table_id, attr_base_indices
-            )));
+            return Err(BackendError::CostModel(
+                format!(
+                    "Not all attributes found for table_id {} and base indices {:?}",
+                    table_id, attr_base_indices
+                )
+                .into(),
+            ));
         }
 
         self.get_stats_for_attr(attr_ids, stat_type, epoch_id).await
@@ -505,10 +511,13 @@ impl CostModelStorageLayer for BackendManager {
             .one(&self.db)
             .await?;
         if expr_exists.is_none() {
-            return Err(BackendError::BackendError(format!(
-                "physical expression id {} not found when storing cost",
-                physical_expression_id
-            )));
+            return Err(BackendError::CostModel(
+                format!(
+                    "physical expression id {} not found when storing cost",
+                    physical_expression_id
+                )
+                .into(),
+            ));
         }
 
         // Check if epoch_id exists in Event table
@@ -518,10 +527,9 @@ impl CostModelStorageLayer for BackendManager {
             .await
             .unwrap();
         if epoch_exists.is_none() {
-            return Err(BackendError::BackendError(format!(
-                "epoch id {} not found when storing cost",
-                epoch_id
-            )));
+            return Err(BackendError::CostModel(
+                format!("epoch id {} not found when storing cost", epoch_id).into(),
+            ));
         }
 
         let new_cost = plan_cost::ActiveModel {

@@ -45,7 +45,6 @@ pub enum LogicalExpression {
     GroupId,
     Fingerprint,
     VariantTag,
-    Data,
 }
 
 #[derive(DeriveMigrationName)]
@@ -70,7 +69,6 @@ impl MigrationTrait for Migration {
                     )
                     .col(big_unsigned(LogicalExpression::Fingerprint))
                     .col(small_integer(LogicalExpression::VariantTag))
-                    .col(json(LogicalExpression::Data))
                     .to_owned(),
             )
             .await
