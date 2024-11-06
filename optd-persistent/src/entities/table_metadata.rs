@@ -14,8 +14,8 @@ pub struct Model {
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
-    #[sea_orm(has_many = "super::column::Entity")]
-    Column,
+    #[sea_orm(has_many = "super::attribute::Entity")]
+    Attribute,
     #[sea_orm(has_many = "super::index::Entity")]
     Index,
     #[sea_orm(
@@ -30,9 +30,9 @@ pub enum Relation {
     Trigger,
 }
 
-impl Related<super::column::Entity> for Entity {
+impl Related<super::attribute::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::Column.def()
+        Relation::Attribute.def()
     }
 }
 

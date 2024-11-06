@@ -3,7 +3,7 @@
 use sea_orm::entity::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
-#[sea_orm(table_name = "column")]
+#[sea_orm(table_name = "attribute")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
@@ -11,18 +11,18 @@ pub struct Model {
     pub name: String,
     pub compression_method: String,
     pub r#type: i32,
-    pub base_col_number: i32,
+    pub base_attribute_number: i32,
     pub is_not_null: bool,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
-    #[sea_orm(has_many = "super::column_constraint_junction::Entity")]
-    ColumnConstraintJunction,
-    #[sea_orm(has_many = "super::column_foreign_constraint_junction::Entity")]
-    ColumnForeignConstraintJunction,
-    #[sea_orm(has_many = "super::column_statistic_to_column_junction::Entity")]
-    ColumnStatisticToColumnJunction,
+    #[sea_orm(has_many = "super::attribute_constraint_junction::Entity")]
+    AttributeConstraintJunction,
+    #[sea_orm(has_many = "super::attribute_foreign_constraint_junction::Entity")]
+    AttributeForeignConstraintJunction,
+    #[sea_orm(has_many = "super::attribute_statistic_to_attribute_junction::Entity")]
+    AttributeStatisticToAttributeJunction,
     #[sea_orm(
         belongs_to = "super::table_metadata::Entity",
         from = "Column::TableId",
@@ -33,21 +33,21 @@ pub enum Relation {
     TableMetadata,
 }
 
-impl Related<super::column_constraint_junction::Entity> for Entity {
+impl Related<super::attribute_constraint_junction::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::ColumnConstraintJunction.def()
+        Relation::AttributeConstraintJunction.def()
     }
 }
 
-impl Related<super::column_foreign_constraint_junction::Entity> for Entity {
+impl Related<super::attribute_foreign_constraint_junction::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::ColumnForeignConstraintJunction.def()
+        Relation::AttributeForeignConstraintJunction.def()
     }
 }
 
-impl Related<super::column_statistic_to_column_junction::Entity> for Entity {
+impl Related<super::attribute_statistic_to_attribute_junction::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::ColumnStatisticToColumnJunction.def()
+        Relation::AttributeStatisticToAttributeJunction.def()
     }
 }
 
@@ -57,13 +57,13 @@ impl Related<super::table_metadata::Entity> for Entity {
     }
 }
 
-impl Related<super::column_statistic::Entity> for Entity {
+impl Related<super::attribute_statistic::Entity> for Entity {
     fn to() -> RelationDef {
-        super::column_statistic_to_column_junction::Relation::ColumnStatistic.def()
+        super::attribute_statistic_to_attribute_junction::Relation::AttributeStatistic.def()
     }
     fn via() -> Option<RelationDef> {
         Some(
-            super::column_statistic_to_column_junction::Relation::Column
+            super::attribute_statistic_to_attribute_junction::Relation::Attribute
                 .def()
                 .rev(),
         )

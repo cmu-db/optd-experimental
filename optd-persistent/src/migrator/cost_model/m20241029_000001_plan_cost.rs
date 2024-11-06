@@ -17,7 +17,7 @@ pub enum PlanCost {
     Id,
     PhysicalExpressionId,
     EpochId,
-    Cost,
+    CostId,
     IsValid,
 }
 
@@ -49,7 +49,7 @@ impl MigrationTrait for Migration {
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
-                    .col(integer(PlanCost::Cost))
+                    .col(integer(PlanCost::CostId))
                     .col(boolean(PlanCost::IsValid))
                     .to_owned(),
             )

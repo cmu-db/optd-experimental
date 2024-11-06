@@ -1,10 +1,18 @@
-use crate::migrator::catalog::{column::Column, constraint::Constraint};
+/*
+// The constrained attributes (columns) if a constraint is a table constraint (including foreign keys, but not constraint triggers)
+Table constraint_attribute_junction {
+  constraint_id integer [ref: > constraint.id]
+  attr_id integer [ref: > table_attribute.id]
+}
+*/
+
+use crate::migrator::catalog::{attribute::Attribute, constraint::Constraint};
 use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(Iden)]
-pub enum ColumnForeignConstraintJunction {
+pub enum AttributeConstraintJunction {
     Table,
-    ColumnId,
+    AttributeId,
     ConstraintId,
 }
 
@@ -17,30 +25,30 @@ impl MigrationTrait for Migration {
         manager
             .create_table(
                 Table::create()
-                    .table(ColumnForeignConstraintJunction::Table)
+                    .table(AttributeConstraintJunction::Table)
                     .if_not_exists()
-                    .col(integer(ColumnForeignConstraintJunction::ColumnId))
-                    .col(integer(ColumnForeignConstraintJunction::ConstraintId))
+                    .col(integer(AttributeConstraintJunction::AttributeId))
+                    .col(integer(AttributeConstraintJunction::ConstraintId))
                     .primary_key(
                         Index::create()
-                            .col(ColumnForeignConstraintJunction::ColumnId)
-                            .col(ColumnForeignConstraintJunction::ConstraintId),
+                            .col(AttributeConstraintJunction::AttributeId)
+                            .col(AttributeConstraintJunction::ConstraintId),
                     )
                     .foreign_key(
                         ForeignKey::create()
                             .from(
-                                ColumnForeignConstraintJunction::Table,
-                                ColumnForeignConstraintJunction::ColumnId,
+                                AttributeConstraintJunction::Table,
+                                AttributeConstraintJunction::AttributeId,
                             )
-                            .to(Column::Table, Column::Id)
+                            .to(Attribute::Table, Attribute::Id)
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
                     .foreign_key(
                         ForeignKey::create()
                             .from(
-                                ColumnForeignConstraintJunction::Table,
-                                ColumnForeignConstraintJunction::ConstraintId,
+                                AttributeConstraintJunction::Table,
+                                AttributeConstraintJunction::ConstraintId,
                             )
                             .to(Constraint::Table, Constraint::Id)
                             .on_delete(ForeignKeyAction::Cascade)
@@ -54,7 +62,7 @@ impl MigrationTrait for Migration {
         manager
             .drop_table(
                 Table::drop()
-                    .table(ColumnForeignConstraintJunction::Table)
+                    .table(AttributeConstraintJunction::Table)
                     .to_owned(),
             )
             .await

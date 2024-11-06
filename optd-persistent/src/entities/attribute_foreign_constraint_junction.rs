@@ -3,10 +3,10 @@
 use sea_orm::entity::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
-#[sea_orm(table_name = "column_foreign_constraint_junction")]
+#[sea_orm(table_name = "attribute_foreign_constraint_junction")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
-    pub column_id: i32,
+    pub attribute_id: i32,
     #[sea_orm(primary_key, auto_increment = false)]
     pub constraint_id: i32,
 }
@@ -14,13 +14,13 @@ pub struct Model {
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
     #[sea_orm(
-        belongs_to = "super::column::Entity",
-        from = "Column::ColumnId",
-        to = "super::column::Column::Id",
+        belongs_to = "super::attribute::Entity",
+        from = "Column::AttributeId",
+        to = "super::attribute::Column::Id",
         on_update = "Cascade",
         on_delete = "Cascade"
     )]
-    Column,
+    Attribute,
     #[sea_orm(
         belongs_to = "super::constraint::Entity",
         from = "Column::ConstraintId",
@@ -31,9 +31,9 @@ pub enum Relation {
     Constraint,
 }
 
-impl Related<super::column::Entity> for Entity {
+impl Related<super::attribute::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::Column.def()
+        Relation::Attribute.def()
     }
 }
 

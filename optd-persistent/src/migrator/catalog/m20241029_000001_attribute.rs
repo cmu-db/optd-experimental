@@ -2,14 +2,14 @@ use crate::migrator::catalog::table_metadata::TableMetadata;
 use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(Iden)]
-pub enum Column {
+pub enum Attribute {
     Table,
     Id,
     TableId,
     Name,
     CompressionMethod,
     Type,
-    BaseColNumber,
+    BaseAttributeNumber,
     IsNotNull,
 }
 
@@ -22,22 +22,22 @@ impl MigrationTrait for Migration {
         manager
             .create_table(
                 Table::create()
-                    .table(Column::Table)
+                    .table(Attribute::Table)
                     .if_not_exists()
-                    .col(pk_auto(Column::Id))
-                    .col(integer(Column::TableId))
+                    .col(pk_auto(Attribute::Id))
+                    .col(integer(Attribute::TableId))
                     .foreign_key(
                         ForeignKey::create()
-                            .from(Column::Table, Column::TableId)
+                            .from(Attribute::Table, Attribute::TableId)
                             .to(TableMetadata::Table, TableMetadata::Id)
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
-                    .col(string(Column::Name))
-                    .col(char(Column::CompressionMethod))
-                    .col(integer(Column::Type))
-                    .col(integer(Column::BaseColNumber))
-                    .col(boolean(Column::IsNotNull))
+                    .col(string(Attribute::Name))
+                    .col(char(Attribute::CompressionMethod))
+                    .col(integer(Attribute::Type))
+                    .col(integer(Attribute::BaseAttributeNumber))
+                    .col(boolean(Attribute::IsNotNull))
                     .to_owned(),
             )
             .await
@@ -45,7 +45,7 @@ impl MigrationTrait for Migration {
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
-            .drop_table(Table::drop().table(Column::Table).to_owned())
+            .drop_table(Table::drop().table(Attribute::Table).to_owned())
             .await
     }
 }

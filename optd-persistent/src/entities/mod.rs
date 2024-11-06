@@ -2,12 +2,12 @@
 
 pub mod prelude;
 
+pub mod attribute;
+pub mod attribute_constraint_junction;
+pub mod attribute_foreign_constraint_junction;
+pub mod attribute_statistic;
+pub mod attribute_statistic_to_attribute_junction;
 pub mod cascades_group;
-pub mod column;
-pub mod column_constraint_junction;
-pub mod column_foreign_constraint_junction;
-pub mod column_statistic;
-pub mod column_statistic_to_column_junction;
 pub mod constraint;
 pub mod database_metadata;
 pub mod event;

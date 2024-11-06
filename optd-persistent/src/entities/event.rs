@@ -14,17 +14,17 @@ pub struct Model {
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
-    #[sea_orm(has_many = "super::column_statistic::Entity")]
-    ColumnStatistic,
+    #[sea_orm(has_many = "super::attribute_statistic::Entity")]
+    AttributeStatistic,
     #[sea_orm(has_many = "super::group_winner::Entity")]
     GroupWinner,
     #[sea_orm(has_many = "super::plan_cost::Entity")]
     PlanCost,
 }
 
-impl Related<super::column_statistic::Entity> for Entity {
+impl Related<super::attribute_statistic::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::ColumnStatistic.def()
+        Relation::AttributeStatistic.def()
     }
 }
 

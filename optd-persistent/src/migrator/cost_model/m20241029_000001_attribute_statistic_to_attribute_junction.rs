@@ -1,19 +1,19 @@
 /*
-// The constrained attributes (columns) if a constraint is a table constraint (including foreign keys, but not constraint triggers)
-Table constraint_attribute_junction {
-  constraint_id integer [ref: > constraint.id]
+Table attribute_stats_junction {
   attr_id integer [ref: > table_attribute.id]
+  stats_id integer [ref: > attribute_stats.id]
 }
-*/
+ */
 
-use crate::migrator::catalog::{column::Column, constraint::Constraint};
+use crate::migrator::catalog::attribute::Attribute;
+use crate::migrator::cost_model::attribute_statistic::AttributeStatistic;
 use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(Iden)]
-pub enum ColumnConstraintJunction {
+pub enum AttributeStatisticToAttributeJunction {
     Table,
-    ColumnId,
-    ConstraintId,
+    AttributeStatisticId,
+    AttributeId,
 }
 
 #[derive(DeriveMigrationName)]
@@ -25,32 +25,34 @@ impl MigrationTrait for Migration {
         manager
             .create_table(
                 Table::create()
-                    .table(ColumnConstraintJunction::Table)
+                    .table(AttributeStatisticToAttributeJunction::Table)
                     .if_not_exists()
-                    .col(integer(ColumnConstraintJunction::ColumnId))
-                    .col(integer(ColumnConstraintJunction::ConstraintId))
+                    .col(integer(
+                        AttributeStatisticToAttributeJunction::AttributeStatisticId,
+                    ))
+                    .col(integer(AttributeStatisticToAttributeJunction::AttributeId))
                     .primary_key(
                         Index::create()
-                            .col(ColumnConstraintJunction::ColumnId)
-                            .col(ColumnConstraintJunction::ConstraintId),
+                            .col(AttributeStatisticToAttributeJunction::AttributeStatisticId)
+                            .col(AttributeStatisticToAttributeJunction::AttributeId),
                     )
                     .foreign_key(
                         ForeignKey::create()
                             .from(
-                                ColumnConstraintJunction::Table,
-                                ColumnConstraintJunction::ColumnId,
+                                AttributeStatisticToAttributeJunction::Table,
+                                AttributeStatisticToAttributeJunction::AttributeStatisticId,
                             )
-                            .to(Column::Table, Column::Id)
+                            .to(AttributeStatistic::Table, AttributeStatistic::Id)
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
                     .foreign_key(
                         ForeignKey::create()
                             .from(
-                                ColumnConstraintJunction::Table,
-                                ColumnConstraintJunction::ConstraintId,
+                                AttributeStatisticToAttributeJunction::Table,
+                                AttributeStatisticToAttributeJunction::AttributeId,
                             )
-                            .to(Constraint::Table, Constraint::Id)
+                            .to(Attribute::Table, Attribute::Id)
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
@@ -58,11 +60,12 @@ impl MigrationTrait for Migration {
             )
             .await
     }
+
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
             .drop_table(
                 Table::drop()
-                    .table(ColumnConstraintJunction::Table)
+                    .table(AttributeStatisticToAttributeJunction::Table)
                     .to_owned(),
             )
             .await

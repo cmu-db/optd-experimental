@@ -17,10 +17,10 @@ pub struct Model {
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
-    #[sea_orm(has_many = "super::column_constraint_junction::Entity")]
-    ColumnConstraintJunction,
-    #[sea_orm(has_many = "super::column_foreign_constraint_junction::Entity")]
-    ColumnForeignConstraintJunction,
+    #[sea_orm(has_many = "super::attribute_constraint_junction::Entity")]
+    AttributeConstraintJunction,
+    #[sea_orm(has_many = "super::attribute_foreign_constraint_junction::Entity")]
+    AttributeForeignConstraintJunction,
     #[sea_orm(
         belongs_to = "super::index::Entity",
         from = "Column::IndexId",
@@ -47,15 +47,15 @@ pub enum Relation {
     TableMetadata1,
 }
 
-impl Related<super::column_constraint_junction::Entity> for Entity {
+impl Related<super::attribute_constraint_junction::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::ColumnConstraintJunction.def()
+        Relation::AttributeConstraintJunction.def()
     }
 }
 
-impl Related<super::column_foreign_constraint_junction::Entity> for Entity {
+impl Related<super::attribute_foreign_constraint_junction::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::ColumnForeignConstraintJunction.def()
+        Relation::AttributeForeignConstraintJunction.def()
     }
 }
 
