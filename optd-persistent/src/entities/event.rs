@@ -7,36 +7,36 @@ use sea_orm::entity::prelude::*;
 pub struct Model {
     #[sea_orm(primary_key)]
     pub epoch_id: i32,
+    pub timestamp: DateTimeUtc,
     pub source_variant: String,
-    pub create_timestamp: DateTimeUtc,
     pub data: Json,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
-    #[sea_orm(has_many = "super::attribute_stat::Entity")]
-    AttributeStat,
-    #[sea_orm(has_many = "super::cost::Entity")]
-    Cost,
+    #[sea_orm(has_many = "super::attribute_statistic::Entity")]
+    AttributeStatistic,
     #[sea_orm(has_many = "super::group_winner::Entity")]
     GroupWinner,
+    #[sea_orm(has_many = "super::plan_cost::Entity")]
+    PlanCost,
 }
 
-impl Related<super::attribute_stat::Entity> for Entity {
+impl Related<super::attribute_statistic::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::AttributeStat.def()
-    }
-}
-
-impl Related<super::cost::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::Cost.def()
+        Relation::AttributeStatistic.def()
     }
 }
 
 impl Related<super::group_winner::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::GroupWinner.def()
+    }
+}
+
+impl Related<super::plan_cost::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::PlanCost.def()
     }
 }
 

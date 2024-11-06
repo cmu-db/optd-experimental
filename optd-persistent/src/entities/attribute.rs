@@ -3,16 +3,16 @@
 use sea_orm::entity::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
-#[sea_orm(table_name = "constraint")]
+#[sea_orm(table_name = "attribute")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
-    pub name: String,
-    pub variant_tag: i32,
     pub table_id: i32,
-    pub index_id: i32,
-    pub foreign_ref_id: i32,
-    pub check_src: String,
+    pub name: String,
+    pub compression_method: String,
+    pub r#type: i32,
+    pub base_attribute_number: i32,
+    pub is_not_null: bool,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -21,22 +21,8 @@ pub enum Relation {
     AttributeConstraintJunction,
     #[sea_orm(has_many = "super::attribute_foreign_constraint_junction::Entity")]
     AttributeForeignConstraintJunction,
-    #[sea_orm(
-        belongs_to = "super::index::Entity",
-        from = "Column::IndexId",
-        to = "super::index::Column::Id",
-        on_update = "Cascade",
-        on_delete = "Cascade"
-    )]
-    Index,
-    #[sea_orm(
-        belongs_to = "super::table_metadata::Entity",
-        from = "Column::ForeignRefId",
-        to = "super::table_metadata::Column::Id",
-        on_update = "Cascade",
-        on_delete = "Cascade"
-    )]
-    TableMetadata2,
+    #[sea_orm(has_many = "super::attribute_statistic_to_attribute_junction::Entity")]
+    AttributeStatisticToAttributeJunction,
     #[sea_orm(
         belongs_to = "super::table_metadata::Entity",
         from = "Column::TableId",
@@ -44,7 +30,7 @@ pub enum Relation {
         on_update = "Cascade",
         on_delete = "Cascade"
     )]
-    TableMetadata1,
+    TableMetadata,
 }
 
 impl Related<super::attribute_constraint_junction::Entity> for Entity {
@@ -59,9 +45,28 @@ impl Related<super::attribute_foreign_constraint_junction::Entity> for Entity {
     }
 }
 
-impl Related<super::index::Entity> for Entity {
+impl Related<super::attribute_statistic_to_attribute_junction::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::Index.def()
+        Relation::AttributeStatisticToAttributeJunction.def()
+    }
+}
+
+impl Related<super::table_metadata::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::TableMetadata.def()
+    }
+}
+
+impl Related<super::attribute_statistic::Entity> for Entity {
+    fn to() -> RelationDef {
+        super::attribute_statistic_to_attribute_junction::Relation::AttributeStatistic.def()
+    }
+    fn via() -> Option<RelationDef> {
+        Some(
+            super::attribute_statistic_to_attribute_junction::Relation::Attribute
+                .def()
+                .rev(),
+        )
     }
 }
 

@@ -3,14 +3,12 @@
 use sea_orm::entity::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
-#[sea_orm(table_name = "group_winner")]
+#[sea_orm(table_name = "physical_children")]
 pub struct Model {
-    #[sea_orm(primary_key)]
-    pub id: i32,
-    pub group_id: i32,
+    #[sea_orm(primary_key, auto_increment = false)]
     pub physical_expression_id: i32,
-    pub cost_id: i32,
-    pub epoch_id: i32,
+    #[sea_orm(primary_key, auto_increment = false)]
+    pub group_id: i32,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -24,14 +22,6 @@ pub enum Relation {
     )]
     CascadesGroup,
     #[sea_orm(
-        belongs_to = "super::event::Entity",
-        from = "Column::EpochId",
-        to = "super::event::Column::EpochId",
-        on_update = "Cascade",
-        on_delete = "Cascade"
-    )]
-    Event,
-    #[sea_orm(
         belongs_to = "super::physical_expression::Entity",
         from = "Column::PhysicalExpressionId",
         to = "super::physical_expression::Column::Id",
@@ -39,14 +29,6 @@ pub enum Relation {
         on_delete = "Cascade"
     )]
     PhysicalExpression,
-    #[sea_orm(
-        belongs_to = "super::plan_cost::Entity",
-        from = "Column::CostId",
-        to = "super::plan_cost::Column::Id",
-        on_update = "Cascade",
-        on_delete = "Cascade"
-    )]
-    PlanCost,
 }
 
 impl Related<super::cascades_group::Entity> for Entity {
@@ -55,21 +37,9 @@ impl Related<super::cascades_group::Entity> for Entity {
     }
 }
 
-impl Related<super::event::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::Event.def()
-    }
-}
-
 impl Related<super::physical_expression::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::PhysicalExpression.def()
-    }
-}
-
-impl Related<super::plan_cost::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::PlanCost.def()
     }
 }
 
