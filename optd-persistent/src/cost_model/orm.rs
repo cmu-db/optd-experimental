@@ -1,11 +1,10 @@
 #![allow(dead_code, unused_imports, unused_variables)]
 
+use crate::entities::{prelude::*, *};
+use crate::{BackendManager, CostModelStorageLayer, StorageResult};
+use sea_orm::prelude::Json;
 use sea_orm::{sqlx::types::chrono::Utc, EntityTrait};
-
-use crate::{
-    entities::event::{self, Entity as Event},
-    BackendManager, CostModelStorageLayer, StorageResult,
-};
+use sea_orm::{ColumnTrait, QueryFilter, QueryOrder, QuerySelect};
 
 use super::interface::CatalogSource;
 
@@ -46,7 +45,7 @@ impl CostModelStorageLayer for BackendManager {
         todo!()
     }
 
-    async fn update_stats(&self, stats: i32, epoch_id: Self::EpochId) -> StorageResult<()> {
+    async fn update_stats(&self, stats: Json, epoch_id: Self::EpochId) -> StorageResult<()> {
         todo!()
     }
 
@@ -72,26 +71,67 @@ impl CostModelStorageLayer for BackendManager {
         table_id: i32,
         stat_type: i32,
         epoch_id: Option<Self::EpochId>,
-    ) -> StorageResult<Option<f32>> {
-        todo!()
+    ) -> StorageResult<Option<Json>> {
+        match epoch_id {
+            Some(epoch_id) => Ok(VersionedStatistic::find()
+                .filter(versioned_statistic::Column::EpochId.eq(epoch_id))
+                .inner_join(statistic::Entity)
+                .filter(statistic::Column::TableId.eq(table_id))
+                .filter(statistic::Column::StatisticType.eq(stat_type))
+                .one(&self.db)
+                .await?
+                .map(|stat| stat.statistic_value)),
+
+            None => Ok(VersionedStatistic::find()
+                .inner_join(statistic::Entity)
+                .filter(statistic::Column::TableId.eq(table_id))
+                .filter(statistic::Column::StatisticType.eq(stat_type))
+                .order_by_desc(versioned_statistic::Column::EpochId)
+                .one(&self.db)
+                .await?
+                .map(|stat| stat.statistic_value)),
+        }
     }
 
     async fn get_stats_for_attr(
         &self,
-        attr_id: i32,
+        mut attr_ids: Vec<Self::AttrId>,
         stat_type: i32,
         epoch_id: Option<Self::EpochId>,
-    ) -> StorageResult<Option<f32>> {
-        todo!()
-    }
+    ) -> StorageResult<Option<Json>> {
+        let attr_num = attr_ids.len() as i32;
+        // The description is to concat `attr_ids` using commas
+        // Note that `attr_ids` should be sorted before concatenation
+        // e.g. [1, 2, 3] -> "1,2,3"
+        attr_ids.sort();
+        let description = attr_ids
+            .iter()
+            .map(|id| id.to_string())
+            .collect::<Vec<String>>()
+            .join(",");
 
-    async fn get_stats_for_attrs(
-        &self,
-        attr_ids: Vec<i32>,
-        stat_type: i32,
-        epoch_id: Option<Self::EpochId>,
-    ) -> StorageResult<Option<f32>> {
-        todo!()
+        // We don't join with junction table here for faster lookup.
+        match epoch_id {
+            Some(epoch_id) => Ok(VersionedStatistic::find()
+                .filter(versioned_statistic::Column::EpochId.eq(epoch_id))
+                .inner_join(statistic::Entity)
+                .filter(statistic::Column::NumberOfAttributes.eq(attr_num))
+                .filter(statistic::Column::Description.eq(description))
+                .filter(statistic::Column::StatisticType.eq(stat_type))
+                .one(&self.db)
+                .await?
+                .map(|stat| stat.statistic_value)),
+
+            None => Ok(VersionedStatistic::find()
+                .inner_join(statistic::Entity)
+                .filter(statistic::Column::NumberOfAttributes.eq(attr_num))
+                .filter(statistic::Column::Description.eq(description))
+                .filter(statistic::Column::StatisticType.eq(stat_type))
+                .order_by_desc(versioned_statistic::Column::EpochId)
+                .one(&self.db)
+                .await?
+                .map(|stat| stat.statistic_value)),
+        }
     }
 
     async fn get_cost_analysis(
@@ -110,10 +150,13 @@ impl CostModelStorageLayer for BackendManager {
 #[cfg(test)]
 mod tests {
     use crate::{migrate, CostModelStorageLayer};
-    use sea_orm::{ConnectionTrait, Database, EntityTrait, ModelTrait};
+    use sea_orm::{
+        ColumnTrait, ConnectionTrait, Database, DbBackend, EntityTrait, ModelTrait, QueryFilter,
+        QuerySelect, QueryTrait,
+    };
     use serde_json::de;
 
-    use crate::entities::event::Entity as Event;
+    use crate::entities::{prelude::*, *};
 
     async fn run_migration(db_file: &str) -> String {
         let database_url = format!("sqlite:./{}?mode=rwc", db_file);

@@ -5,6 +5,7 @@ use crate::entities::event::Model as event_model;
 use crate::entities::logical_expression;
 use crate::entities::physical_expression;
 use crate::StorageResult;
+use sea_orm::prelude::Json;
 use sea_orm::*;
 use sea_orm_migration::prelude::*;
 use serde_json::json;
@@ -43,8 +44,7 @@ pub trait CostModelStorageLayer {
         epoch_id: Self::EpochId,
     ) -> StorageResult<()>;
 
-    // i32 in `stats:i32` is a placeholder for the stats type
-    async fn update_stats(&self, stats: i32, epoch_id: Self::EpochId) -> StorageResult<()>;
+    async fn update_stats(&self, stats: Json, epoch_id: Self::EpochId) -> StorageResult<()>;
 
     async fn store_cost(
         &self,
@@ -68,27 +68,17 @@ pub trait CostModelStorageLayer {
         // TODO: Add enum for stat_type
         stat_type: i32,
         epoch_id: Option<Self::EpochId>,
-    ) -> StorageResult<Option<f32>>;
+    ) -> StorageResult<Option<Json>>;
 
-    /// Get the statistics for a given attribute.
+    /// Get the (joint) statistics for one or more attributes.
     ///
     /// If `epoch_id` is None, it will return the latest statistics.
     async fn get_stats_for_attr(
         &self,
-        attr_id: Self::AttrId,
-        stat_type: i32,
-        epoch_id: Option<Self::EpochId>,
-    ) -> StorageResult<Option<f32>>;
-
-    /// Get the joint statistics for a list of attributes.
-    ///
-    /// If `epoch_id` is None, it will return the latest statistics.
-    async fn get_stats_for_attrs(
-        &self,
         attr_ids: Vec<Self::AttrId>,
         stat_type: i32,
         epoch_id: Option<Self::EpochId>,
-    ) -> StorageResult<Option<f32>>;
+    ) -> StorageResult<Option<Json>>;
 
     async fn get_cost_analysis(
         &self,
