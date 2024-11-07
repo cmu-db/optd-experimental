@@ -9,3 +9,5 @@ target/
 **/*.db
 
 .DS_Store
+
+optd-persistent/sql/

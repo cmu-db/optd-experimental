@@ -3,18 +3,26 @@
 use sea_orm::entity::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
-#[sea_orm(table_name = "trigger")]
+#[sea_orm(table_name = "index_metadata")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
-    pub name: String,
     pub table_id: i32,
-    pub parent_trigger_id: i32,
-    pub function: Json,
+    pub name: String,
+    pub number_of_attributes: i32,
+    pub variant_tag: i32,
+    pub is_unique: bool,
+    pub nulls_not_distinct: bool,
+    pub is_primary: bool,
+    pub is_clustered: bool,
+    pub is_exclusion: bool,
+    pub description: String,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
+    #[sea_orm(has_many = "super::constraint_metadata::Entity")]
+    ConstraintMetadata,
     #[sea_orm(
         belongs_to = "super::table_metadata::Entity",
         from = "Column::TableId",
@@ -23,14 +31,12 @@ pub enum Relation {
         on_delete = "Cascade"
     )]
     TableMetadata,
-    #[sea_orm(
-        belongs_to = "Entity",
-        from = "Column::ParentTriggerId",
-        to = "Column::Id",
-        on_update = "Cascade",
-        on_delete = "Cascade"
-    )]
-    SelfRef,
+}
+
+impl Related<super::constraint_metadata::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::ConstraintMetadata.def()
+    }
 }
 
 impl Related<super::table_metadata::Entity> for Entity {

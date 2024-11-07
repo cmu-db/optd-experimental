@@ -5,7 +5,7 @@
 //!
 //! One constraint might be associated with multiple attributes, for example, a composite primary key.
 
-use crate::migrator::catalog::{attribute::Attribute, constraint::Constraint};
+use crate::migrator::catalog::{attribute::Attribute, constraint_metadata::ConstraintMetadata};
 use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(Iden)]
@@ -49,7 +49,7 @@ impl MigrationTrait for Migration {
                                 AttributeConstraintJunction::Table,
                                 AttributeConstraintJunction::ConstraintId,
                             )
-                            .to(Constraint::Table, Constraint::Id)
+                            .to(ConstraintMetadata::Table, ConstraintMetadata::Id)
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )

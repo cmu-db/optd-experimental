@@ -15,7 +15,7 @@ pub enum Statistic {
     Name,
     // null if not a table statistic.
     TableId,
-    CreatedTime,
+    CreationTime,
     // 0 if a table statistic.
     NumberOfAttributes,
     VariantTag,
@@ -47,7 +47,7 @@ impl MigrationTrait for Migration {
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
-                    .col(timestamp(Statistic::CreatedTime))
+                    .col(timestamp(Statistic::CreationTime))
                     .col(integer(Statistic::NumberOfAttributes))
                     .col(integer(Statistic::VariantTag))
                     .col(string(Statistic::Description))

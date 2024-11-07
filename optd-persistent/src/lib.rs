@@ -7,10 +7,10 @@ use sea_orm_migration::prelude::*;
 
 use migrator::Migrator;
 
-mod entities;
+pub mod entities;
 mod migrator;
 
-mod cost_model;
+pub mod cost_model;
 pub use cost_model::interface::CostModelStorageLayer;
 
 pub type StorageResult<T> = Result<T, BackendError>;

@@ -114,7 +114,7 @@ impl CostModelStorageLayer for BackendManager {
                         name: sea_orm::ActiveValue::Set(stat.name.clone()),
                         table_id: sea_orm::ActiveValue::Set(stat.table_id),
                         number_of_attributes: sea_orm::ActiveValue::Set(stat.attr_ids.len() as i32),
-                        created_time: sea_orm::ActiveValue::Set(Utc::now()),
+                        creation_time: sea_orm::ActiveValue::Set(Utc::now()),
                         variant_tag: sea_orm::ActiveValue::Set(stat.stat_type),
                         description: sea_orm::ActiveValue::Set(
                             self.get_description_from_attr_ids(stat.attr_ids.clone()),
@@ -124,21 +124,28 @@ impl CostModelStorageLayer for BackendManager {
                 }))
                 .exec(&self.db)
                 .await?;
-                Index::insert_many(mock_catalog.indexes.iter().map(|index| index::ActiveModel {
-                    name: sea_orm::ActiveValue::Set(index.name.clone()),
-                    table_id: sea_orm::ActiveValue::Set(index.table_id),
-                    number_of_attributes: sea_orm::ActiveValue::Set(index.attr_ids.len() as i32),
-                    variant_tag: sea_orm::ActiveValue::Set(index.index_type),
-                    is_unique: sea_orm::ActiveValue::Set(index.is_unique),
-                    nulls_not_distinct: sea_orm::ActiveValue::Set(index.nulls_not_distinct),
-                    is_primary: sea_orm::ActiveValue::Set(index.is_primary),
-                    is_clustered: sea_orm::ActiveValue::Set(index.is_clustered),
-                    is_exclusion: sea_orm::ActiveValue::Set(index.is_exclusion),
-                    description: sea_orm::ActiveValue::Set(
-                        self.get_description_from_attr_ids(index.attr_ids.clone()),
-                    ),
-                    ..Default::default()
-                }))
+                IndexMetadata::insert_many(
+                    mock_catalog
+                        .indexes
+                        .iter()
+                        .map(|index| index_metadata::ActiveModel {
+                            name: sea_orm::ActiveValue::Set(index.name.clone()),
+                            table_id: sea_orm::ActiveValue::Set(index.table_id),
+                            number_of_attributes: sea_orm::ActiveValue::Set(
+                                index.attr_ids.len() as i32
+                            ),
+                            variant_tag: sea_orm::ActiveValue::Set(index.index_type),
+                            is_unique: sea_orm::ActiveValue::Set(index.is_unique),
+                            nulls_not_distinct: sea_orm::ActiveValue::Set(index.nulls_not_distinct),
+                            is_primary: sea_orm::ActiveValue::Set(index.is_primary),
+                            is_clustered: sea_orm::ActiveValue::Set(index.is_clustered),
+                            is_exclusion: sea_orm::ActiveValue::Set(index.is_exclusion),
+                            description: sea_orm::ActiveValue::Set(
+                                self.get_description_from_attr_ids(index.attr_ids.clone()),
+                            ),
+                            ..Default::default()
+                        }),
+                )
                 .exec(&self.db)
                 .await?;
                 Ok(())
@@ -176,7 +183,7 @@ impl CostModelStorageLayer for BackendManager {
                             number_of_attributes: sea_orm::ActiveValue::Set(
                                 stat.attr_ids.len() as i32
                             ),
-                            created_time: sea_orm::ActiveValue::Set(Utc::now()),
+                            creation_time: sea_orm::ActiveValue::Set(Utc::now()),
                             variant_tag: sea_orm::ActiveValue::Set(stat.stat_type),
                             description: sea_orm::ActiveValue::Set("".to_string()),
                             ..Default::default()
@@ -220,7 +227,7 @@ impl CostModelStorageLayer for BackendManager {
                             number_of_attributes: sea_orm::ActiveValue::Set(
                                 stat.attr_ids.len() as i32
                             ),
-                            created_time: sea_orm::ActiveValue::Set(Utc::now()),
+                            creation_time: sea_orm::ActiveValue::Set(Utc::now()),
                             variant_tag: sea_orm::ActiveValue::Set(stat.stat_type),
                             description: sea_orm::ActiveValue::Set(description),
                             ..Default::default()
@@ -395,11 +402,11 @@ impl CostModelStorageLayer for BackendManager {
 
     async fn store_cost(
         &self,
-        expr_id: Self::ExprId,
+        physical_expression_id: Self::ExprId,
         cost: i32,
         epoch_id: Self::EpochId,
     ) -> StorageResult<()> {
-        let expr_exists = PhysicalExpression::find_by_id(expr_id)
+        let expr_exists = PhysicalExpression::find_by_id(physical_expression_id)
             .one(&self.db)
             .await?;
         if expr_exists.is_none() {
@@ -421,7 +428,7 @@ impl CostModelStorageLayer for BackendManager {
         }
 
         let new_cost = plan_cost::ActiveModel {
-            physical_expression_id: sea_orm::ActiveValue::Set(expr_id),
+            physical_expression_id: sea_orm::ActiveValue::Set(physical_expression_id),
             epoch_id: sea_orm::ActiveValue::Set(epoch_id),
             cost: sea_orm::ActiveValue::Set(cost),
             is_valid: sea_orm::ActiveValue::Set(true),
@@ -435,6 +442,8 @@ impl CostModelStorageLayer for BackendManager {
 #[cfg(test)]
 mod tests {
     use crate::{cost_model::interface::Stat, migrate, CostModelStorageLayer};
+    use sea_orm::sqlx::database;
+    use sea_orm::Statement;
     use sea_orm::{
         ColumnTrait, ConnectionTrait, Database, DbBackend, EntityTrait, ModelTrait, QueryFilter,
         QuerySelect, QueryTrait,
@@ -467,6 +476,13 @@ mod tests {
     fn remove_db_file(db_file: &str) {
         let database_file = format!("./{}", db_file);
         let _ = std::fs::remove_file(database_file);
+    }
+
+    async fn copy_init_db(db_file: &str) -> String {
+        let original_db = "init.db";
+        let _ = std::fs::copy(original_db, format!("./{}", db_file));
+        let database_url = format!("sqlite:./{}?mode=rwc", format!("./{}", db_file));
+        database_url
     }
 
     #[tokio::test]
@@ -514,5 +530,38 @@ mod tests {
         assert_eq!(lookup_res.len(), 3);
 
         remove_db_file(DATABASE_FILE);
+    }
+
+    #[tokio::test]
+    #[ignore] // Need to update all tables
+    async fn test_store_cost() {
+        const DATABASE_FILE: &str = "test_store_cost.db";
+        let database_url = copy_init_db(DATABASE_FILE).await;
+        let mut binding = super::BackendManager::new(Some(&database_url)).await;
+        let backend_manager = binding.as_mut().unwrap();
+        let epoch_id = backend_manager
+            .create_new_epoch("source".to_string(), "data".to_string())
+            .await
+            .unwrap();
+        let physical_expression_id = 1;
+        let cost = 42;
+        let res = backend_manager
+            .store_cost(physical_expression_id, cost, epoch_id)
+            .await;
+        match res {
+            Ok(_) => assert!(true),
+            Err(e) => {
+                println!("Error: {:?}", e);
+                assert!(false);
+            }
+        }
+        let costs = super::PlanCost::find()
+            .all(&backend_manager.db)
+            .await
+            .unwrap();
+        assert_eq!(costs.len(), 2); // The first row one is the initialized data
+        assert_eq!(costs[1].epoch_id, epoch_id);
+        assert_eq!(costs[1].physical_expression_id, physical_expression_id);
+        assert_eq!(costs[1].cost, cost);
     }
 }
