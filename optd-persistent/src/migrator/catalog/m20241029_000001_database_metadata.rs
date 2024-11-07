@@ -4,6 +4,7 @@ use sea_orm_migration::{prelude::*, schema::*};
 pub enum DatabaseMetadata {
     Table,
     Id,
+    Name,
     CreationTime,
 }
 
@@ -19,6 +20,7 @@ impl MigrationTrait for Migration {
                     .table(DatabaseMetadata::Table)
                     .if_not_exists()
                     .col(pk_auto(DatabaseMetadata::Id))
+                    .col(string(DatabaseMetadata::Name))
                     .col(timestamp(DatabaseMetadata::CreationTime))
                     .to_owned(),
             )

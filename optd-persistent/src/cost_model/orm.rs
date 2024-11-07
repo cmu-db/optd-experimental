@@ -12,6 +12,7 @@ use sea_orm::{
     QueryOrder, QuerySelect, RuntimeErr, TransactionTrait,
 };
 
+use super::catalog::mock_catalog::{self, MockCatalog};
 use super::interface::{CatalogSource, Stat};
 
 impl BackendManager {
@@ -61,7 +62,89 @@ impl CostModelStorageLayer for BackendManager {
         c: CatalogSource,
         epoch_id: Self::EpochId,
     ) -> StorageResult<()> {
-        todo!()
+        match c {
+            CatalogSource::Mock => {
+                let mock_catalog = MockCatalog::new();
+                DatabaseMetadata::insert_many(mock_catalog.databases.iter().map(|database| {
+                    database_metadata::ActiveModel {
+                        name: sea_orm::ActiveValue::Set(database.name.clone()),
+                        creation_time: sea_orm::ActiveValue::Set(Utc::now()),
+                        ..Default::default()
+                    }
+                }))
+                .exec(&self.db)
+                .await?;
+                NamespaceMetadata::insert_many(mock_catalog.namespaces.iter().map(|namespace| {
+                    namespace_metadata::ActiveModel {
+                        name: sea_orm::ActiveValue::Set(namespace.name.clone()),
+                        database_id: sea_orm::ActiveValue::Set(namespace.database_id),
+                        creation_time: sea_orm::ActiveValue::Set(Utc::now()),
+                        ..Default::default()
+                    }
+                }))
+                .exec(&self.db)
+                .await?;
+                TableMetadata::insert_many(mock_catalog.tables.iter().map(|table| {
+                    table_metadata::ActiveModel {
+                        name: sea_orm::ActiveValue::Set(table.name.clone()),
+                        namespace_id: sea_orm::ActiveValue::Set(table.namespace_id),
+                        creation_time: sea_orm::ActiveValue::Set(Utc::now()),
+                        ..Default::default()
+                    }
+                }))
+                .exec(&self.db)
+                .await?;
+                Attribute::insert_many(mock_catalog.attributes.iter().map(|attr| {
+                    attribute::ActiveModel {
+                        table_id: sea_orm::ActiveValue::Set(attr.table_id),
+                        name: sea_orm::ActiveValue::Set(attr.name.clone()),
+                        compression_method: sea_orm::ActiveValue::Set(
+                            attr.compression_method.to_string(),
+                        ),
+                        variant_tag: sea_orm::ActiveValue::Set(attr.attr_type),
+                        base_attribute_number: sea_orm::ActiveValue::Set(attr.attr_index),
+                        is_not_null: sea_orm::ActiveValue::Set(attr.is_not_null),
+                        ..Default::default()
+                    }
+                }))
+                .exec(&self.db)
+                .await?;
+                Statistic::insert_many(mock_catalog.statistics.iter().map(|stat| {
+                    statistic::ActiveModel {
+                        name: sea_orm::ActiveValue::Set(stat.name.clone()),
+                        table_id: sea_orm::ActiveValue::Set(stat.table_id),
+                        number_of_attributes: sea_orm::ActiveValue::Set(stat.attr_ids.len() as i32),
+                        created_time: sea_orm::ActiveValue::Set(Utc::now()),
+                        variant_tag: sea_orm::ActiveValue::Set(stat.stat_type),
+                        description: sea_orm::ActiveValue::Set(
+                            self.get_description_from_attr_ids(stat.attr_ids.clone()),
+                        ),
+                        ..Default::default()
+                    }
+                }))
+                .exec(&self.db)
+                .await?;
+                Index::insert_many(mock_catalog.indexes.iter().map(|index| index::ActiveModel {
+                    name: sea_orm::ActiveValue::Set(index.name.clone()),
+                    table_id: sea_orm::ActiveValue::Set(index.table_id),
+                    number_of_attributes: sea_orm::ActiveValue::Set(index.attr_ids.len() as i32),
+                    variant_tag: sea_orm::ActiveValue::Set(index.index_type),
+                    is_unique: sea_orm::ActiveValue::Set(index.is_unique),
+                    nulls_not_distinct: sea_orm::ActiveValue::Set(index.nulls_not_distinct),
+                    is_primary: sea_orm::ActiveValue::Set(index.is_primary),
+                    is_clustered: sea_orm::ActiveValue::Set(index.is_clustered),
+                    is_exclusion: sea_orm::ActiveValue::Set(index.is_exclusion),
+                    description: sea_orm::ActiveValue::Set(
+                        self.get_description_from_attr_ids(index.attr_ids.clone()),
+                    ),
+                    ..Default::default()
+                }))
+                .exec(&self.db)
+                .await?;
+                Ok(())
+            }
+            CatalogSource::Iceberg() => todo!(),
+        }
     }
 
     async fn update_stats(&self, stat: Stat, epoch_id: Self::EpochId) -> StorageResult<()> {

@@ -10,7 +10,7 @@ pub struct Model {
     pub table_id: i32,
     pub name: String,
     pub compression_method: String,
-    pub r#type: i32,
+    pub variant_tag: i32,
     pub base_attribute_number: i32,
     pub is_not_null: bool,
 }

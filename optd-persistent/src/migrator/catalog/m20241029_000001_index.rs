@@ -45,7 +45,7 @@ impl MigrationTrait for Migration {
                     .col(boolean(Index::IsPrimary))
                     .col(boolean(Index::IsClustered))
                     .col(boolean(Index::IsExclusion))
-                    .col(json(Index::Description))
+                    .col(string(Index::Description))
                     .to_owned(),
             )
             .await

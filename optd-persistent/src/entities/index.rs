@@ -16,7 +16,7 @@ pub struct Model {
     pub is_primary: bool,
     pub is_clustered: bool,
     pub is_exclusion: bool,
-    pub description: Json,
+    pub description: String,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

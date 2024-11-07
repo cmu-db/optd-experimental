@@ -8,7 +8,7 @@ pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
     pub name: String,
-    pub schema_id: i32,
+    pub namespace_id: i32,
     pub creation_time: DateTimeUtc,
 }
 
@@ -20,7 +20,7 @@ pub enum Relation {
     Index,
     #[sea_orm(
         belongs_to = "super::namespace_metadata::Entity",
-        from = "Column::SchemaId",
+        from = "Column::NamespaceId",
         to = "super::namespace_metadata::Column::Id",
         on_update = "Cascade",
         on_delete = "Cascade"
