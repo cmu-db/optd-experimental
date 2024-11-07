@@ -1,6 +1,5 @@
 #![allow(dead_code, unused_imports, unused_variables)]
 
-use std::i32;
 use std::ptr::null;
 
 use crate::entities::{prelude::*, *};
@@ -201,15 +200,6 @@ impl CostModelStorageLayer for BackendManager {
         Ok(())
     }
 
-    async fn store_cost(
-        &self,
-        expr_id: Self::ExprId,
-        cost: i32,
-        epoch_id: Self::EpochId,
-    ) -> StorageResult<()> {
-        todo!()
-    }
-
     async fn store_expr_stats_mappings(
         &self,
         expr_id: Self::ExprId,
@@ -299,11 +289,63 @@ impl CostModelStorageLayer for BackendManager {
         expr_id: Self::ExprId,
         epoch_id: Self::EpochId,
     ) -> StorageResult<Option<i32>> {
-        todo!()
+        let cost = PlanCost::find()
+            .filter(plan_cost::Column::PhysicalExpressionId.eq(expr_id))
+            .filter(plan_cost::Column::EpochId.eq(epoch_id))
+            .one(&self.db)
+            .await?;
+        assert!(cost.is_some(), "Cost not found in Cost table");
+        assert!(cost.clone().unwrap().is_valid, "Cost is not valid");
+        Ok(cost.map(|c| c.cost))
     }
 
     async fn get_cost(&self, expr_id: Self::ExprId) -> StorageResult<Option<i32>> {
-        todo!()
+        let cost = PlanCost::find()
+            .filter(plan_cost::Column::PhysicalExpressionId.eq(expr_id))
+            .order_by_desc(plan_cost::Column::EpochId)
+            .one(&self.db)
+            .await?;
+        assert!(cost.is_some(), "Cost not found in Cost table");
+        assert!(cost.clone().unwrap().is_valid, "Cost is not valid");
+        Ok(cost.map(|c| c.cost))
+    }
+
+    async fn store_cost(
+        &self,
+        expr_id: Self::ExprId,
+        cost: i32,
+        epoch_id: Self::EpochId,
+    ) -> StorageResult<()> {
+        let expr_exists = PhysicalExpression::find_by_id(expr_id)
+            .one(&self.db)
+            .await?;
+        if expr_exists.is_none() {
+            return Err(BackendError::Database(DbErr::RecordNotFound(
+                "ExprId not found in PhysicalExpression table".to_string(),
+            )));
+        }
+
+        // Check if epoch_id exists in Event table
+        let epoch_exists = Event::find()
+            .filter(event::Column::EpochId.eq(epoch_id))
+            .one(&self.db)
+            .await
+            .unwrap();
+        if epoch_exists.is_none() {
+            return Err(BackendError::Database(DbErr::RecordNotFound(
+                "EpochId not found in Event table".to_string(),
+            )));
+        }
+
+        let new_cost = plan_cost::ActiveModel {
+            physical_expression_id: sea_orm::ActiveValue::Set(expr_id),
+            epoch_id: sea_orm::ActiveValue::Set(epoch_id),
+            cost: sea_orm::ActiveValue::Set(cost),
+            is_valid: sea_orm::ActiveValue::Set(true),
+            ..Default::default()
+        };
+        let _ = PlanCost::insert(new_cost).exec(&self.db).await?;
+        Ok(())
     }
 }
 
