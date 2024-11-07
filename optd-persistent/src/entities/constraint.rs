@@ -9,9 +9,9 @@ pub struct Model {
     pub id: i32,
     pub name: String,
     pub variant_tag: i32,
-    pub table_id: i32,
-    pub index_id: i32,
-    pub foreign_ref_id: i32,
+    pub table_id: Option<i32>,
+    pub index_id: Option<i32>,
+    pub foreign_ref_id: Option<i32>,
     pub check_src: String,
 }
 
