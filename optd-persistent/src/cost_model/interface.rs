@@ -12,6 +12,13 @@ use std::sync::Arc;
 
 pub enum CatalogSource {
     Iceberg(),
+    Mock,
+}
+
+pub enum StatisticType {
+    Count,
+    Min,
+    Max,
 }
 
 #[trait_variant::make(Send)]

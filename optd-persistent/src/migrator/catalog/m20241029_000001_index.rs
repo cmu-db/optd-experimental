@@ -23,12 +23,13 @@ pub enum Index {
     TableId,
     Name,
     NumberOfAttributes,
+    VariantTag,
     IsUnique,
     NullsNotDistinct,
     IsPrimary,
     IsClustered,
     IsExclusion,
-    Data,
+    Description,
 }
 
 #[derive(DeriveMigrationName)]
@@ -53,12 +54,13 @@ impl MigrationTrait for Migration {
                     )
                     .col(string(Index::Name))
                     .col(integer(Index::NumberOfAttributes))
+                    .col(integer(Index::VariantTag))
                     .col(boolean(Index::IsUnique))
                     .col(boolean(Index::NullsNotDistinct))
                     .col(boolean(Index::IsPrimary))
                     .col(boolean(Index::IsClustered))
                     .col(boolean(Index::IsExclusion))
-                    .col(json(Index::Data))
+                    .col(json(Index::Description))
                     .to_owned(),
             )
             .await
