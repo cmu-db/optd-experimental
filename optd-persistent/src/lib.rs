@@ -45,9 +45,9 @@ pub struct BackendManager {
 
 impl BackendManager {
     /// Creates a new `BackendManager`.
-    pub async fn new() -> StorageResult<Self> {
+    pub async fn new(database_url: Option<&str>) -> StorageResult<Self> {
         Ok(Self {
-            db: Database::connect(DATABASE_URL).await?,
+            db: Database::connect(database_url.unwrap_or(DATABASE_URL)).await?,
             latest_epoch_id: AtomicUsize::new(0),
         })
     }
@@ -55,8 +55,6 @@ impl BackendManager {
 
 pub const DATABASE_URL: &str = "sqlite:./sqlite.db?mode=rwc";
 pub const DATABASE_FILE: &str = "./sqlite.db";
-pub const TEST_DATABASE_URL: &str = "sqlite:./test.db?mode=rwc";
-pub const TEST_DATABASE_FILE: &str = "./test.db";
 
 pub async fn migrate(db: &DatabaseConnection) -> Result<(), DbErr> {
     Migrator::refresh(db).await
