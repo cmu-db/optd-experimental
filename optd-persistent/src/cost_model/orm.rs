@@ -1,6 +1,6 @@
 #![allow(dead_code, unused_imports, unused_variables)]
 
-use crate::{BackendManager, CostModelStorageLayer, CostModelStorageResult};
+use crate::{BackendManager, CostModelStorageLayer, StorageResult};
 
 use super::interface::CatalogSource;
 
@@ -16,7 +16,7 @@ impl CostModelStorageLayer for BackendManager {
         &mut self,
         source: String,
         data: String,
-    ) -> CostModelStorageResult<Self::EpochId> {
+    ) -> StorageResult<Self::EpochId> {
         todo!()
     }
 
@@ -24,15 +24,11 @@ impl CostModelStorageLayer for BackendManager {
         &self,
         c: CatalogSource,
         epoch_id: Self::EpochId,
-    ) -> CostModelStorageResult<()> {
+    ) -> StorageResult<()> {
         todo!()
     }
 
-    async fn update_stats(
-        &self,
-        stats: i32,
-        epoch_id: Self::EpochId,
-    ) -> CostModelStorageResult<()> {
+    async fn update_stats(&self, stats: i32, epoch_id: Self::EpochId) -> StorageResult<()> {
         todo!()
     }
 
@@ -41,7 +37,7 @@ impl CostModelStorageLayer for BackendManager {
         expr_id: Self::ExprId,
         cost: i32,
         epoch_id: Self::EpochId,
-    ) -> CostModelStorageResult<()> {
+    ) -> StorageResult<()> {
         todo!()
     }
 
@@ -49,40 +45,34 @@ impl CostModelStorageLayer for BackendManager {
         &self,
         expr_id: Self::ExprId,
         stat_ids: Vec<Self::StatId>,
-    ) -> CostModelStorageResult<()> {
+    ) -> StorageResult<()> {
         todo!()
     }
 
-    #[doc = " Get the statistics for a given table."]
-    #[doc = " If `epoch_id` is None, it will return the latest statistics."]
     async fn get_stats_for_table(
         &self,
         table_id: i32,
         stat_type: i32,
         epoch_id: Option<Self::EpochId>,
-    ) -> CostModelStorageResult<Option<f32>> {
+    ) -> StorageResult<Option<f32>> {
         todo!()
     }
 
-    #[doc = " Get the statistics for a given attribute."]
-    #[doc = " If `epoch_id` is None, it will return the latest statistics."]
     async fn get_stats_for_attr(
         &self,
         attr_id: i32,
         stat_type: i32,
         epoch_id: Option<Self::EpochId>,
-    ) -> CostModelStorageResult<Option<f32>> {
+    ) -> StorageResult<Option<f32>> {
         todo!()
     }
 
-    #[doc = " Get the joint statistics for a list of attributes."]
-    #[doc = " If `epoch_id` is None, it will return the latest statistics."]
     async fn get_stats_for_attrs(
         &self,
         attr_ids: Vec<i32>,
         stat_type: i32,
         epoch_id: Option<Self::EpochId>,
-    ) -> CostModelStorageResult<Option<f32>> {
+    ) -> StorageResult<Option<f32>> {
         todo!()
     }
 
@@ -90,11 +80,11 @@ impl CostModelStorageLayer for BackendManager {
         &self,
         expr_id: Self::ExprId,
         epoch_id: Self::EpochId,
-    ) -> CostModelStorageResult<Option<i32>> {
+    ) -> StorageResult<Option<i32>> {
         todo!()
     }
 
-    async fn get_cost(&self, expr_id: Self::ExprId) -> CostModelStorageResult<Option<i32>> {
+    async fn get_cost(&self, expr_id: Self::ExprId) -> StorageResult<Option<i32>> {
         todo!()
     }
 }

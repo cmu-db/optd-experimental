@@ -13,16 +13,28 @@ mod migrator;
 mod cost_model;
 pub use cost_model::interface::CostModelStorageLayer;
 
-pub type CostModelStorageResult<T> = Result<T, CostModelError>;
+pub type StorageResult<T> = Result<T, BackendError>;
 
 pub enum CostModelError {
     // TODO: Add more error types
-    Database(DbErr),
+    UnknownStatisticType,
 }
 
-impl From<DbErr> for CostModelError {
+pub enum BackendError {
+    CostModel(CostModelError),
+    Database(DbErr),
+    // Add other variants as needed for different error types
+}
+
+impl From<CostModelError> for BackendError {
+    fn from(value: CostModelError) -> Self {
+        BackendError::CostModel(value)
+    }
+}
+
+impl From<DbErr> for BackendError {
     fn from(value: DbErr) -> Self {
-        CostModelError::Database(value)
+        BackendError::Database(value)
     }
 }
 
@@ -33,7 +45,7 @@ pub struct BackendManager {
 
 impl BackendManager {
     /// Creates a new `BackendManager`.
-    pub async fn new() -> CostModelStorageResult<Self> {
+    pub async fn new() -> StorageResult<Self> {
         Ok(Self {
             db: Database::connect(DATABASE_URL).await?,
             latest_epoch_id: AtomicUsize::new(0),
@@ -44,6 +56,7 @@ impl BackendManager {
 pub const DATABASE_URL: &str = "sqlite:./sqlite.db?mode=rwc";
 pub const DATABASE_FILE: &str = "./sqlite.db";
 pub const TEST_DATABASE_URL: &str = "sqlite:./test.db?mode=rwc";
+pub const TEST_DATABASE_FILE: &str = "./test.db";
 
 pub async fn migrate(db: &DatabaseConnection) -> Result<(), DbErr> {
     Migrator::refresh(db).await
