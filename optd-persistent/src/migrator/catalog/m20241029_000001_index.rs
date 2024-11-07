@@ -1,18 +1,3 @@
-/*
-Table index {
-  id integer PK
-  name varchar
-  table_id integer [ref: > table_metadata.id]
-  number_of_attributes integer
-  is_unique boolean
-  nulls_not_distinct boolean // Only valid for unique index, if true, then null value is equal, if false, null value is distinct
-  is_primary boolean
-  is_clustered boolean // If true, the table was last clustered on this index
-  is_exclusion boolean // More fields might be added in the future for expressiveness on exclusion constraint.
-  data json // Stores the attribute ids. The reason for not creating an additional junction table is the same as with the attribute_stats table.
-}
- */
-
 use crate::migrator::catalog::table_metadata::TableMetadata;
 use sea_orm_migration::{prelude::*, schema::*};
 

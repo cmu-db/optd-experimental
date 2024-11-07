@@ -1,9 +1,8 @@
-/*
-Table statistic_attribute_junction {
-  statistic_id integer [ref: > statistic.id]
-  attribute_id integer [ref: > attribute.id]
-}
- */
+//! An entity representing the relationship between [`statistic`] and [`attribute`].
+//!
+//! One [`statistic`] can be associated with multiple [`attribute`]s, which denotes a joint
+//! statistic for the attributes. On the other hand, one [`attribute`] can be associated with
+//! multiple [`statistic`]s, since the attribute can be used in multiple statistics.
 
 use crate::migrator::catalog::attribute::Attribute;
 use crate::migrator::cost_model::statistic::Statistic;

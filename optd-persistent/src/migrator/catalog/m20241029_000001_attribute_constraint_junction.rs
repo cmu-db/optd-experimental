@@ -1,10 +1,9 @@
-/*
-// The constrained attributes (columns) if a constraint is a table constraint (including foreign keys, but not constraint triggers)
-Table attribute_constraint_junction {
-  attribute_id integer [ref: > attribute.id]
-  constraint_id integer [ref: > constraint.id]
-}
-*/
+//! An entity representing the relationship between [`attribute`] and [`constraint`].
+//!
+//! If a constraint is a table constraint (including foreign keys, but not constraint triggers),
+//! the attributes that are constrained on are stored in the [`attribute_constraint_junction`].
+//!
+//! One constraint might be associated with multiple attributes, for example, a composite primary key.
 
 use crate::migrator::catalog::{attribute::Attribute, constraint::Constraint};
 use sea_orm_migration::{prelude::*, schema::*};

@@ -1,3 +1,14 @@
+//! An entity representing the relationship between [`attribute`] and [`constraint`].
+//!
+//! If a constraint is a foreign key constraint, the attributes that are referenced by the foreign
+//! key are stored in the [`attribute_foreign_constraint_junction`]. Note that this is different from
+//! the [`attribute_constraint_junction`] table, which stores the attributes that are constrained on.
+//! In the case of a foreign key constraint, this refers to the attributes that are referecing from the
+//! foreign key.
+//!
+//! One foreign key constraint might be associated with multiple attributes, for example, a composite
+//! foreign key.
+
 use crate::migrator::catalog::{attribute::Attribute, constraint::Constraint};
 use sea_orm_migration::{prelude::*, schema::*};
 
