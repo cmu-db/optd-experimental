@@ -1,16 +1,3 @@
-/*
-// Not-null is handled directly in `attribute`. See `is_not_null` field.
-// Constraint trigger is handled directly in `trigger`.
-Table constraint {
-  id integer PK
-  name varchar
-  constraint_type integer // pk, fk, unique, check, exclusion
-  table_id integer [ref: > table_metadata.id] // 0 if not a table constraint
-  index_id integer [ref: > index.id] // The index supporting this constraint, if it's a unique, primary key, foreign key, or exclusion constraint; else 0
-  foreign_ref_id integer [ref: > table_metadata.id] // If a foreign key, the referenced table; else 0
-  check_src varchar // the expression tree for a check constraint, which provides a textual representation of the constraint expression
-} */
-
 use crate::migrator::catalog::{index::Index, table_metadata::TableMetadata};
 use sea_orm_migration::{prelude::*, schema::*};
 
@@ -40,7 +27,7 @@ impl MigrationTrait for Migration {
                     .col(pk_auto(Constraint::Id))
                     .col(string(Constraint::Name))
                     .col(integer(Constraint::VariantTag))
-                    .col(integer(Constraint::TableId))
+                    .col(integer_null(Constraint::TableId))
                     .foreign_key(
                         ForeignKey::create()
                             .from(Constraint::Table, Constraint::TableId)
@@ -48,7 +35,7 @@ impl MigrationTrait for Migration {
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
-                    .col(integer(Constraint::IndexId))
+                    .col(integer_null(Constraint::IndexId))
                     .foreign_key(
                         ForeignKey::create()
                             .from(Constraint::Table, Constraint::IndexId)
@@ -56,7 +43,7 @@ impl MigrationTrait for Migration {
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
-                    .col(integer(Constraint::ForeignRefId))
+                    .col(integer_null(Constraint::ForeignRefId))
                     .foreign_key(
                         ForeignKey::create()
                             .from(Constraint::Table, Constraint::ForeignRefId)

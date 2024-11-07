@@ -33,10 +33,10 @@ Table attribute {
 Table statistic {
   id integer PK
   name varchar
-  table_id integer [ref: > table_metadata.id] // null if not a table statistic
+  table_id integer [ref: > table_metadata.id, null] // null if not a table statistic
   created_time timestamp
   number_of_attributes integer // 0 if a table statistic
-  statistic_type integer // Should we make another table to explain the type mapping?
+  variant_tag integer // Should we make another table to explain the type mapping?
   description varchar // Store the sorted attribute ids of this statistic, to support quick lookup (OR we can use junction table to look up)
 }
 
@@ -98,10 +98,10 @@ Table trigger {
 Table constraint {
   id integer PK
   name varchar
-  constraint_type integer // pk, fk, unique, check, exclusion
-  table_id integer [ref: > table_metadata.id] // null if not a table constraint
-  index_id integer [ref: > index.id] // The index supporting this constraint, if it's a unique, primary key, foreign key, or exclusion constraint; else null
-  foreign_ref_id integer [ref: > table_metadata.id] // If a foreign key, the referenced table; else null
+  variant_tag integer // pk, fk, unique, check, exclusion
+  table_id integer [ref: > table_metadata.id, null] // null if not a table constraint
+  index_id integer [ref: > index.id, null] // The index supporting this constraint, if it's a unique, primary key, foreign key, or exclusion constraint; else null
+  foreign_ref_id integer [ref: > table_metadata.id, null] // If a foreign key, the referenced table; else null
   check_src varchar // the expression tree for a check constraint, which provides a textual representation of the constraint expression
 }
 

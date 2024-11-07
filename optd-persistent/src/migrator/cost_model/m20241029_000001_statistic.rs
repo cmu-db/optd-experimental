@@ -18,9 +18,7 @@ pub enum Statistic {
     CreatedTime,
     // 0 if a table statistic.
     NumberOfAttributes,
-    // TODO(lanlou): Should we make another table to explain the type mapping?
-    #[allow(clippy::enum_variant_names)]
-    StatisticType,
+    VariantTag,
     // Store the sorted attribute ids of this statistic, to support quick lookup (OR we can use junction table to look up)
     // For example, if we want to store the statistic of attributes [1, 2, 3], we can store it as "1,2,3".
     // During lookup, we should first sort the attribute ids, and then look up.
@@ -41,7 +39,7 @@ impl MigrationTrait for Migration {
                     .if_not_exists()
                     .col(pk_auto(Statistic::Id))
                     .col(string(Statistic::Name))
-                    .col(integer(Statistic::TableId))
+                    .col(integer_null(Statistic::TableId))
                     .foreign_key(
                         ForeignKey::create()
                             .from(Statistic::Table, Statistic::TableId)
@@ -51,7 +49,7 @@ impl MigrationTrait for Migration {
                     )
                     .col(timestamp(Statistic::CreatedTime))
                     .col(integer(Statistic::NumberOfAttributes))
-                    .col(integer(Statistic::StatisticType))
+                    .col(integer(Statistic::VariantTag))
                     .col(string(Statistic::Description))
                     .to_owned(),
             )

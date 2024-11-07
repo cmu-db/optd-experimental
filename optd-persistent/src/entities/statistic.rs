@@ -8,10 +8,10 @@ pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
     pub name: String,
-    pub table_id: i32,
+    pub table_id: Option<i32>,
     pub created_time: DateTimeUtc,
     pub number_of_attributes: i32,
-    pub statistic_type: i32,
+    pub variant_tag: i32,
     pub description: String,
 }
 
