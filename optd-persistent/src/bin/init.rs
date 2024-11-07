@@ -75,7 +75,7 @@ async fn init_all_tables(db_file: &str) -> Result<(), sea_orm::error::DbErr> {
         creation_time: Set(Utc::now()),
         number_of_attributes: Set(0),
         variant_tag: Set(1),
-        description: Set("Total rows".to_owned()),
+        description: Set("".to_owned()),
     };
     statistic::Entity::insert(statistic)
         .exec(&db)
@@ -118,7 +118,7 @@ async fn init_all_tables(db_file: &str) -> Result<(), sea_orm::error::DbErr> {
         is_exclusion: Set(false),
         variant_tag: Set(1),
         number_of_attributes: Set(1),
-        description: Set("random".to_owned()),
+        description: Set("1".to_owned()),
     };
     index_metadata::Entity::insert(index_metadata)
         .exec(&db)
