@@ -10,7 +10,7 @@ use sea_orm::sea_query::Query;
 use sea_orm::{sqlx::types::chrono::Utc, EntityTrait};
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DbErr, DeleteResult, EntityOrSelect, ModelTrait, QueryFilter,
-    QueryOrder, QuerySelect, RuntimeErr,
+    QueryOrder, QuerySelect, RuntimeErr, TransactionTrait,
 };
 
 use super::interface::{CatalogSource, Stat};
@@ -68,8 +68,8 @@ impl CostModelStorageLayer for BackendManager {
     }
 
     async fn update_stats(&self, stat: Stat, epoch_id: Self::EpochId) -> StorageResult<()> {
+        let transaction = self.db.begin().await?;
         // 0. Check if the stat already exists. If exists, get stat_id, else insert into statistic table.
-        let mut stat_inserted = false;
         let stat_id = match stat.table_id {
             Some(table_id) => {
                 // TODO(lanlou): only select needed fields
@@ -90,7 +90,6 @@ impl CostModelStorageLayer for BackendManager {
                         stat_data.0.id
                     }
                     None => {
-                        stat_inserted = true;
                         let new_stat = statistic::ActiveModel {
                             name: sea_orm::ActiveValue::Set(stat.name.clone()),
                             table_id: sea_orm::ActiveValue::Set(table_id),
@@ -136,7 +135,6 @@ impl CostModelStorageLayer for BackendManager {
                         stat_data.0.id
                     }
                     None => {
-                        stat_inserted = true;
                         let new_stat = statistic::ActiveModel {
                             name: sea_orm::ActiveValue::Set(stat.name.clone()),
                             number_of_attributes: sea_orm::ActiveValue::Set(
@@ -178,18 +176,10 @@ impl CostModelStorageLayer for BackendManager {
             statistic_value: sea_orm::ActiveValue::Set(sea_orm::JsonValue::String(stat.stat_value)),
             ..Default::default()
         };
-        let insert_res = VersionedStatistic::insert(new_stats).exec(&self.db).await;
-        if insert_res.is_err() && stat_inserted {
-            // TODO(lanlou): update it with txn.
-            let delete_res = Statistic::delete_by_id(stat_id).exec(&self.db).await;
-            return Err(BackendError::Database(DbErr::Exec(RuntimeErr::Internal(
-                format!("Failed to insert into versioned_statistic table. And statistic with id {} is{} deleted.", stat_id, if delete_res.is_err() { "not" } else { "" }),
-            ))));
-        }
+        let _ = VersionedStatistic::insert(new_stats).exec(&self.db).await;
 
         // 2. Invalidate all the related cost.
-        // TODO(lanlou): better handle error, let everything atomic :(
-        let update_res = plan_cost::Entity::update_many()
+        let _ = plan_cost::Entity::update_many()
             .col_expr(plan_cost::Column::IsValid, Expr::value(false))
             .filter(plan_cost::Column::IsValid.eq(true))
             .filter(
@@ -208,28 +198,8 @@ impl CostModelStorageLayer for BackendManager {
             )
             .exec(&self.db)
             .await;
-        if update_res.is_err() {
-            let delete_versioned_res =
-                VersionedStatistic::delete_by_id(insert_res.unwrap().last_insert_id)
-                    .exec(&self.db)
-                    .await;
-            let delete_res = if stat_inserted {
-                Statistic::delete_by_id(stat_id).exec(&self.db).await
-            } else {
-                Ok(DeleteResult { rows_affected: (0) })
-            };
-            return Err(BackendError::Database(DbErr::Exec(RuntimeErr::Internal(
-                format!(
-                    "Failed to update plan_cost table. And related deletion is{} done.",
-                    if !delete_res.is_err() && !delete_versioned_res.is_err() {
-                        ""
-                    } else {
-                        " not"
-                    }
-                ),
-            ))));
-        }
 
+        transaction.commit().await?;
         Ok(())
     }
 
@@ -247,7 +217,19 @@ impl CostModelStorageLayer for BackendManager {
         expr_id: Self::ExprId,
         stat_ids: Vec<Self::StatId>,
     ) -> StorageResult<()> {
-        todo!()
+        let to_insert_mappings = stat_ids
+            .iter()
+            .map(
+                |stat_id| physical_expression_to_statistic_junction::ActiveModel {
+                    physical_expression_id: sea_orm::ActiveValue::Set(expr_id),
+                    statistic_id: sea_orm::ActiveValue::Set(*stat_id),
+                },
+            )
+            .collect::<Vec<_>>();
+        let _ = PhysicalExpressionToStatisticJunction::insert_many(to_insert_mappings)
+            .exec(&self.db)
+            .await?;
+        Ok(())
     }
 
     async fn get_stats_for_table(
