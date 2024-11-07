@@ -5,7 +5,7 @@ use std::ptr::null;
 
 use crate::entities::{prelude::*, *};
 use crate::{BackendError, BackendManager, CostModelError, CostModelStorageLayer, StorageResult};
-use sea_orm::prelude::Json;
+use sea_orm::prelude::{Expr, Json};
 use sea_orm::{sqlx::types::chrono::Utc, EntityTrait};
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DbErr, ModelTrait, QueryFilter, QueryOrder, QuerySelect,
@@ -70,13 +70,23 @@ impl CostModelStorageLayer for BackendManager {
         // 0. Check if the stat already exists. If exists, get stat_id, else insert into statistic table.
         let stat_id = match stat.table_id {
             Some(table_id) => {
+                // TODO(lanlou): only select needed fields
                 let res = Statistic::find()
                     .filter(statistic::Column::TableId.eq(table_id))
                     .filter(statistic::Column::StatisticType.eq(stat.stat_type))
+                    // FIX_ME: Do we need the following filter?
+                    .inner_join(versioned_statistic::Entity)
+                    .select_also(versioned_statistic::Entity)
+                    .order_by_desc(versioned_statistic::Column::EpochId)
                     .one(&self.db)
                     .await?;
                 match res {
-                    Some(stat_data) => stat_data.id,
+                    Some(stat_data) => {
+                        if stat_data.1.unwrap().statistic_value == stat.stat_value {
+                            return Ok(());
+                        }
+                        stat_data.0.id
+                    }
                     None => {
                         let new_stat = statistic::ActiveModel {
                             name: sea_orm::ActiveValue::Set(stat.name.clone()),
@@ -109,10 +119,19 @@ impl CostModelStorageLayer for BackendManager {
                     .filter(statistic::Column::NumberOfAttributes.eq(stat.attr_ids.len() as i32))
                     .filter(statistic::Column::Description.eq(description.clone()))
                     .filter(statistic::Column::StatisticType.eq(stat.stat_type))
+                    // FIX_ME: Do we need the following filter?
+                    .inner_join(versioned_statistic::Entity)
+                    .select_also(versioned_statistic::Entity)
+                    .order_by_desc(versioned_statistic::Column::EpochId)
                     .one(&self.db)
                     .await?;
                 match res {
-                    Some(stat_data) => stat_data.id,
+                    Some(stat_data) => {
+                        if stat_data.1.unwrap().statistic_value == stat.stat_value {
+                            return Ok(());
+                        }
+                        stat_data.0.id
+                    }
                     None => {
                         let new_stat = statistic::ActiveModel {
                             name: sea_orm::ActiveValue::Set(stat.name.clone()),
@@ -148,17 +167,6 @@ impl CostModelStorageLayer for BackendManager {
                 }
             }
         };
-        // TODO(lanlou): use join previously to filter, so we don't need another query here.
-        let res = VersionedStatistic::find()
-            .filter(versioned_statistic::Column::StatisticId.eq(stat_id))
-            .order_by_desc(versioned_statistic::Column::EpochId)
-            .one(&self.db)
-            .await?;
-        if res.is_some() {
-            if res.unwrap().statistic_value == sea_orm::JsonValue::String(stat.stat_value.clone()) {
-                return Ok(());
-            }
-        }
         // 1. Insert into attr_stats and related junction tables.
         let new_stats = versioned_statistic::ActiveModel {
             epoch_id: sea_orm::ActiveValue::Set(epoch_id),
@@ -170,29 +178,28 @@ impl CostModelStorageLayer for BackendManager {
 
         // 2. Invalidate all the related cost.
         // TODO(lanlou): better handle error, let everything atomic :(
-        let related_exprs = physical_expression_to_statistic_junction::Entity::find()
+        let related_costs: Vec<i32> = plan_cost::Entity::find()
+            .filter(plan_cost::Column::IsValid.eq(true))
+            .join_rev(
+                sea_orm::JoinType::InnerJoin,
+                physical_expression_to_statistic_junction::Entity::belongs_to(plan_cost::Entity)
+                    .from(physical_expression_to_statistic_junction::Column::PhysicalExpressionId)
+                    .to(plan_cost::Column::PhysicalExpressionId)
+                    .into(),
+            )
             .filter(physical_expression_to_statistic_junction::Column::StatisticId.eq(stat_id))
+            .select_only()
+            .column(plan_cost::Column::Id)
             .all(&self.db)
+            .await?
+            .iter()
+            .map(|cost| cost.id)
+            .collect();
+        let _ = plan_cost::Entity::update_many()
+            .col_expr(plan_cost::Column::IsValid, Expr::value(false))
+            .filter(plan_cost::Column::Id.is_in(related_costs))
+            .exec(&self.db)
             .await?;
-        for expr in related_exprs {
-            let res = PlanCost::find()
-                .filter(plan_cost::Column::PhysicalExpressionId.eq(expr.physical_expression_id))
-                .filter(plan_cost::Column::IsValid.eq(true))
-                .all(&self.db)
-                .await?;
-            assert!(res.len() <= 1);
-            for cost in res {
-                // TODO(lanlou): better way to update the cost?
-                let new_cost = plan_cost::ActiveModel {
-                    id: sea_orm::ActiveValue::Set(cost.id),
-                    physical_expression_id: sea_orm::ActiveValue::Set(cost.physical_expression_id),
-                    epoch_id: sea_orm::ActiveValue::Set(cost.epoch_id),
-                    cost: sea_orm::ActiveValue::Set(cost.cost),
-                    is_valid: sea_orm::ActiveValue::Set(false),
-                };
-                let _ = new_cost.update(&self.db).await?;
-            }
-        }
 
         Ok(())
     }
