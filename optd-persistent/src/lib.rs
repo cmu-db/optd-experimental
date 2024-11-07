@@ -15,11 +15,13 @@ pub use cost_model::interface::CostModelStorageLayer;
 
 pub type StorageResult<T> = Result<T, BackendError>;
 
+#[derive(Debug)]
 pub enum CostModelError {
     // TODO: Add more error types
     UnknownStatisticType,
 }
 
+#[derive(Debug)]
 pub enum BackendError {
     CostModel(CostModelError),
     Database(DbErr),
