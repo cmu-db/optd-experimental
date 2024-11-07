@@ -10,12 +10,13 @@ pub struct Model {
     pub table_id: i32,
     pub name: String,
     pub number_of_attributes: i32,
+    pub variant_tag: i32,
     pub is_unique: bool,
     pub nulls_not_distinct: bool,
     pub is_primary: bool,
     pub is_clustered: bool,
     pub is_exclusion: bool,
-    pub data: Json,
+    pub description: Json,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
