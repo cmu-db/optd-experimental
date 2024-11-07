@@ -19,6 +19,7 @@ pub type StorageResult<T> = Result<T, BackendError>;
 pub enum CostModelError {
     // TODO: Add more error types
     UnknownStatisticType,
+    VersionedStatisticNotFound,
 }
 
 #[derive(Debug)]

@@ -22,6 +22,15 @@ pub enum StatisticType {
     Max,
 }
 
+pub struct Stat {
+    pub stat_type: i32,
+    // TODO(lanlou): what should I use for the value type?
+    pub stat_value: String,
+    pub attr_ids: Vec<i32>,
+    pub table_id: Option<i32>,
+    pub name: String,
+}
+
 #[trait_variant::make(Send)]
 pub trait CostModelStorageLayer {
     type GroupId;
@@ -44,7 +53,8 @@ pub trait CostModelStorageLayer {
         epoch_id: Self::EpochId,
     ) -> StorageResult<()>;
 
-    async fn update_stats(&self, stats: Json, epoch_id: Self::EpochId) -> StorageResult<()>;
+    // i32 in `stats:i32` is a placeholder for the stats type
+    async fn update_stats(&self, stat: Stat, epoch_id: Self::EpochId) -> StorageResult<()>;
 
     async fn store_cost(
         &self,
