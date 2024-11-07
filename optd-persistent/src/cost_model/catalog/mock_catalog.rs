@@ -61,6 +61,7 @@ pub struct MockTrigger {
     pub function: String,
 }
 
+#[derive(Default)]
 pub struct MockCatalog {
     pub databases: Vec<MockDatabaseMetadata>,
     pub namespaces: Vec<MockNamespaceMetadata>,

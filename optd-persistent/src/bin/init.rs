@@ -22,7 +22,6 @@ async fn init_all_tables(db_file: &str) -> Result<(), sea_orm::error::DbErr> {
         id: Set(1),
         name: Set("database1".to_owned()),
         creation_time: Set(Utc::now()),
-        ..Default::default()
     };
     database_metadata::Entity::insert(database_metadata)
         .exec(&db)
@@ -35,7 +34,6 @@ async fn init_all_tables(db_file: &str) -> Result<(), sea_orm::error::DbErr> {
         database_id: Set(1),
         name: Set("default".to_owned()),
         creation_time: Set(Utc::now()),
-        ..Default::default()
     };
     namespace_metadata::Entity::insert(namespace_metadata)
         .exec(&db)
@@ -48,7 +46,6 @@ async fn init_all_tables(db_file: &str) -> Result<(), sea_orm::error::DbErr> {
         namespace_id: Set(1),
         name: Set("users".to_owned()),
         creation_time: Set(Utc::now()),
-        ..Default::default()
     };
     table_metadata::Entity::insert(table_metadata)
         .exec(&db)
@@ -64,7 +61,6 @@ async fn init_all_tables(db_file: &str) -> Result<(), sea_orm::error::DbErr> {
         variant_tag: Set(1),
         base_attribute_number: Set(1),
         is_not_null: Set(true),
-        ..Default::default()
     };
     attribute::Entity::insert(attribute)
         .exec(&db)
@@ -80,7 +76,6 @@ async fn init_all_tables(db_file: &str) -> Result<(), sea_orm::error::DbErr> {
         number_of_attributes: Set(0),
         variant_tag: Set(1),
         description: Set("Total rows".to_owned()),
-        ..Default::default()
     };
     statistic::Entity::insert(statistic)
         .exec(&db)
@@ -92,7 +87,6 @@ async fn init_all_tables(db_file: &str) -> Result<(), sea_orm::error::DbErr> {
         source_variant: Set("insert".to_owned()),
         timestamp: Set(Utc::now()),
         data: Set(json!(r#"{"user_id": 1}"#)),
-        ..Default::default()
     };
 
     event::Entity::insert(event)
@@ -106,7 +100,6 @@ async fn init_all_tables(db_file: &str) -> Result<(), sea_orm::error::DbErr> {
         epoch_id: Set(1),
         statistic_id: Set(1),
         statistic_value: Set(json!(r#"{"row_count": 0}"#)),
-        ..Default::default()
     };
     versioned_statistic::Entity::insert(versioned_statistic)
         .exec(&db)
@@ -126,7 +119,6 @@ async fn init_all_tables(db_file: &str) -> Result<(), sea_orm::error::DbErr> {
         variant_tag: Set(1),
         number_of_attributes: Set(1),
         description: Set("random".to_owned()),
-        ..Default::default()
     };
     index_metadata::Entity::insert(index_metadata)
         .exec(&db)
@@ -140,7 +132,6 @@ async fn init_all_tables(db_file: &str) -> Result<(), sea_orm::error::DbErr> {
         table_id: Set(1),
         parent_trigger_id: Set(1),
         function: Set(json!(r#"{"function": "insert"}"#)),
-        ..Default::default()
     };
     trigger::Entity::insert(trigger)
         .exec(&db)
@@ -156,7 +147,6 @@ async fn init_all_tables(db_file: &str) -> Result<(), sea_orm::error::DbErr> {
         index_id: Set(Some(1)),
         foreign_ref_id: Set(None),
         check_src: Set("hello".to_owned()),
-        ..Default::default()
     };
     constraint_metadata::Entity::insert(constraint_metadata)
         .exec(&db)
@@ -167,7 +157,6 @@ async fn init_all_tables(db_file: &str) -> Result<(), sea_orm::error::DbErr> {
     let attribute_constraint_junction = attribute_constraint_junction::ActiveModel {
         attribute_id: Set(1),
         constraint_id: Set(1),
-        ..Default::default()
     };
     attribute_constraint_junction::Entity::insert(attribute_constraint_junction)
         .exec(&db)
@@ -179,7 +168,6 @@ async fn init_all_tables(db_file: &str) -> Result<(), sea_orm::error::DbErr> {
         attribute_foreign_constraint_junction::ActiveModel {
             attribute_id: Set(1),
             constraint_id: Set(1),
-            ..Default::default()
         };
     attribute_foreign_constraint_junction::Entity::insert(attribute_foreign_constraint_junction)
         .exec(&db)
@@ -190,7 +178,6 @@ async fn init_all_tables(db_file: &str) -> Result<(), sea_orm::error::DbErr> {
     let statistic_to_attribute_junction = statistic_to_attribute_junction::ActiveModel {
         statistic_id: Set(1),
         attribute_id: Set(1),
-        ..Default::default()
     };
     statistic_to_attribute_junction::Entity::insert(statistic_to_attribute_junction)
         .exec(&db)
@@ -203,7 +190,6 @@ async fn init_all_tables(db_file: &str) -> Result<(), sea_orm::error::DbErr> {
         latest_winner: Set(None),
         in_progress: Set(true),
         is_optimized: Set(false),
-        ..Default::default()
     };
     cascades_group::Entity::insert(cascades_group)
         .exec(&db)
@@ -217,7 +203,6 @@ async fn init_all_tables(db_file: &str) -> Result<(), sea_orm::error::DbErr> {
         fingerprint: Set(12345),
         variant_tag: Set(1),
         data: Set(json!(r#"{"expr": "index_scan"}"#)),
-        ..Default::default()
     };
     logical_expression::Entity::insert(logical_expression)
         .exec(&db)
@@ -231,7 +216,6 @@ async fn init_all_tables(db_file: &str) -> Result<(), sea_orm::error::DbErr> {
         fingerprint: Set(12345),
         variant_tag: Set(1),
         data: Set(json!(r#"{"expr": "index_scan"}"#)),
-        ..Default::default()
     };
     physical_expression::Entity::insert(physical_expression)
         .exec(&db)
@@ -244,7 +228,6 @@ async fn init_all_tables(db_file: &str) -> Result<(), sea_orm::error::DbErr> {
         physical_expression_id: Set(1),
         variant_tag: Set(1),
         data: Set(json!(r#"{"property": "indexed"}"#)),
-        ..Default::default()
     };
     physical_property::Entity::insert(physical_property)
         .exec(&db)
@@ -257,7 +240,6 @@ async fn init_all_tables(db_file: &str) -> Result<(), sea_orm::error::DbErr> {
         group_id: Set(1),
         variant_tag: Set(1),
         data: Set(json!(r#"{"property": "indexed"}"#)),
-        ..Default::default()
     };
     logical_property::Entity::insert(logical_property)
         .exec(&db)
@@ -267,7 +249,6 @@ async fn init_all_tables(db_file: &str) -> Result<(), sea_orm::error::DbErr> {
     let logical_children = logical_children::ActiveModel {
         logical_expression_id: Set(1),
         group_id: Set(1),
-        ..Default::default()
     };
     logical_children::Entity::insert(logical_children)
         .exec(&db)
@@ -277,7 +258,6 @@ async fn init_all_tables(db_file: &str) -> Result<(), sea_orm::error::DbErr> {
     let physical_children = physical_children::ActiveModel {
         physical_expression_id: Set(1),
         group_id: Set(1),
-        ..Default::default()
     };
     physical_children::Entity::insert(physical_children)
         .exec(&db)
@@ -291,7 +271,6 @@ async fn init_all_tables(db_file: &str) -> Result<(), sea_orm::error::DbErr> {
         epoch_id: Set(1),
         cost: Set(10),
         is_valid: Set(true),
-        ..Default::default()
     };
     plan_cost::Entity::insert(plan_cost)
         .exec(&db)
@@ -303,7 +282,6 @@ async fn init_all_tables(db_file: &str) -> Result<(), sea_orm::error::DbErr> {
         physical_expression_to_statistic_junction::ActiveModel {
             physical_expression_id: Set(1),
             statistic_id: Set(1),
-            ..Default::default()
         };
     physical_expression_to_statistic_junction::Entity::insert(
         physical_expression_to_statistic_junction,
@@ -319,7 +297,6 @@ async fn init_all_tables(db_file: &str) -> Result<(), sea_orm::error::DbErr> {
         physical_expression_id: Set(1),
         cost_id: Set(1),
         epoch_id: Set(1),
-        ..Default::default()
     };
     group_winner::Entity::insert(group_winner)
         .exec(&db)

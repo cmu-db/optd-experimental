@@ -481,7 +481,7 @@ mod tests {
     async fn copy_init_db(db_file: &str) -> String {
         let original_db = "init.db";
         let _ = std::fs::copy(original_db, format!("./{}", db_file));
-        let database_url = format!("sqlite:./{}?mode=rwc", format!("./{}", db_file));
+        let database_url = format!("sqlite:./{}?mode=rwc", db_file);
         database_url
     }
 
@@ -549,10 +549,10 @@ mod tests {
             .store_cost(physical_expression_id, cost, epoch_id)
             .await;
         match res {
-            Ok(_) => assert!(true),
+            Ok(_) => {}
             Err(e) => {
                 println!("Error: {:?}", e);
-                assert!(false);
+                panic!();
             }
         }
         let costs = super::PlanCost::find()
