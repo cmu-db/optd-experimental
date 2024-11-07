@@ -6,10 +6,11 @@ use std::ptr::null;
 use crate::entities::{prelude::*, *};
 use crate::{BackendError, BackendManager, CostModelError, CostModelStorageLayer, StorageResult};
 use sea_orm::prelude::{Expr, Json};
+use sea_orm::sea_query::Query;
 use sea_orm::{sqlx::types::chrono::Utc, EntityTrait};
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DbErr, ModelTrait, QueryFilter, QueryOrder, QuerySelect,
-    RuntimeErr,
+    ActiveModelTrait, ColumnTrait, DbErr, DeleteResult, EntityOrSelect, ModelTrait, QueryFilter,
+    QueryOrder, QuerySelect, RuntimeErr,
 };
 
 use super::interface::{CatalogSource, Stat};
@@ -68,6 +69,7 @@ impl CostModelStorageLayer for BackendManager {
 
     async fn update_stats(&self, stat: Stat, epoch_id: Self::EpochId) -> StorageResult<()> {
         // 0. Check if the stat already exists. If exists, get stat_id, else insert into statistic table.
+        let mut stat_inserted = false;
         let stat_id = match stat.table_id {
             Some(table_id) => {
                 // TODO(lanlou): only select needed fields
@@ -88,6 +90,7 @@ impl CostModelStorageLayer for BackendManager {
                         stat_data.0.id
                     }
                     None => {
+                        stat_inserted = true;
                         let new_stat = statistic::ActiveModel {
                             name: sea_orm::ActiveValue::Set(stat.name.clone()),
                             table_id: sea_orm::ActiveValue::Set(table_id),
@@ -133,6 +136,7 @@ impl CostModelStorageLayer for BackendManager {
                         stat_data.0.id
                     }
                     None => {
+                        stat_inserted = true;
                         let new_stat = statistic::ActiveModel {
                             name: sea_orm::ActiveValue::Set(stat.name.clone()),
                             number_of_attributes: sea_orm::ActiveValue::Set(
@@ -174,32 +178,57 @@ impl CostModelStorageLayer for BackendManager {
             statistic_value: sea_orm::ActiveValue::Set(sea_orm::JsonValue::String(stat.stat_value)),
             ..Default::default()
         };
-        let _ = VersionedStatistic::insert(new_stats).exec(&self.db).await?;
+        let insert_res = VersionedStatistic::insert(new_stats).exec(&self.db).await;
+        if insert_res.is_err() && stat_inserted {
+            // TODO(lanlou): update it with txn.
+            let delete_res = Statistic::delete_by_id(stat_id).exec(&self.db).await;
+            return Err(BackendError::Database(DbErr::Exec(RuntimeErr::Internal(
+                format!("Failed to insert into versioned_statistic table. And statistic with id {} is{} deleted.", stat_id, if delete_res.is_err() { "not" } else { "" }),
+            ))));
+        }
 
         // 2. Invalidate all the related cost.
         // TODO(lanlou): better handle error, let everything atomic :(
-        let related_costs: Vec<i32> = plan_cost::Entity::find()
-            .filter(plan_cost::Column::IsValid.eq(true))
-            .join_rev(
-                sea_orm::JoinType::InnerJoin,
-                physical_expression_to_statistic_junction::Entity::belongs_to(plan_cost::Entity)
-                    .from(physical_expression_to_statistic_junction::Column::PhysicalExpressionId)
-                    .to(plan_cost::Column::PhysicalExpressionId)
-                    .into(),
-            )
-            .filter(physical_expression_to_statistic_junction::Column::StatisticId.eq(stat_id))
-            .select_only()
-            .column(plan_cost::Column::Id)
-            .all(&self.db)
-            .await?
-            .iter()
-            .map(|cost| cost.id)
-            .collect();
-        let _ = plan_cost::Entity::update_many()
+        let update_res = plan_cost::Entity::update_many()
             .col_expr(plan_cost::Column::IsValid, Expr::value(false))
-            .filter(plan_cost::Column::Id.is_in(related_costs))
+            .filter(plan_cost::Column::IsValid.eq(true))
+            .filter(
+                plan_cost::Column::PhysicalExpressionId.in_subquery(
+                    (*Query::select()
+                        .column(
+                            physical_expression_to_statistic_junction::Column::PhysicalExpressionId,
+                        )
+                        .from(physical_expression_to_statistic_junction::Entity)
+                        .and_where(
+                            physical_expression_to_statistic_junction::Column::StatisticId
+                                .eq(stat_id),
+                        ))
+                    .to_owned(),
+                ),
+            )
             .exec(&self.db)
-            .await?;
+            .await;
+        if update_res.is_err() {
+            let delete_versioned_res =
+                VersionedStatistic::delete_by_id(insert_res.unwrap().last_insert_id)
+                    .exec(&self.db)
+                    .await;
+            let delete_res = if stat_inserted {
+                Statistic::delete_by_id(stat_id).exec(&self.db).await
+            } else {
+                Ok(DeleteResult { rows_affected: (0) })
+            };
+            return Err(BackendError::Database(DbErr::Exec(RuntimeErr::Internal(
+                format!(
+                    "Failed to update plan_cost table. And related deletion is{} done.",
+                    if !delete_res.is_err() && !delete_versioned_res.is_err() {
+                        ""
+                    } else {
+                        " not"
+                    }
+                ),
+            ))));
+        }
 
         Ok(())
     }
