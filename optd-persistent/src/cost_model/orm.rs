@@ -434,7 +434,7 @@ impl CostModelStorageLayer for BackendManager {
 
 #[cfg(test)]
 mod tests {
-    use crate::{migrate, CostModelStorageLayer};
+    use crate::{cost_model::interface::Stat, migrate, CostModelStorageLayer};
     use sea_orm::{
         ColumnTrait, ConnectionTrait, Database, DbBackend, EntityTrait, ModelTrait, QueryFilter,
         QuerySelect, QueryTrait,
@@ -493,6 +493,25 @@ mod tests {
             serde_json::Value::String("data".to_string())
         );
         assert_eq!(lookup_res[0].epoch_id, inserted_id);
+
+        remove_db_file(DATABASE_FILE);
+    }
+
+    #[tokio::test]
+    async fn test_update_stats_from_catalog() {
+        const DATABASE_FILE: &str = "test_update_stats_from_catalog.db";
+        let database_url = run_migration(DATABASE_FILE).await;
+        let mut binding = super::BackendManager::new(Some(&database_url)).await;
+        let backend_manager = binding.as_mut().unwrap();
+        let res = backend_manager
+            .update_stats_from_catalog(super::CatalogSource::Mock, 1)
+            .await;
+        println!("{:?}", res);
+        assert!(res.is_ok());
+
+        let lookup_res = Statistic::find().all(&backend_manager.db).await.unwrap();
+        println!("{:?}", lookup_res);
+        assert_eq!(lookup_res.len(), 3);
 
         remove_db_file(DATABASE_FILE);
     }
