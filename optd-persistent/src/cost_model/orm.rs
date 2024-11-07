@@ -73,7 +73,7 @@ impl CostModelStorageLayer for BackendManager {
                 // TODO(lanlou): only select needed fields
                 let res = Statistic::find()
                     .filter(statistic::Column::TableId.eq(table_id))
-                    .filter(statistic::Column::StatisticType.eq(stat.stat_type))
+                    .filter(statistic::Column::VariantTag.eq(stat.stat_type))
                     // FIX_ME: Do we need the following filter?
                     .inner_join(versioned_statistic::Entity)
                     .select_also(versioned_statistic::Entity)
@@ -90,12 +90,12 @@ impl CostModelStorageLayer for BackendManager {
                     None => {
                         let new_stat = statistic::ActiveModel {
                             name: sea_orm::ActiveValue::Set(stat.name.clone()),
-                            table_id: sea_orm::ActiveValue::Set(table_id),
+                            table_id: sea_orm::ActiveValue::Set(Some(table_id)),
                             number_of_attributes: sea_orm::ActiveValue::Set(
                                 stat.attr_ids.len() as i32
                             ),
                             created_time: sea_orm::ActiveValue::Set(Utc::now()),
-                            statistic_type: sea_orm::ActiveValue::Set(stat.stat_type),
+                            variant_tag: sea_orm::ActiveValue::Set(stat.stat_type),
                             description: sea_orm::ActiveValue::Set("".to_string()),
                             ..Default::default()
                         };
@@ -118,7 +118,7 @@ impl CostModelStorageLayer for BackendManager {
                 let res = Statistic::find()
                     .filter(statistic::Column::NumberOfAttributes.eq(stat.attr_ids.len() as i32))
                     .filter(statistic::Column::Description.eq(description.clone()))
-                    .filter(statistic::Column::StatisticType.eq(stat.stat_type))
+                    .filter(statistic::Column::VariantTag.eq(stat.stat_type))
                     // FIX_ME: Do we need the following filter?
                     .inner_join(versioned_statistic::Entity)
                     .select_also(versioned_statistic::Entity)
@@ -139,7 +139,7 @@ impl CostModelStorageLayer for BackendManager {
                                 stat.attr_ids.len() as i32
                             ),
                             created_time: sea_orm::ActiveValue::Set(Utc::now()),
-                            statistic_type: sea_orm::ActiveValue::Set(stat.stat_type),
+                            variant_tag: sea_orm::ActiveValue::Set(stat.stat_type),
                             description: sea_orm::ActiveValue::Set(description),
                             ..Default::default()
                         };
@@ -241,7 +241,7 @@ impl CostModelStorageLayer for BackendManager {
                 .filter(versioned_statistic::Column::EpochId.eq(epoch_id))
                 .inner_join(statistic::Entity)
                 .filter(statistic::Column::TableId.eq(table_id))
-                .filter(statistic::Column::StatisticType.eq(stat_type))
+                .filter(statistic::Column::VariantTag.eq(stat_type))
                 .one(&self.db)
                 .await?
                 .map(|stat| stat.statistic_value)),
@@ -249,7 +249,7 @@ impl CostModelStorageLayer for BackendManager {
             None => Ok(VersionedStatistic::find()
                 .inner_join(statistic::Entity)
                 .filter(statistic::Column::TableId.eq(table_id))
-                .filter(statistic::Column::StatisticType.eq(stat_type))
+                .filter(statistic::Column::VariantTag.eq(stat_type))
                 .order_by_desc(versioned_statistic::Column::EpochId)
                 .one(&self.db)
                 .await?
@@ -277,7 +277,7 @@ impl CostModelStorageLayer for BackendManager {
                 .inner_join(statistic::Entity)
                 .filter(statistic::Column::NumberOfAttributes.eq(attr_num))
                 .filter(statistic::Column::Description.eq(description))
-                .filter(statistic::Column::StatisticType.eq(stat_type))
+                .filter(statistic::Column::VariantTag.eq(stat_type))
                 .one(&self.db)
                 .await?
                 .map(|stat| stat.statistic_value)),
@@ -286,7 +286,7 @@ impl CostModelStorageLayer for BackendManager {
                 .inner_join(statistic::Entity)
                 .filter(statistic::Column::NumberOfAttributes.eq(attr_num))
                 .filter(statistic::Column::Description.eq(description))
-                .filter(statistic::Column::StatisticType.eq(stat_type))
+                .filter(statistic::Column::VariantTag.eq(stat_type))
                 .order_by_desc(versioned_statistic::Column::EpochId)
                 .one(&self.db)
                 .await?
