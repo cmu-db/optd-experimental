@@ -49,14 +49,12 @@ impl CostModelStorageLayer for BackendManager {
             data: sea_orm::ActiveValue::Set(sea_orm::JsonValue::String(data)),
             ..Default::default()
         };
-        let res = Event::insert(new_event).exec(&self.db).await;
-        Ok(res.and_then(|insert_res| {
-            self.latest_epoch_id.store(
-                insert_res.last_insert_id as usize,
-                std::sync::atomic::Ordering::Relaxed,
-            );
-            Ok(insert_res.last_insert_id)
-        })?)
+        let insert_res = Event::insert(new_event).exec(&self.db).await?;
+        self.latest_epoch_id.store(
+            insert_res.last_insert_id as usize,
+            std::sync::atomic::Ordering::Relaxed,
+        );
+        Ok(insert_res.last_insert_id)
     }
 
     async fn update_stats_from_catalog(
