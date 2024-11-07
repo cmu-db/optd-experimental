@@ -355,22 +355,20 @@ mod tests {
             .await;
         println!("{:?}", res);
         assert!(res.is_ok());
+        let inserted_id = res.unwrap();
+        let lookup_res = Event::find_by_id(inserted_id)
+            .all(&backend_manager.db)
+            .await
+            .unwrap();
+        println!("{:?}", lookup_res);
+        assert_eq!(lookup_res.len(), 1);
+        assert_eq!(lookup_res[0].source_variant, "source");
         assert_eq!(
-            super::Event::find()
-                .all(&backend_manager.db)
-                .await
-                .unwrap()
-                .len(),
-            1
+            lookup_res[0].data,
+            serde_json::Value::String("data".to_string())
         );
-        println!(
-            "{:?}",
-            super::Event::find().all(&backend_manager.db).await.unwrap()[0]
-        );
-        assert_eq!(
-            super::Event::find().all(&backend_manager.db).await.unwrap()[0].epoch_id,
-            res.unwrap()
-        );
+        assert_eq!(lookup_res[0].epoch_id, inserted_id);
+
         remove_db_file(DATABASE_FILE);
     }
 }
