@@ -19,6 +19,7 @@ pub enum Statistic {
     // 0 if a table statistic.
     NumberOfAttributes,
     // TODO(lanlou): Should we make another table to explain the type mapping?
+    #[allow(clippy::enum_variant_names)]
     StatisticType,
     // Store the sorted attribute ids of this statistic, to support quick lookup (OR we can use junction table to look up)
     // For example, if we want to store the statistic of attributes [1, 2, 3], we can store it as "1,2,3".
