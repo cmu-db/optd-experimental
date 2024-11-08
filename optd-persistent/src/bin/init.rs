@@ -53,58 +53,150 @@ async fn init_all_tables() -> Result<(), sea_orm::error::DbErr> {
         .expect("Unable to insert table metadata");
 
     // Inserting into attribute
-    let attribute = attribute::ActiveModel {
+    let attribute1 = attribute::ActiveModel {
         id: Set(1),
         table_id: Set(1),
         name: Set("user_id".to_owned()),
         compression_method: Set("N".to_owned()),
-        variant_tag: Set(1),
+        variant_tag: Set(1), // integer
         base_attribute_number: Set(1),
         is_not_null: Set(true),
     };
-    attribute::Entity::insert(attribute)
+    let attribute2 = attribute::ActiveModel {
+        id: Set(2),
+        table_id: Set(1),
+        name: Set("username".to_owned()),
+        compression_method: Set("N".to_owned()),
+        variant_tag: Set(2), // varchar
+        base_attribute_number: Set(2),
+        is_not_null: Set(true),
+    };
+    attribute::Entity::insert(attribute1)
+        .exec(&db)
+        .await
+        .expect("Unable to insert attribute");
+    attribute::Entity::insert(attribute2)
         .exec(&db)
         .await
         .expect("Unable to insert attribute");
 
-    // Inserting into statistic
-    let statistic = statistic::ActiveModel {
-        id: Set(1),
-        name: Set("row_count".to_owned()),
-        table_id: Set(Some(1)),
-        creation_time: Set(Utc::now()),
-        number_of_attributes: Set(0),
-        variant_tag: Set(1),
-        description: Set("".to_owned()),
-    };
-    statistic::Entity::insert(statistic)
-        .exec(&db)
-        .await
-        .expect("Unable to insert statistic");
     // Inserting into event
     let event = event::ActiveModel {
         epoch_id: Set(1),
-        source_variant: Set("insert".to_owned()),
+        source_variant: Set("execution_engine".to_owned()),
         timestamp: Set(Utc::now()),
-        data: Set(json!(r#"{"user_id": 1}"#)),
+        data: Set(json!({"dba": "parpulse"})),
     };
-
     event::Entity::insert(event)
         .exec(&db)
         .await
         .expect("Unable to insert event");
 
-    // Inserting into versioned_statistic
-    let versioned_statistic = versioned_statistic::ActiveModel {
+    // Inserting into statistic
+
+    // Table statistic
+    let table_statistic = statistic::ActiveModel {
+        id: Set(1),
+        name: Set("row_count".to_owned()),
+        table_id: Set(Some(1)),
+        creation_time: Set(Utc::now()),
+        number_of_attributes: Set(0),
+        variant_tag: Set(1), // row count
+        description: Set("".to_owned()),
+    };
+    let table_versioned_statistic = versioned_statistic::ActiveModel {
         id: Set(1),
         epoch_id: Set(1),
         statistic_id: Set(1),
-        statistic_value: Set(json!(r#"{"row_count": 0}"#)),
+        statistic_value: Set(json!(0)),
     };
-    versioned_statistic::Entity::insert(versioned_statistic)
+    statistic::Entity::insert(table_statistic)
+        .exec(&db)
+        .await
+        .expect("Unable to insert statistic");
+    versioned_statistic::Entity::insert(table_versioned_statistic)
         .exec(&db)
         .await
         .expect("Unable to insert versioned statistic");
+
+    // Single-column attribute statistic
+    let single_column_attribute_statistic = statistic::ActiveModel {
+        id: Set(2),
+        name: Set("cardinality".to_owned()),
+        table_id: Set(Some(1)),
+        creation_time: Set(Utc::now()),
+        number_of_attributes: Set(1),
+        variant_tag: Set(2), // cardinality
+        description: Set("1".to_owned()),
+    };
+    let single_column_attribute_versioned_statistic = versioned_statistic::ActiveModel {
+        id: Set(2),
+        epoch_id: Set(1),
+        statistic_id: Set(2),
+        statistic_value: Set(json!(0)),
+    };
+    statistic::Entity::insert(single_column_attribute_statistic)
+        .exec(&db)
+        .await
+        .expect("Unable to insert statistic");
+    versioned_statistic::Entity::insert(single_column_attribute_versioned_statistic)
+        .exec(&db)
+        .await
+        .expect("Unable to insert versioned statistic");
+
+    let single_column_statistic_to_attribute_junction =
+        statistic_to_attribute_junction::ActiveModel {
+            statistic_id: Set(2), // cardinality
+            attribute_id: Set(1), // user_id
+        };
+    statistic_to_attribute_junction::Entity::insert(single_column_statistic_to_attribute_junction)
+        .exec(&db)
+        .await
+        .expect("Unable to insert statistic_to_attribute_junction");
+
+    // Multi-column attribute statistic
+    let multi_column_attribute_statistic = statistic::ActiveModel {
+        id: Set(3),
+        name: Set("cardinality".to_owned()),
+        table_id: Set(Some(1)),
+        creation_time: Set(Utc::now()),
+        number_of_attributes: Set(2),
+        variant_tag: Set(2), // cardinality
+        description: Set("1,2".to_owned()),
+    };
+    let multi_column_attribute_versioned_statistic = versioned_statistic::ActiveModel {
+        id: Set(3),
+        epoch_id: Set(1),
+        statistic_id: Set(3),
+        statistic_value: Set(json!(0)),
+    };
+    statistic::Entity::insert(multi_column_attribute_statistic)
+        .exec(&db)
+        .await
+        .expect("Unable to insert statistic");
+    versioned_statistic::Entity::insert(multi_column_attribute_versioned_statistic)
+        .exec(&db)
+        .await
+        .expect("Unable to insert versioned statistic");
+
+    let multi_column_statistic_to_attribute_junction1 =
+        statistic_to_attribute_junction::ActiveModel {
+            statistic_id: Set(3), // joint cardinality
+            attribute_id: Set(1), // user_id
+        };
+    let multi_column_statistic_to_attribute_junction2 =
+        statistic_to_attribute_junction::ActiveModel {
+            statistic_id: Set(3), // joint cardinality
+            attribute_id: Set(2), // username
+        };
+    statistic_to_attribute_junction::Entity::insert(multi_column_statistic_to_attribute_junction1)
+        .exec(&db)
+        .await
+        .expect("Unable to insert statistic_to_attribute_junction");
+    statistic_to_attribute_junction::Entity::insert(multi_column_statistic_to_attribute_junction2)
+        .exec(&db)
+        .await
+        .expect("Unable to insert statistic_to_attribute_junction");
 
     // Inserting into index_metadata
     let index_metadata = index_metadata::ActiveModel {
@@ -173,16 +265,6 @@ async fn init_all_tables() -> Result<(), sea_orm::error::DbErr> {
         .exec(&db)
         .await
         .expect("Unable to insert attribute_foreign_constraint_junction");
-
-    // Inserting into statistic_to_attribute_junction
-    let statistic_to_attribute_junction = statistic_to_attribute_junction::ActiveModel {
-        statistic_id: Set(1),
-        attribute_id: Set(1),
-    };
-    statistic_to_attribute_junction::Entity::insert(statistic_to_attribute_junction)
-        .exec(&db)
-        .await
-        .expect("Unable to insert statistic_to_attribute_junction");
 
     // Inserting into cascades_group
     let cascades_group = cascades_group::ActiveModel {
