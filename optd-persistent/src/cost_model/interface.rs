@@ -18,6 +18,7 @@ pub enum CatalogSource {
 
 pub enum StatisticType {
     Count,
+    Cardinality,
     Min,
     Max,
 }
