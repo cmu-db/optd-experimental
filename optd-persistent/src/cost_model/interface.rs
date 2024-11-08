@@ -42,6 +42,14 @@ pub enum StatType {
     Max,
 }
 
+#[derive(PartialEq)]
+pub enum EpochOption {
+    // TODO(lanlou): Could I make i32 -> EpochId?
+    Existed(i32),
+    New(String, String),
+}
+
+#[derive(Clone)]
 pub struct Stat {
     pub stat_type: i32,
     pub stat_value: Json,
@@ -72,7 +80,11 @@ pub trait CostModelStorageLayer {
         epoch_id: Self::EpochId,
     ) -> StorageResult<()>;
 
-    async fn update_stats(&self, stat: Stat, epoch_id: Self::EpochId) -> StorageResult<()>;
+    async fn update_stats(
+        &mut self,
+        stat: Stat,
+        epoch_option: EpochOption,
+    ) -> StorageResult<Option<Self::EpochId>>;
 
     async fn store_cost(
         &self,
