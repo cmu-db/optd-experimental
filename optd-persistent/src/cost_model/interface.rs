@@ -16,7 +16,26 @@ pub enum CatalogSource {
     Mock,
 }
 
-pub enum StatisticType {
+pub enum AttrType {
+    Integer,
+    Float,
+    Varchar,
+    Boolean,
+}
+
+pub enum IndexType {
+    BTree,
+    Hash,
+}
+
+pub enum ConstraintType {
+    PrimaryKey,
+    ForeignKey,
+    Unique,
+    Check,
+}
+
+pub enum StatType {
     Count,
     Cardinality,
     Min,

@@ -455,7 +455,7 @@ impl CostModelStorageLayer for BackendManager {
 
 #[cfg(test)]
 mod tests {
-    use crate::cost_model::interface::StatisticType;
+    use crate::cost_model::interface::StatType;
     use crate::{cost_model::interface::Stat, migrate, CostModelStorageLayer};
     use crate::{get_sqlite_url, TEST_DATABASE_FILE};
     use sea_orm::sqlx::database;
@@ -464,7 +464,7 @@ mod tests {
         ColumnTrait, ConnectionTrait, Database, DbBackend, EntityTrait, ModelTrait, QueryFilter,
         QuerySelect, QueryTrait,
     };
-    use serde_json::de;
+    use serde_json::{de, json};
 
     use crate::entities::{prelude::*, *};
 
@@ -559,7 +559,7 @@ mod tests {
             .await
             .unwrap();
         let stat = Stat {
-            stat_type: StatisticType::Count as i32,
+            stat_type: StatType::Count as i32,
             stat_value: "100".to_string(),
             attr_ids: vec![1],
             table_id: None,
@@ -576,7 +576,7 @@ mod tests {
         println!("{:?}", stat_res);
         assert_eq!(stat_res[0].number_of_attributes, 1);
         assert_eq!(stat_res[0].description, "1".to_string());
-        assert_eq!(stat_res[0].variant_tag, StatisticType::Count as i32);
+        assert_eq!(stat_res[0].variant_tag, StatType::Count as i32);
         let stat_attr_res = StatisticToAttributeJunction::find()
             .filter(statistic_to_attribute_junction::Column::StatisticId.eq(stat_res[0].id))
             .all(&backend_manager.db)
@@ -632,7 +632,7 @@ mod tests {
             .await
             .unwrap();
         let stat2 = Stat {
-            stat_type: StatisticType::Count as i32,
+            stat_type: StatType::Count as i32,
             stat_value: "200".to_string(),
             attr_ids: vec![1],
             table_id: None,
@@ -649,7 +649,7 @@ mod tests {
         assert_eq!(stat_res.len(), 1);
         assert_eq!(stat_res[0].number_of_attributes, 1);
         assert_eq!(stat_res[0].description, "1".to_string());
-        assert_eq!(stat_res[0].variant_tag, StatisticType::Count as i32);
+        assert_eq!(stat_res[0].variant_tag, StatType::Count as i32);
         // 2.4 Check statistic_to_attribute_junction table
         let stat_attr_res = StatisticToAttributeJunction::find()
             .filter(statistic_to_attribute_junction::Column::StatisticId.eq(stat_res[0].id))

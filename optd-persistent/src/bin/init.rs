@@ -1,3 +1,7 @@
+use optd_persistent::cost_model::interface::AttrType;
+use optd_persistent::cost_model::interface::ConstraintType;
+use optd_persistent::cost_model::interface::IndexType;
+use optd_persistent::cost_model::interface::StatType;
 use optd_persistent::entities::*;
 use optd_persistent::migrate;
 use optd_persistent::TEST_DATABASE_FILENAME;
@@ -58,7 +62,7 @@ async fn init_all_tables() -> Result<(), sea_orm::error::DbErr> {
         table_id: Set(1),
         name: Set("user_id".to_owned()),
         compression_method: Set("N".to_owned()),
-        variant_tag: Set(1), // integer
+        variant_tag: Set(AttrType::Integer as i32),
         base_attribute_number: Set(1),
         is_not_null: Set(true),
     };
@@ -67,7 +71,7 @@ async fn init_all_tables() -> Result<(), sea_orm::error::DbErr> {
         table_id: Set(1),
         name: Set("username".to_owned()),
         compression_method: Set("N".to_owned()),
-        variant_tag: Set(2), // varchar
+        variant_tag: Set(AttrType::Varchar as i32),
         base_attribute_number: Set(2),
         is_not_null: Set(true),
     };
@@ -101,7 +105,7 @@ async fn init_all_tables() -> Result<(), sea_orm::error::DbErr> {
         table_id: Set(Some(1)),
         creation_time: Set(Utc::now()),
         number_of_attributes: Set(0),
-        variant_tag: Set(1), // row count
+        variant_tag: Set(StatType::Count as i32),
         description: Set("".to_owned()),
     };
     let table_versioned_statistic = versioned_statistic::ActiveModel {
@@ -126,7 +130,7 @@ async fn init_all_tables() -> Result<(), sea_orm::error::DbErr> {
         table_id: Set(Some(1)),
         creation_time: Set(Utc::now()),
         number_of_attributes: Set(1),
-        variant_tag: Set(2), // cardinality
+        variant_tag: Set(StatType::Cardinality as i32),
         description: Set("1".to_owned()),
     };
     let single_column_attribute_versioned_statistic = versioned_statistic::ActiveModel {
@@ -161,7 +165,7 @@ async fn init_all_tables() -> Result<(), sea_orm::error::DbErr> {
         table_id: Set(Some(1)),
         creation_time: Set(Utc::now()),
         number_of_attributes: Set(2),
-        variant_tag: Set(2), // cardinality
+        variant_tag: Set(StatType::Cardinality as i32),
         description: Set("1,2".to_owned()),
     };
     let multi_column_attribute_versioned_statistic = versioned_statistic::ActiveModel {
@@ -208,7 +212,7 @@ async fn init_all_tables() -> Result<(), sea_orm::error::DbErr> {
         is_primary: Set(true),
         is_clustered: Set(false),
         is_exclusion: Set(false),
-        variant_tag: Set(1),
+        variant_tag: Set(IndexType::Hash as i32),
         number_of_attributes: Set(1),
         description: Set("1".to_owned()),
     };
@@ -234,7 +238,7 @@ async fn init_all_tables() -> Result<(), sea_orm::error::DbErr> {
     let constraint_metadata = constraint_metadata::ActiveModel {
         id: Set(1),
         name: Set("pk_user_id".to_owned()),
-        variant_tag: Set(1),
+        variant_tag: Set(ConstraintType::PrimaryKey as i32),
         table_id: Set(Some(1)),
         index_id: Set(Some(1)),
         foreign_ref_id: Set(None),
@@ -283,7 +287,7 @@ async fn init_all_tables() -> Result<(), sea_orm::error::DbErr> {
         id: Set(1),
         group_id: Set(1),
         fingerprint: Set(12345),
-        variant_tag: Set(1),
+        variant_tag: Set(0),
         data: Set(json!(r#"{"expr": "index_scan"}"#)),
     };
     logical_expression::Entity::insert(logical_expression)
@@ -296,7 +300,7 @@ async fn init_all_tables() -> Result<(), sea_orm::error::DbErr> {
         id: Set(1),
         group_id: Set(1),
         fingerprint: Set(12345),
-        variant_tag: Set(1),
+        variant_tag: Set(0),
         data: Set(json!(r#"{"expr": "index_scan"}"#)),
     };
     physical_expression::Entity::insert(physical_expression)
@@ -308,7 +312,7 @@ async fn init_all_tables() -> Result<(), sea_orm::error::DbErr> {
     let physical_property = physical_property::ActiveModel {
         id: Set(1),
         physical_expression_id: Set(1),
-        variant_tag: Set(1),
+        variant_tag: Set(0),
         data: Set(json!(r#"{"property": "indexed"}"#)),
     };
     physical_property::Entity::insert(physical_property)
@@ -320,7 +324,7 @@ async fn init_all_tables() -> Result<(), sea_orm::error::DbErr> {
     let logical_property = logical_property::ActiveModel {
         id: Set(1),
         group_id: Set(1),
-        variant_tag: Set(1),
+        variant_tag: Set(0),
         data: Set(json!(r#"{"property": "indexed"}"#)),
     };
     logical_property::Entity::insert(logical_property)
