@@ -13,6 +13,28 @@ mod migrator;
 pub mod cost_model;
 pub use cost_model::interface::CostModelStorageLayer;
 
+pub const DATABASE_FILENAME: &str = "sqlite.db";
+pub const DATABASE_URL: &str = "sqlite:./sqlite.db?mode=rwc";
+
+pub const TEST_DATABASE_FILENAME: &str = "init.db";
+lazy_static::lazy_static! {
+    pub static ref TEST_DATABASE_FILE: String = {
+        std::env::current_dir().unwrap()
+            .join("src")
+            .join("db")
+            .join(TEST_DATABASE_FILENAME)
+            .to_str()
+            .unwrap()
+            .to_owned()
+    };
+    pub static ref TEST_DATABASE_URL: String =
+        get_sqlite_url(TEST_DATABASE_FILE.as_str());
+}
+
+fn get_sqlite_url(file: &str) -> String {
+    format!("sqlite:{}?mode=rwc", file)
+}
+
 pub type StorageResult<T> = Result<T, BackendError>;
 
 #[derive(Debug)]
@@ -55,9 +77,6 @@ impl BackendManager {
         })
     }
 }
-
-pub const DATABASE_URL: &str = "sqlite:./sqlite.db?mode=rwc";
-pub const DATABASE_FILE: &str = "./sqlite.db";
 
 pub async fn migrate(db: &DatabaseConnection) -> Result<(), DbErr> {
     Migrator::refresh(db).await

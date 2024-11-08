@@ -457,6 +457,7 @@ impl CostModelStorageLayer for BackendManager {
 mod tests {
     use crate::cost_model::interface::StatisticType;
     use crate::{cost_model::interface::Stat, migrate, CostModelStorageLayer};
+    use crate::{get_sqlite_url, TEST_DATABASE_FILE};
     use sea_orm::sqlx::database;
     use sea_orm::Statement;
     use sea_orm::{
@@ -468,7 +469,7 @@ mod tests {
     use crate::entities::{prelude::*, *};
 
     async fn run_migration(db_file: &str) -> String {
-        let database_url = format!("sqlite:./{}?mode=rwc", db_file);
+        let database_url = get_sqlite_url(db_file);
         remove_db_file(db_file);
 
         let db = Database::connect(database_url.clone())
@@ -494,9 +495,8 @@ mod tests {
     }
 
     async fn copy_init_db(db_file: &str) -> String {
-        let original_db = "init.db";
-        let _ = std::fs::copy(original_db, format!("./{}", db_file));
-        let database_url = format!("sqlite:./{}?mode=rwc", db_file);
+        let _ = std::fs::copy(TEST_DATABASE_FILE.clone(), db_file);
+        let database_url = get_sqlite_url(db_file);
         database_url
     }
 

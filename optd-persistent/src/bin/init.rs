@@ -1,15 +1,15 @@
 use optd_persistent::entities::*;
 use optd_persistent::migrate;
+use optd_persistent::TEST_DATABASE_FILENAME;
+use optd_persistent::TEST_DATABASE_URL;
 use sea_orm::sqlx::types::chrono::Utc;
 use sea_orm::*;
 use serde_json::json;
 
-async fn init_all_tables(db_file: &str) -> Result<(), sea_orm::error::DbErr> {
-    let database_url = format!("sqlite:./{}?mode=rwc", db_file);
-    let database_file = format!("./{}", db_file);
-    let _ = std::fs::remove_file(database_file);
+async fn init_all_tables() -> Result<(), sea_orm::error::DbErr> {
+    let _ = std::fs::remove_file(TEST_DATABASE_FILENAME);
 
-    let db = Database::connect(database_url.clone())
+    let db = Database::connect(TEST_DATABASE_URL.clone())
         .await
         .expect("Unable to connect to the database");
 
@@ -308,8 +308,7 @@ async fn init_all_tables(db_file: &str) -> Result<(), sea_orm::error::DbErr> {
 
 #[tokio::main]
 async fn main() {
-    let db_file = "init.db";
-    if let Err(e) = init_all_tables(db_file).await {
+    if let Err(e) = init_all_tables().await {
         eprintln!("Error initializing database: {}", e);
         std::process::exit(1);
     }
