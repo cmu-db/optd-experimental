@@ -72,7 +72,6 @@ pub trait CostModelStorageLayer {
         epoch_id: Self::EpochId,
     ) -> StorageResult<()>;
 
-    // i32 in `stats:i32` is a placeholder for the stats type
     async fn update_stats(&self, stat: Stat, epoch_id: Self::EpochId) -> StorageResult<()>;
 
     async fn store_cost(
