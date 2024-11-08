@@ -688,7 +688,6 @@ mod tests {
     async fn test_update_table_stats() {}
 
     #[tokio::test]
-    #[ignore] // Need to update all tables
     async fn test_store_cost() {
         const DATABASE_FILE: &str = "test_store_cost.db";
         let database_url = copy_init_db(DATABASE_FILE).await;
@@ -712,6 +711,78 @@ mod tests {
         assert_eq!(costs[1].epoch_id, epoch_id);
         assert_eq!(costs[1].physical_expression_id, physical_expression_id);
         assert_eq!(costs[1].cost, cost);
+
+        remove_db_file(DATABASE_FILE);
+    }
+
+    #[tokio::test]
+    async fn test_get_cost() {
+        const DATABASE_FILE: &str = "test_get_cost.db";
+        let database_url = copy_init_db(DATABASE_FILE).await;
+        let mut binding = super::BackendManager::new(Some(&database_url)).await;
+        let backend_manager = binding.as_mut().unwrap();
+        let epoch_id = backend_manager
+            .create_new_epoch("source".to_string(), "data".to_string())
+            .await
+            .unwrap();
+        let physical_expression_id = 1;
+        let cost = 42;
+        let _ = backend_manager
+            .store_cost(physical_expression_id, cost, epoch_id)
+            .await;
+        let costs = super::PlanCost::find()
+            .all(&backend_manager.db)
+            .await
+            .unwrap();
+        assert_eq!(costs.len(), 2); // The first row one is the initialized data
+        assert_eq!(costs[1].epoch_id, epoch_id);
+        assert_eq!(costs[1].physical_expression_id, physical_expression_id);
+        assert_eq!(costs[1].cost, cost);
+
+        let res = backend_manager
+            .get_cost(physical_expression_id)
+            .await
+            .unwrap();
+        assert_eq!(res.unwrap(), cost);
+
+        remove_db_file(DATABASE_FILE);
+    }
+
+    #[tokio::test]
+    async fn test_get_cost_analysis() {
+        const DATABASE_FILE: &str = "test_get_cost_analysis.db";
+        let database_url = copy_init_db(DATABASE_FILE).await;
+        let mut binding = super::BackendManager::new(Some(&database_url)).await;
+        let backend_manager = binding.as_mut().unwrap();
+        let epoch_id = backend_manager
+            .create_new_epoch("source".to_string(), "data".to_string())
+            .await
+            .unwrap();
+        let physical_expression_id = 1;
+        let cost = 42;
+        let _ = backend_manager
+            .store_cost(physical_expression_id, cost, epoch_id)
+            .await;
+        let costs = super::PlanCost::find()
+            .all(&backend_manager.db)
+            .await
+            .unwrap();
+        assert_eq!(costs.len(), 2); // The first row one is the initialized data
+        assert_eq!(costs[1].epoch_id, epoch_id);
+        assert_eq!(costs[1].physical_expression_id, physical_expression_id);
+        assert_eq!(costs[1].cost, cost);
+        println!("{:?}", costs);
+
+        // Retrieve physical_expression_id 1 and epoch_id 1
+        let res = backend_manager
+            .get_cost_analysis(physical_expression_id, 1)
+            .await
+            .unwrap();
+
+        // The cost in the dummy data is 10
+        assert_eq!(res.unwrap(), 10);
+
+        remove_db_file(DATABASE_FILE);
     }
 
     #[tokio::test]
