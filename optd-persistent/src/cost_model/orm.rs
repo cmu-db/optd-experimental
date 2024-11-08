@@ -727,4 +727,56 @@ mod tests {
         assert_eq!(costs[1].physical_expression_id, physical_expression_id);
         assert_eq!(costs[1].cost, cost);
     }
+
+    #[tokio::test]
+    async fn test_get_stats_for_table() {
+        const DATABASE_FILE: &str = "test_get_stats_for_table.db";
+        let database_url = copy_init_db(DATABASE_FILE).await;
+        let mut binding = super::BackendManager::new(Some(&database_url)).await;
+        let backend_manager = binding.as_mut().unwrap();
+        let epoch_id = 1;
+        let table_id = 1;
+        let stat_type = StatType::Count as i32;
+
+        // Get initial stats
+        let res = backend_manager
+            .get_stats_for_table(table_id, stat_type, None)
+            .await
+            .unwrap()
+            .unwrap();
+        let row_count = res.as_i64().unwrap();
+        assert_eq!(row_count, 0);
+
+        // Update stats
+        let epoch_id2 = backend_manager
+            .create_new_epoch("test".to_string(), "test_get_stats_for_table".to_string())
+            .await
+            .unwrap();
+        let stat = Stat {
+            stat_type: StatType::Count as i32,
+            stat_value: json!(100),
+            attr_ids: vec![],
+            table_id: Some(table_id),
+            name: "row_count".to_string(),
+        };
+        backend_manager.update_stats(stat, epoch_id2).await.unwrap();
+
+        // Get updated stats
+        let res = backend_manager
+            .get_stats_for_table(table_id, stat_type, None)
+            .await
+            .unwrap()
+            .unwrap();
+        let row_count = res.as_i64().unwrap();
+        assert_eq!(row_count, 100);
+
+        // Get stats for a specific epoch
+        let res = backend_manager
+            .get_stats_for_table(table_id, stat_type, Some(epoch_id))
+            .await
+            .unwrap()
+            .unwrap();
+        let row_count = res.as_i64().unwrap();
+        assert_eq!(row_count, 0);
+    }
 }
