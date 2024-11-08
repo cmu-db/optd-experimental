@@ -464,6 +464,7 @@ mod tests {
         ColumnTrait, ConnectionTrait, Database, DbBackend, EntityTrait, ModelTrait, QueryFilter,
         QuerySelect, QueryTrait,
     };
+    use sea_orm_migration::schema::json;
     use serde_json::{de, json};
 
     use crate::entities::{prelude::*, *};
@@ -555,7 +556,7 @@ mod tests {
         let backend_manager = binding.as_mut().unwrap();
         // 1. Update non-existed stat
         let epoch_id1 = backend_manager
-            .create_new_epoch("test".to_string(), "InsertTest".to_string())
+            .create_new_epoch("test".to_string(), "test_update_attr_stats".to_string())
             .await
             .unwrap();
         let stat = Stat {
@@ -563,12 +564,12 @@ mod tests {
             stat_value: json!(100),
             attr_ids: vec![1],
             table_id: None,
-            name: "CountAttr1".to_string(),
+            name: "countattr1".to_string(),
         };
         let res = backend_manager.update_stats(stat, epoch_id1).await;
         assert!(res.is_ok());
         let stat_res = Statistic::find()
-            .filter(statistic::Column::Name.eq("CountAttr1"))
+            .filter(statistic::Column::Name.eq("countattr1"))
             .all(&backend_manager.db)
             .await
             .unwrap();
@@ -590,10 +591,7 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(versioned_stat_res.len(), 1);
-        assert_eq!(
-            versioned_stat_res[0].statistic_value,
-            serde_json::Value::String("100".to_string())
-        );
+        assert_eq!(versioned_stat_res[0].statistic_value, json!(100));
         assert_eq!(versioned_stat_res[0].epoch_id, epoch_id1);
 
         // 2. Normal update
@@ -628,7 +626,7 @@ mod tests {
         assert!(cost_res[0].is_valid);
         // 2.2 Normal update
         let epoch_id2 = backend_manager
-            .create_new_epoch("test".to_string(), "InsertTest".to_string())
+            .create_new_epoch("test".to_string(), "test_update_attr_stats".to_string())
             .await
             .unwrap();
         let stat2 = Stat {
@@ -636,13 +634,13 @@ mod tests {
             stat_value: json!(200),
             attr_ids: vec![1],
             table_id: None,
-            name: "CountAttr1".to_string(),
+            name: "countattr1".to_string(),
         };
         let res = backend_manager.update_stats(stat2, epoch_id2).await;
         assert!(res.is_ok());
         // 2.3 Check statistic table
         let stat_res = Statistic::find()
-            .filter(statistic::Column::Name.eq("CountAttr1"))
+            .filter(statistic::Column::Name.eq("countattr1"))
             .all(&backend_manager.db)
             .await
             .unwrap();
@@ -665,16 +663,10 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(versioned_stat_res.len(), 2);
-        assert_eq!(
-            versioned_stat_res[0].statistic_value,
-            serde_json::Value::String("100".to_string())
-        );
+        assert_eq!(versioned_stat_res[0].statistic_value, json!(100));
         assert_eq!(versioned_stat_res[0].epoch_id, epoch_id1);
         assert_eq!(versioned_stat_res[0].statistic_id, stat_res[0].id);
-        assert_eq!(
-            versioned_stat_res[1].statistic_value,
-            serde_json::Value::String("200".to_string())
-        );
+        assert_eq!(versioned_stat_res[1].statistic_value, json!(200));
         assert_eq!(versioned_stat_res[1].epoch_id, epoch_id2);
         assert_eq!(versioned_stat_res[1].statistic_id, stat_res[0].id);
         assert!(epoch_id1 < epoch_id2);
@@ -710,14 +702,8 @@ mod tests {
         let cost = 42;
         let res = backend_manager
             .store_cost(physical_expression_id, cost, epoch_id)
-            .await;
-        match res {
-            Ok(_) => {}
-            Err(e) => {
-                println!("Error: {:?}", e);
-                panic!();
-            }
-        }
+            .await
+            .unwrap();
         let costs = super::PlanCost::find()
             .all(&backend_manager.db)
             .await
@@ -778,5 +764,7 @@ mod tests {
             .unwrap();
         let row_count = res.as_i64().unwrap();
         assert_eq!(row_count, 0);
+
+        remove_db_file(DATABASE_FILE);
     }
 }
