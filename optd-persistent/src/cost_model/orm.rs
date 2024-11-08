@@ -767,4 +767,118 @@ mod tests {
 
         remove_db_file(DATABASE_FILE);
     }
+
+    #[tokio::test]
+    async fn test_get_stats_for_single_attr() {
+        const DATABASE_FILE: &str = "test_get_stats_for_single_attr.db";
+        let database_url = copy_init_db(DATABASE_FILE).await;
+        let mut binding = super::BackendManager::new(Some(&database_url)).await;
+        let backend_manager = binding.as_mut().unwrap();
+        let epoch_id = 1;
+        let attr_ids = vec![1];
+        let stat_type = StatType::Cardinality as i32;
+
+        // Get initial stats
+        let res = backend_manager
+            .get_stats_for_attr(attr_ids.clone(), stat_type, None)
+            .await
+            .unwrap()
+            .unwrap();
+        let cardinality = res.as_i64().unwrap();
+        assert_eq!(cardinality, 0);
+
+        // Update stats
+        let epoch_id2 = backend_manager
+            .create_new_epoch(
+                "test".to_string(),
+                "test_get_stats_for_single_attr".to_string(),
+            )
+            .await
+            .unwrap();
+        let stat = Stat {
+            stat_type: StatType::Cardinality as i32,
+            stat_value: json!(100),
+            attr_ids: attr_ids.clone(),
+            table_id: None,
+            name: "cardinality".to_string(),
+        };
+        backend_manager.update_stats(stat, epoch_id2).await.unwrap();
+
+        // Get updated stats
+        let res = backend_manager
+            .get_stats_for_attr(attr_ids.clone(), stat_type, None)
+            .await
+            .unwrap()
+            .unwrap();
+        let cardinality = res.as_i64().unwrap();
+        assert_eq!(cardinality, 100);
+
+        // Get stats for a specific epoch
+        let res = backend_manager
+            .get_stats_for_attr(attr_ids.clone(), stat_type, Some(epoch_id))
+            .await
+            .unwrap()
+            .unwrap();
+        let cardinality = res.as_i64().unwrap();
+        assert_eq!(cardinality, 0);
+
+        remove_db_file(DATABASE_FILE);
+    }
+
+    #[tokio::test]
+    async fn test_get_stats_for_multiple_attrs() {
+        const DATABASE_FILE: &str = "test_get_stats_for_multiple_attrs.db";
+        let database_url = copy_init_db(DATABASE_FILE).await;
+        let mut binding = super::BackendManager::new(Some(&database_url)).await;
+        let backend_manager = binding.as_mut().unwrap();
+        let epoch_id = 1;
+        let attr_ids = vec![2, 1];
+        let stat_type = StatType::Cardinality as i32;
+
+        // Get initial stats
+        let res = backend_manager
+            .get_stats_for_attr(attr_ids.clone(), stat_type, None)
+            .await
+            .unwrap()
+            .unwrap();
+        let cardinality = res.as_i64().unwrap();
+        assert_eq!(cardinality, 0);
+
+        // Update stats
+        let epoch_id2 = backend_manager
+            .create_new_epoch(
+                "test".to_string(),
+                "test_get_stats_for_multiple_attrs".to_string(),
+            )
+            .await
+            .unwrap();
+        let stat = Stat {
+            stat_type: StatType::Cardinality as i32,
+            stat_value: json!(111),
+            attr_ids: attr_ids.clone(),
+            table_id: None,
+            name: "cardinality".to_string(),
+        };
+        backend_manager.update_stats(stat, epoch_id2).await.unwrap();
+
+        // Get updated stats
+        let res = backend_manager
+            .get_stats_for_attr(attr_ids.clone(), stat_type, None)
+            .await
+            .unwrap()
+            .unwrap();
+        let cardinality = res.as_i64().unwrap();
+        assert_eq!(cardinality, 111);
+
+        // Get stats for a specific epoch
+        let res = backend_manager
+            .get_stats_for_attr(attr_ids.clone(), stat_type, Some(epoch_id))
+            .await
+            .unwrap()
+            .unwrap();
+        let cardinality = res.as_i64().unwrap();
+        assert_eq!(cardinality, 0);
+
+        remove_db_file(DATABASE_FILE);
+    }
 }
