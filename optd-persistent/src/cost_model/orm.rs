@@ -273,7 +273,7 @@ impl CostModelStorageLayer for BackendManager {
         let new_stats = versioned_statistic::ActiveModel {
             epoch_id: sea_orm::ActiveValue::Set(epoch_id),
             statistic_id: sea_orm::ActiveValue::Set(stat_id),
-            statistic_value: sea_orm::ActiveValue::Set(sea_orm::JsonValue::String(stat.stat_value)),
+            statistic_value: sea_orm::ActiveValue::Set(stat.stat_value),
             ..Default::default()
         };
         let _ = VersionedStatistic::insert(new_stats).exec(&self.db).await;
@@ -560,7 +560,7 @@ mod tests {
             .unwrap();
         let stat = Stat {
             stat_type: StatType::Count as i32,
-            stat_value: "100".to_string(),
+            stat_value: json!(100),
             attr_ids: vec![1],
             table_id: None,
             name: "CountAttr1".to_string(),
@@ -633,7 +633,7 @@ mod tests {
             .unwrap();
         let stat2 = Stat {
             stat_type: StatType::Count as i32,
-            stat_value: "200".to_string(),
+            stat_value: json!(200),
             attr_ids: vec![1],
             table_id: None,
             name: "CountAttr1".to_string(),

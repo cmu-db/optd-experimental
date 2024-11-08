@@ -161,7 +161,7 @@ async fn init_all_tables() -> Result<(), sea_orm::error::DbErr> {
     // Multi-column attribute statistic
     let multi_column_attribute_statistic = statistic::ActiveModel {
         id: Set(3),
-        name: Set("cardinality".to_owned()),
+        name: Set("joint_cardinality".to_owned()),
         table_id: Set(Some(1)),
         creation_time: Set(Utc::now()),
         number_of_attributes: Set(2),
