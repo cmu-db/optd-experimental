@@ -59,6 +59,7 @@ pub struct MockTrigger {
     pub function: String,
 }
 
+/// TODO: documentation
 #[derive(Default)]
 pub struct MockCatalog {
     pub databases: Vec<MockDatabaseMetadata>,

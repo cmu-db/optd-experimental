@@ -38,11 +38,8 @@ impl CostModelStorageLayer for BackendManager {
     type EpochId = i32;
     type StatId = i32;
 
-    async fn create_new_epoch(
-        &mut self,
-        source: String,
-        data: String,
-    ) -> StorageResult<Self::EpochId> {
+    /// TODO: documentation
+    async fn create_new_epoch(&self, source: String, data: String) -> StorageResult<Self::EpochId> {
         let new_event = event::ActiveModel {
             source_variant: sea_orm::ActiveValue::Set(source),
             timestamp: sea_orm::ActiveValue::Set(Utc::now()),
@@ -50,13 +47,10 @@ impl CostModelStorageLayer for BackendManager {
             ..Default::default()
         };
         let insert_res = Event::insert(new_event).exec(&self.db).await?;
-        self.latest_epoch_id.store(
-            insert_res.last_insert_id as usize,
-            std::sync::atomic::Ordering::Relaxed,
-        );
         Ok(insert_res.last_insert_id)
     }
 
+    /// TODO: documentation
     async fn update_stats_from_catalog(
         &self,
         c: CatalogSource,
@@ -154,6 +148,7 @@ impl CostModelStorageLayer for BackendManager {
         }
     }
 
+    /// TODO: improve the documentation
     /* Update the statistics in the database.
      * The statistic can be newly inserted or updated. If the statistic value
      * is the same as the latest existing one, the update will be ignored, and
@@ -166,14 +161,14 @@ impl CostModelStorageLayer for BackendManager {
      * If the statistic value is the same as the latest existing one, this function
      * won't create a new epoch.
      *
-     * For batch updates, if the caller can directly call this function with
+     * For batch updates, the caller can directly call this function with
      * New epoch option at the first time, and if the epoch_id is returned, the
      * caller can use the returned epoch_id for the rest of the updates.
      * But if the epoch_id is not returned, the caller should continue using
      * the New epoch option for the next statistic update.
      */
     async fn update_stats(
-        &mut self,
+        &self,
         stat: Stat,
         epoch_option: EpochOption,
     ) -> StorageResult<Option<Self::EpochId>> {
@@ -270,11 +265,9 @@ impl CostModelStorageLayer for BackendManager {
             }
         };
         // 1. Insert into attr_stats and related junction tables.
-        let mut insert_new_epoch = false;
         let epoch_id = match epoch_option {
             EpochOption::Existed(e) => e,
             EpochOption::New(source, data) => {
-                insert_new_epoch = true;
                 let new_event = event::ActiveModel {
                     source_variant: sea_orm::ActiveValue::Set(source),
                     timestamp: sea_orm::ActiveValue::Set(Utc::now()),
@@ -317,19 +310,11 @@ impl CostModelStorageLayer for BackendManager {
             .exec(&transaction)
             .await?;
 
-        // TODO(lanlou): consider the update conflict for latest_epoch_id in multiple threads
-        // Assume the txn fails to commit, and the epoch_id is updated. But the epoch_id
-        // is always increasing and won't be overwritten even if the record is deleted, it
-        // might be fine.
-        if insert_new_epoch {
-            self.latest_epoch_id
-                .store(epoch_id as usize, std::sync::atomic::Ordering::Relaxed);
-        }
-
         transaction.commit().await?;
         Ok(Some(epoch_id))
     }
 
+    /// TODO: documentation
     async fn store_expr_stats_mappings(
         &self,
         expr_id: Self::ExprId,
@@ -350,6 +335,7 @@ impl CostModelStorageLayer for BackendManager {
         Ok(())
     }
 
+    /// TODO: documentation
     async fn get_stats_for_table(
         &self,
         table_id: i32,
@@ -377,6 +363,7 @@ impl CostModelStorageLayer for BackendManager {
         }
     }
 
+    /// TODO: documentation
     async fn get_stats_for_attr(
         &self,
         mut attr_ids: Vec<Self::AttrId>,
@@ -414,6 +401,7 @@ impl CostModelStorageLayer for BackendManager {
         }
     }
 
+    /// TODO: documentation
     async fn get_cost_analysis(
         &self,
         expr_id: Self::ExprId,
@@ -440,6 +428,7 @@ impl CostModelStorageLayer for BackendManager {
         Ok(cost.map(|c| c.cost))
     }
 
+    /// TODO: documentation
     async fn store_cost(
         &self,
         physical_expression_id: Self::ExprId,
