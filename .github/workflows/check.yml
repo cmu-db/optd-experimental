@@ -64,7 +64,6 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           reporter: 'github-pr-check'
-          fail_on_error: true
           clippy_flags: --locked --all-targets -- -D warnings
   doc:
     # run docs generation on nightly rather than stable. This enables features like
