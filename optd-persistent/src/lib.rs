@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::{cell::LazyCell, sync::atomic::AtomicUsize};
+use std::cell::LazyCell;
 
 use sea_orm::*;
 use sea_orm_migration::prelude::*;
@@ -47,7 +47,7 @@ pub enum CostModelError {
 pub enum BackendError {
     CostModel(CostModelError),
     Database(DbErr),
-    // Add other variants as needed for different error types
+    // TODO: Add other variants as needed for different error types
 }
 
 impl From<CostModelError> for BackendError {
@@ -64,7 +64,6 @@ impl From<DbErr> for BackendError {
 
 pub struct BackendManager {
     db: DatabaseConnection,
-    latest_epoch_id: AtomicUsize,
 }
 
 impl BackendManager {
@@ -72,7 +71,6 @@ impl BackendManager {
     pub async fn new(database_url: Option<&str>) -> StorageResult<Self> {
         Ok(Self {
             db: Database::connect(database_url.unwrap_or(DATABASE_URL)).await?,
-            latest_epoch_id: AtomicUsize::new(0),
         })
     }
 }
