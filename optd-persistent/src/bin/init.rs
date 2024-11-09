@@ -105,7 +105,7 @@ async fn init_all_tables() -> Result<(), sea_orm::error::DbErr> {
         table_id: Set(Some(1)),
         creation_time: Set(Utc::now()),
         number_of_attributes: Set(0),
-        variant_tag: Set(StatType::Count as i32),
+        variant_tag: Set(StatType::TableRowCount as i32),
         description: Set("".to_owned()),
     };
     let table_versioned_statistic = versioned_statistic::ActiveModel {

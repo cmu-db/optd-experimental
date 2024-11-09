@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::cell::LazyCell;
+use std::sync::LazyLock;
 
 use sea_orm::*;
 use sea_orm_migration::prelude::*;
@@ -13,11 +13,15 @@ mod migrator;
 pub mod cost_model;
 pub use cost_model::interface::CostModelStorageLayer;
 
+/// The filename of the SQLite database for migration.
 pub const DATABASE_FILENAME: &str = "sqlite.db";
+/// The URL of the SQLite database for migration.
 pub const DATABASE_URL: &str = "sqlite:./sqlite.db?mode=rwc";
 
+/// The filename of the SQLite database for testing.
 pub const TEST_DATABASE_FILENAME: &str = "init.db";
-pub const TEST_DATABASE_FILE: LazyCell<String> = LazyCell::new(|| {
+/// The URL of the SQLite database for testing.
+pub static TEST_DATABASE_FILE: LazyLock<String> = LazyLock::new(|| {
     std::env::current_dir()
         .unwrap()
         .join("src")
@@ -27,8 +31,9 @@ pub const TEST_DATABASE_FILE: LazyCell<String> = LazyCell::new(|| {
         .unwrap()
         .to_owned()
 });
-pub const TEST_DATABASE_URL: LazyCell<String> =
-    LazyCell::new(|| get_sqlite_url(TEST_DATABASE_FILE.as_str()));
+/// The URL of the SQLite database for testing.
+pub static TEST_DATABASE_URL: LazyLock<String> =
+    LazyLock::new(|| get_sqlite_url(TEST_DATABASE_FILE.as_str()));
 
 fn get_sqlite_url(file: &str) -> String {
     format!("sqlite:{}?mode=rwc", file)

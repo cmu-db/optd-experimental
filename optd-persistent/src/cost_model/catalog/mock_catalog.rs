@@ -1,5 +1,9 @@
+use sea_orm::prelude::Json;
+use serde_json::json;
+
 use crate::cost_model::interface::{AttrType, IndexType, StatType};
 
+/// TODO: documentation
 pub struct MockDatabaseMetadata {
     pub id: i32,
     pub name: String,
@@ -30,8 +34,7 @@ pub struct MockAttribute {
 pub struct MockStatistic {
     pub id: i32,
     pub stat_type: i32,
-    // TODO(lanlou): what should I use for the value type?
-    pub stat_value: String,
+    pub stat_value: Json,
     pub attr_ids: Vec<i32>,
     pub table_id: Option<i32>,
     pub name: String,
@@ -71,7 +74,9 @@ pub struct MockCatalog {
     pub triggers: Vec<MockTrigger>,
     // TODO: constraints
 }
+
 impl MockCatalog {
+    /// TODO: documentation
     pub fn new() -> Self {
         let databases: Vec<MockDatabaseMetadata> = vec![MockDatabaseMetadata {
             id: 1,
@@ -110,24 +115,24 @@ impl MockCatalog {
         let statistics: Vec<MockStatistic> = vec![
             MockStatistic {
                 id: 1,
-                stat_type: StatType::Count as i32,
-                stat_value: "100".to_string(),
+                stat_type: StatType::NotNullCount as i32,
+                stat_value: json!(100),
                 attr_ids: vec![1],
                 table_id: None,
                 name: "CountAttr1".to_string(),
             },
             MockStatistic {
                 id: 2,
-                stat_type: StatType::Count as i32,
-                stat_value: "200".to_string(),
+                stat_type: StatType::NotNullCount as i32,
+                stat_value: json!(200),
                 attr_ids: vec![2],
                 table_id: None,
                 name: "CountAttr2".to_string(),
             },
             MockStatistic {
                 id: 3,
-                stat_type: StatType::Count as i32,
-                stat_value: "300".to_string(),
+                stat_type: StatType::TableRowCount as i32,
+                stat_value: json!(300),
                 attr_ids: vec![],
                 table_id: Some(1),
                 name: "Table1Count".to_string(),

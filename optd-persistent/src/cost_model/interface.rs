@@ -41,7 +41,9 @@ pub enum ConstraintType {
 
 /// TODO: documentation
 pub enum StatType {
-    Count,
+    /// `TableRowCount` only applies to table statistics.
+    TableRowCount,
+    NotNullCount,
     Cardinality,
     Min,
     Max,
@@ -78,11 +80,7 @@ pub trait CostModelStorageLayer {
     // TODO: Change EpochId to event::Model::epoch_id
     async fn create_new_epoch(&self, source: String, data: String) -> StorageResult<Self::EpochId>;
 
-    async fn update_stats_from_catalog(
-        &self,
-        c: CatalogSource,
-        epoch_id: Self::EpochId,
-    ) -> StorageResult<()>;
+    async fn update_stats_from_catalog(&self, c: CatalogSource) -> StorageResult<Self::EpochId>;
 
     async fn update_stats(
         &self,
