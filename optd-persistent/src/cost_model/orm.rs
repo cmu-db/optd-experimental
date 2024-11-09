@@ -318,6 +318,9 @@ impl CostModelStorageLayer for BackendManager {
             .await?;
 
         // TODO(lanlou): consider the update conflict for latest_epoch_id in multiple threads
+        // Assume the txn fails to commit, and the epoch_id is updated. But the epoch_id
+        // is always increasing and won't be overwritten even if the record is deleted, it
+        // might be fine.
         if insert_new_epoch {
             self.latest_epoch_id
                 .store(epoch_id as usize, std::sync::atomic::Ordering::Relaxed);
