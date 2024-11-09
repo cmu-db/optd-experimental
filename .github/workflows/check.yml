@@ -62,8 +62,10 @@ jobs:
       - name: cargo clippy
         uses: giraffate/clippy-action@v1
         with:
-          reporter: 'github-pr-check'
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          reporter: 'github-pr-check'
+          fail_on_error: true
+          clippy_flags: --locked --all-targets -- -D warnings
   doc:
     # run docs generation on nightly rather than stable. This enables features like
     # https://doc.rust-lang.org/beta/unstable-book/language-features/doc-cfg.html which allows an
