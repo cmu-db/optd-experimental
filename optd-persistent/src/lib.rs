@@ -13,10 +13,14 @@ mod migrator;
 pub mod cost_model;
 pub use cost_model::interface::CostModelStorageLayer;
 
+/// The filename of the SQLite database for migration.
 pub const DATABASE_FILENAME: &str = "sqlite.db";
+/// The URL of the SQLite database for migration.
 pub const DATABASE_URL: &str = "sqlite:./sqlite.db?mode=rwc";
 
+/// The filename of the SQLite database for testing.
 pub const TEST_DATABASE_FILENAME: &str = "init.db";
+/// The URL of the SQLite database for testing.
 pub static TEST_DATABASE_FILE: LazyLock<String> = LazyLock::new(|| {
     std::env::current_dir()
         .unwrap()
@@ -27,6 +31,7 @@ pub static TEST_DATABASE_FILE: LazyLock<String> = LazyLock::new(|| {
         .unwrap()
         .to_owned()
 });
+/// The URL of the SQLite database for testing.
 pub static TEST_DATABASE_URL: LazyLock<String> =
     LazyLock::new(|| get_sqlite_url(TEST_DATABASE_FILE.as_str()));
 

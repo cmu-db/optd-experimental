@@ -177,6 +177,7 @@ impl CostModelStorageLayer for BackendManager {
                 )
                 .exec(&transaction)
                 .await?;
+                // TODO: initialize constraints
             }
             CatalogSource::Iceberg() => todo!(),
         }

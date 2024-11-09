@@ -3,6 +3,7 @@ use serde_json::json;
 
 use crate::cost_model::interface::{AttrType, IndexType, StatType};
 
+/// TODO: documentation
 pub struct MockDatabaseMetadata {
     pub id: i32,
     pub name: String,
@@ -33,7 +34,6 @@ pub struct MockAttribute {
 pub struct MockStatistic {
     pub id: i32,
     pub stat_type: i32,
-    // TODO(lanlou): what should I use for the value type?
     pub stat_value: Json,
     pub attr_ids: Vec<i32>,
     pub table_id: Option<i32>,
@@ -74,7 +74,9 @@ pub struct MockCatalog {
     pub triggers: Vec<MockTrigger>,
     // TODO: constraints
 }
+
 impl MockCatalog {
+    /// TODO: documentation
     pub fn new() -> Self {
         let databases: Vec<MockDatabaseMetadata> = vec![MockDatabaseMetadata {
             id: 1,
