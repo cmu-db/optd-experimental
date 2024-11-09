@@ -11,11 +11,13 @@ use sea_orm_migration::prelude::*;
 use serde_json::json;
 use std::sync::Arc;
 
+/// TODO: documentation
 pub enum CatalogSource {
     Iceberg(),
     Mock,
 }
 
+/// TODO: documentation
 pub enum AttrType {
     Integer,
     Float,
@@ -23,11 +25,13 @@ pub enum AttrType {
     Boolean,
 }
 
+/// TODO: documentation
 pub enum IndexType {
     BTree,
     Hash,
 }
 
+/// TODO: documentation
 pub enum ConstraintType {
     PrimaryKey,
     ForeignKey,
@@ -35,6 +39,7 @@ pub enum ConstraintType {
     Check,
 }
 
+/// TODO: documentation
 pub enum StatType {
     Count,
     Cardinality,
@@ -42,6 +47,7 @@ pub enum StatType {
     Max,
 }
 
+/// TODO: documentation
 #[derive(PartialEq)]
 pub enum EpochOption {
     // TODO(lanlou): Could I make i32 -> EpochId?
@@ -49,6 +55,7 @@ pub enum EpochOption {
     New(String, String),
 }
 
+/// TODO: documentation
 #[derive(Clone)]
 pub struct Stat {
     pub stat_type: i32,
@@ -58,6 +65,7 @@ pub struct Stat {
     pub name: String,
 }
 
+/// TODO: documentation
 #[trait_variant::make(Send)]
 pub trait CostModelStorageLayer {
     type GroupId;
@@ -68,11 +76,7 @@ pub trait CostModelStorageLayer {
     type StatId;
 
     // TODO: Change EpochId to event::Model::epoch_id
-    async fn create_new_epoch(
-        &mut self,
-        source: String,
-        data: String,
-    ) -> StorageResult<Self::EpochId>;
+    async fn create_new_epoch(&self, source: String, data: String) -> StorageResult<Self::EpochId>;
 
     async fn update_stats_from_catalog(
         &self,
@@ -81,7 +85,7 @@ pub trait CostModelStorageLayer {
     ) -> StorageResult<()>;
 
     async fn update_stats(
-        &mut self,
+        &self,
         stat: Stat,
         epoch_option: EpochOption,
     ) -> StorageResult<Option<Self::EpochId>>;
