@@ -1146,7 +1146,6 @@ version = "0.1.0"
 dependencies = [
  "async-stream",
  "async-trait",
- "lazy_static",
  "sea-orm",
  "sea-orm-migration",
  "serde_json",
