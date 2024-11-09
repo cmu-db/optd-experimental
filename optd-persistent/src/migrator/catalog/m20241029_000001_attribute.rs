@@ -8,7 +8,7 @@ pub enum Attribute {
     TableId,
     Name,
     CompressionMethod,
-    Type,
+    VariantTag,
     BaseAttributeNumber,
     IsNotNull,
 }
@@ -35,7 +35,7 @@ impl MigrationTrait for Migration {
                     )
                     .col(string(Attribute::Name))
                     .col(char(Attribute::CompressionMethod))
-                    .col(integer(Attribute::Type))
+                    .col(integer(Attribute::VariantTag))
                     .col(integer(Attribute::BaseAttributeNumber))
                     .col(boolean(Attribute::IsNotNull))
                     .to_owned(),

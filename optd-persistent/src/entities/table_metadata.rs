@@ -8,7 +8,7 @@ pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
     pub name: String,
-    pub schema_id: i32,
+    pub namespace_id: i32,
     pub creation_time: DateTimeUtc,
 }
 
@@ -16,11 +16,11 @@ pub struct Model {
 pub enum Relation {
     #[sea_orm(has_many = "super::attribute::Entity")]
     Attribute,
-    #[sea_orm(has_many = "super::index::Entity")]
-    Index,
+    #[sea_orm(has_many = "super::index_metadata::Entity")]
+    IndexMetadata,
     #[sea_orm(
         belongs_to = "super::namespace_metadata::Entity",
-        from = "Column::SchemaId",
+        from = "Column::NamespaceId",
         to = "super::namespace_metadata::Column::Id",
         on_update = "Cascade",
         on_delete = "Cascade"
@@ -38,9 +38,9 @@ impl Related<super::attribute::Entity> for Entity {
     }
 }
 
-impl Related<super::index::Entity> for Entity {
+impl Related<super::index_metadata::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::Index.def()
+        Relation::IndexMetadata.def()
     }
 }
 

@@ -2,7 +2,7 @@ use crate::migrator::catalog::table_metadata::TableMetadata;
 use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(Iden)]
-pub enum Index {
+pub enum IndexMetadata {
     Table,
     Id,
     TableId,
@@ -26,26 +26,26 @@ impl MigrationTrait for Migration {
         manager
             .create_table(
                 Table::create()
-                    .table(Index::Table)
+                    .table(IndexMetadata::Table)
                     .if_not_exists()
-                    .col(pk_auto(Index::Id))
-                    .col(integer(Index::TableId))
+                    .col(pk_auto(IndexMetadata::Id))
+                    .col(integer(IndexMetadata::TableId))
                     .foreign_key(
                         ForeignKey::create()
-                            .from(Index::Table, Index::TableId)
+                            .from(IndexMetadata::Table, IndexMetadata::TableId)
                             .to(TableMetadata::Table, TableMetadata::Id)
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
-                    .col(string(Index::Name))
-                    .col(integer(Index::NumberOfAttributes))
-                    .col(integer(Index::VariantTag))
-                    .col(boolean(Index::IsUnique))
-                    .col(boolean(Index::NullsNotDistinct))
-                    .col(boolean(Index::IsPrimary))
-                    .col(boolean(Index::IsClustered))
-                    .col(boolean(Index::IsExclusion))
-                    .col(json(Index::Description))
+                    .col(string(IndexMetadata::Name))
+                    .col(integer(IndexMetadata::NumberOfAttributes))
+                    .col(integer(IndexMetadata::VariantTag))
+                    .col(boolean(IndexMetadata::IsUnique))
+                    .col(boolean(IndexMetadata::NullsNotDistinct))
+                    .col(boolean(IndexMetadata::IsPrimary))
+                    .col(boolean(IndexMetadata::IsClustered))
+                    .col(boolean(IndexMetadata::IsExclusion))
+                    .col(string(IndexMetadata::Description))
                     .to_owned(),
             )
             .await
@@ -53,7 +53,7 @@ impl MigrationTrait for Migration {
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
-            .drop_table(Table::drop().table(Index::Table).to_owned())
+            .drop_table(Table::drop().table(IndexMetadata::Table).to_owned())
             .await
     }
 }

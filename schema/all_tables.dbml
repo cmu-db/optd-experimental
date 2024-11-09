@@ -3,21 +3,22 @@
 
 Table database_metadata {
   id integer PK
-  created_time timestamp 
+  name varchar
+  creation_time timestamp 
 }
 
 Table namespace_metadata {
   id integer PK
   database_id integer [ref: > database_metadata.id]
   name varchar
-  created_time timestamp
+  creation_time timestamp
 }
 
 Table table_metadata {
   id integer PK
-  schema_id integer [ref: > namespace_metadata.id]
+  namespace_id integer [ref: > namespace_metadata.id]
   name varchar
-  created_time timestamp
+  creation_time timestamp
 }
 
 Table attribute {
@@ -25,8 +26,8 @@ Table attribute {
   table_id integer [ref: > table_metadata.id]
   name varchar
   compression_method char
-  type integer // Data type of this attribute. Should we make another table to explain the type mapping?
-  base_col_number integer // local index within the table
+  variant_tag integer // Data type of this attribute. Should we make another table to explain the type mapping?
+  base_attribute_number integer // local index within the table
   is_not_null boolean // physical property
 }
 
@@ -34,7 +35,7 @@ Table statistic {
   id integer PK
   name varchar
   table_id integer [ref: > table_metadata.id, null] // null if not a table statistic
-  created_time timestamp
+  creation_time timestamp
   number_of_attributes integer // 0 if a table statistic
   variant_tag integer // Should we make another table to explain the type mapping?
   description varchar // Store the sorted attribute ids of this statistic, to support quick lookup (OR we can use junction table to look up)

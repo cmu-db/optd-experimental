@@ -1,6 +1,4 @@
-use crate::cost_model::interface::StatisticType;
-
-use super::IndexType;
+use crate::cost_model::interface::{AttrType, IndexType, StatType};
 
 pub struct MockDatabaseMetadata {
     pub id: i32,
@@ -24,6 +22,9 @@ pub struct MockAttribute {
     pub name: String,
     pub attr_index: i32,
     pub table_id: i32,
+    pub compression_method: char,
+    pub attr_type: i32,
+    pub is_not_null: bool,
 }
 
 pub struct MockStatistic {
@@ -58,6 +59,7 @@ pub struct MockTrigger {
     pub function: String,
 }
 
+#[derive(Default)]
 pub struct MockCatalog {
     pub databases: Vec<MockDatabaseMetadata>,
     pub namespaces: Vec<MockNamespaceMetadata>,
@@ -90,18 +92,24 @@ impl MockCatalog {
                 name: "attr1".to_string(),
                 attr_index: 1,
                 table_id: 1,
+                compression_method: 'n',
+                attr_type: AttrType::Integer as i32,
+                is_not_null: true,
             },
             MockAttribute {
                 id: 2,
                 name: "attr2".to_string(),
                 attr_index: 2,
                 table_id: 1,
+                compression_method: 'n',
+                attr_type: AttrType::Integer as i32,
+                is_not_null: false,
             },
         ];
         let statistics: Vec<MockStatistic> = vec![
             MockStatistic {
                 id: 1,
-                stat_type: StatisticType::Count as i32,
+                stat_type: StatType::Count as i32,
                 stat_value: "100".to_string(),
                 attr_ids: vec![1],
                 table_id: None,
@@ -109,7 +117,7 @@ impl MockCatalog {
             },
             MockStatistic {
                 id: 2,
-                stat_type: StatisticType::Count as i32,
+                stat_type: StatType::Count as i32,
                 stat_value: "200".to_string(),
                 attr_ids: vec![2],
                 table_id: None,
@@ -117,7 +125,7 @@ impl MockCatalog {
             },
             MockStatistic {
                 id: 3,
-                stat_type: StatisticType::Count as i32,
+                stat_type: StatType::Count as i32,
                 stat_value: "300".to_string(),
                 attr_ids: vec![],
                 table_id: Some(1),

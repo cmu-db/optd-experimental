@@ -6,7 +6,7 @@ pub enum TableMetadata {
     Table,
     Id,
     Name,
-    SchemaId,
+    NamespaceId,
     CreationTime,
 }
 
@@ -23,10 +23,10 @@ impl MigrationTrait for Migration {
                     .if_not_exists()
                     .col(pk_auto(TableMetadata::Id))
                     .col(string(TableMetadata::Name))
-                    .col(integer(TableMetadata::SchemaId))
+                    .col(integer(TableMetadata::NamespaceId))
                     .foreign_key(
                         ForeignKey::create()
-                            .from(TableMetadata::Table, TableMetadata::SchemaId)
+                            .from(TableMetadata::Table, TableMetadata::NamespaceId)
                             .to(NamespaceMetadata::Table, NamespaceMetadata::Id)
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
