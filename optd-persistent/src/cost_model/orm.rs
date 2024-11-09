@@ -51,11 +51,24 @@ impl CostModelStorageLayer for BackendManager {
     }
 
     /// TODO: documentation
-    async fn update_stats_from_catalog(
-        &self,
-        c: CatalogSource,
-        epoch_id: Self::EpochId,
-    ) -> StorageResult<()> {
+    async fn update_stats_from_catalog(&self, c: CatalogSource) -> StorageResult<Self::EpochId> {
+        let transaction = self.db.begin().await?;
+        let source = match c {
+            CatalogSource::Mock => "Mock",
+            CatalogSource::Iceberg() => "Iceberg",
+        };
+        let new_event = event::ActiveModel {
+            source_variant: sea_orm::ActiveValue::Set(source.to_string()),
+            timestamp: sea_orm::ActiveValue::Set(Utc::now()),
+            data: sea_orm::ActiveValue::Set(sea_orm::JsonValue::String(
+                "Update stats from catalog".to_string(),
+            )),
+            ..Default::default()
+        };
+        let epoch_id = Event::insert(new_event)
+            .exec(&transaction)
+            .await?
+            .last_insert_id;
         match c {
             CatalogSource::Mock => {
                 let mock_catalog = MockCatalog::new();
@@ -66,7 +79,7 @@ impl CostModelStorageLayer for BackendManager {
                         ..Default::default()
                     }
                 }))
-                .exec(&self.db)
+                .exec(&transaction)
                 .await?;
                 NamespaceMetadata::insert_many(mock_catalog.namespaces.iter().map(|namespace| {
                     namespace_metadata::ActiveModel {
@@ -76,7 +89,7 @@ impl CostModelStorageLayer for BackendManager {
                         ..Default::default()
                     }
                 }))
-                .exec(&self.db)
+                .exec(&transaction)
                 .await?;
                 TableMetadata::insert_many(mock_catalog.tables.iter().map(|table| {
                     table_metadata::ActiveModel {
@@ -86,7 +99,7 @@ impl CostModelStorageLayer for BackendManager {
                         ..Default::default()
                     }
                 }))
-                .exec(&self.db)
+                .exec(&transaction)
                 .await?;
                 Attribute::insert_many(mock_catalog.attributes.iter().map(|attr| {
                     attribute::ActiveModel {
@@ -101,7 +114,7 @@ impl CostModelStorageLayer for BackendManager {
                         ..Default::default()
                     }
                 }))
-                .exec(&self.db)
+                .exec(&transaction)
                 .await?;
                 Statistic::insert_many(mock_catalog.statistics.iter().map(|stat| {
                     statistic::ActiveModel {
@@ -116,7 +129,29 @@ impl CostModelStorageLayer for BackendManager {
                         ..Default::default()
                     }
                 }))
-                .exec(&self.db)
+                .exec(&transaction)
+                .await?;
+                VersionedStatistic::insert_many(mock_catalog.statistics.iter().map(|stat| {
+                    versioned_statistic::ActiveModel {
+                        epoch_id: sea_orm::ActiveValue::Set(epoch_id),
+                        statistic_id: sea_orm::ActiveValue::Set(stat.id),
+                        statistic_value: sea_orm::ActiveValue::Set(stat.stat_value.clone()),
+                        ..Default::default()
+                    }
+                }))
+                .exec(&transaction)
+                .await?;
+                StatisticToAttributeJunction::insert_many(mock_catalog.statistics.iter().flat_map(
+                    |stat| {
+                        stat.attr_ids.iter().map(move |attr_id| {
+                            statistic_to_attribute_junction::ActiveModel {
+                                statistic_id: sea_orm::ActiveValue::Set(stat.id),
+                                attribute_id: sea_orm::ActiveValue::Set(*attr_id),
+                            }
+                        })
+                    },
+                ))
+                .exec(&transaction)
                 .await?;
                 IndexMetadata::insert_many(
                     mock_catalog
@@ -140,12 +175,13 @@ impl CostModelStorageLayer for BackendManager {
                             ..Default::default()
                         }),
                 )
-                .exec(&self.db)
+                .exec(&transaction)
                 .await?;
-                Ok(())
             }
             CatalogSource::Iceberg() => todo!(),
         }
+        transaction.commit().await?;
+        Ok(epoch_id)
     }
 
     /// TODO: improve the documentation
@@ -551,14 +587,27 @@ mod tests {
         let mut binding = super::BackendManager::new(Some(&database_url)).await;
         let backend_manager = binding.as_mut().unwrap();
         let res = backend_manager
-            .update_stats_from_catalog(super::CatalogSource::Mock, 1)
+            .update_stats_from_catalog(super::CatalogSource::Mock)
             .await;
         println!("{:?}", res);
         assert!(res.is_ok());
+        let epoch_id = res.unwrap();
+        assert_eq!(epoch_id, 1);
 
         let lookup_res = Statistic::find().all(&backend_manager.db).await.unwrap();
         println!("{:?}", lookup_res);
         assert_eq!(lookup_res.len(), 3);
+
+        let stat_res = backend_manager
+            .get_stats_for_table(1, StatType::Count as i32, Some(epoch_id))
+            .await;
+        assert!(stat_res.is_ok());
+        assert_eq!(stat_res.unwrap().unwrap(), json!(300));
+        let stat_res = backend_manager
+            .get_stats_for_attr([2].to_vec(), StatType::Count as i32, None)
+            .await;
+        assert!(stat_res.is_ok());
+        assert_eq!(stat_res.unwrap().unwrap(), json!(200));
 
         remove_db_file(DATABASE_FILE);
     }

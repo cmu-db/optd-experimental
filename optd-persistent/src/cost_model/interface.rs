@@ -41,6 +41,14 @@ pub enum ConstraintType {
 
 /// TODO: documentation
 pub enum StatType {
+    // TODO(lanlou): I am not sure which way to represent the type is better.
+    // 1. `Count` means row count, (i.e. record count), and it only applies to
+    // table statistics. In this way, we should introduce `NotNullCount` for attribute
+    // statistics to indicate the number of non-null values.
+    // 2. `Count` means the number of non-null values, and it applies to both table
+    // and attribute statistics. (Will a table have a record with null values in all
+    // attributes?)
+    // For now, we just use the second way for simplicity.
     Count,
     Cardinality,
     Min,
@@ -78,11 +86,7 @@ pub trait CostModelStorageLayer {
     // TODO: Change EpochId to event::Model::epoch_id
     async fn create_new_epoch(&self, source: String, data: String) -> StorageResult<Self::EpochId>;
 
-    async fn update_stats_from_catalog(
-        &self,
-        c: CatalogSource,
-        epoch_id: Self::EpochId,
-    ) -> StorageResult<()>;
+    async fn update_stats_from_catalog(&self, c: CatalogSource) -> StorageResult<Self::EpochId>;
 
     async fn update_stats(
         &self,
