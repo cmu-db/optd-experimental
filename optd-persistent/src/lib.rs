@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::sync::atomic::AtomicUsize;
+use std::{cell::LazyCell, sync::atomic::AtomicUsize};
 
 use sea_orm::*;
 use sea_orm_migration::prelude::*;
@@ -17,19 +17,18 @@ pub const DATABASE_FILENAME: &str = "sqlite.db";
 pub const DATABASE_URL: &str = "sqlite:./sqlite.db?mode=rwc";
 
 pub const TEST_DATABASE_FILENAME: &str = "init.db";
-lazy_static::lazy_static! {
-    pub static ref TEST_DATABASE_FILE: String = {
-        std::env::current_dir().unwrap()
-            .join("src")
-            .join("db")
-            .join(TEST_DATABASE_FILENAME)
-            .to_str()
-            .unwrap()
-            .to_owned()
-    };
-    pub static ref TEST_DATABASE_URL: String =
-        get_sqlite_url(TEST_DATABASE_FILE.as_str());
-}
+pub const TEST_DATABASE_FILE: LazyCell<String> = LazyCell::new(|| {
+    std::env::current_dir()
+        .unwrap()
+        .join("src")
+        .join("db")
+        .join(TEST_DATABASE_FILENAME)
+        .to_str()
+        .unwrap()
+        .to_owned()
+});
+pub const TEST_DATABASE_URL: LazyCell<String> =
+    LazyCell::new(|| get_sqlite_url(TEST_DATABASE_FILE.as_str()));
 
 fn get_sqlite_url(file: &str) -> String {
     format!("sqlite:{}?mode=rwc", file)
