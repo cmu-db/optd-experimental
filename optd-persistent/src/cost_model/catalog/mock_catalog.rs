@@ -113,7 +113,7 @@ impl MockCatalog {
         let statistics: Vec<MockStatistic> = vec![
             MockStatistic {
                 id: 1,
-                stat_type: StatType::Count as i32,
+                stat_type: StatType::NotNullCount as i32,
                 stat_value: json!(100),
                 attr_ids: vec![1],
                 table_id: None,
@@ -121,7 +121,7 @@ impl MockCatalog {
             },
             MockStatistic {
                 id: 2,
-                stat_type: StatType::Count as i32,
+                stat_type: StatType::NotNullCount as i32,
                 stat_value: json!(200),
                 attr_ids: vec![2],
                 table_id: None,
@@ -129,7 +129,7 @@ impl MockCatalog {
             },
             MockStatistic {
                 id: 3,
-                stat_type: StatType::Count as i32,
+                stat_type: StatType::TableRowCount as i32,
                 stat_value: json!(300),
                 attr_ids: vec![],
                 table_id: Some(1),

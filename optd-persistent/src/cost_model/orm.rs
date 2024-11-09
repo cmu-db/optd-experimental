@@ -599,12 +599,12 @@ mod tests {
         assert_eq!(lookup_res.len(), 3);
 
         let stat_res = backend_manager
-            .get_stats_for_table(1, StatType::Count as i32, Some(epoch_id))
+            .get_stats_for_table(1, StatType::TableRowCount as i32, Some(epoch_id))
             .await;
         assert!(stat_res.is_ok());
         assert_eq!(stat_res.unwrap().unwrap(), json!(300));
         let stat_res = backend_manager
-            .get_stats_for_attr([2].to_vec(), StatType::Count as i32, None)
+            .get_stats_for_attr([2].to_vec(), StatType::NotNullCount as i32, None)
             .await;
         assert!(stat_res.is_ok());
         assert_eq!(stat_res.unwrap().unwrap(), json!(200));
@@ -624,7 +624,7 @@ mod tests {
             .await
             .unwrap();
         let stat = Stat {
-            stat_type: StatType::Count as i32,
+            stat_type: StatType::NotNullCount as i32,
             stat_value: json!(100),
             attr_ids: vec![1],
             table_id: None,
@@ -643,7 +643,7 @@ mod tests {
         println!("{:?}", stat_res);
         assert_eq!(stat_res[0].number_of_attributes, 1);
         assert_eq!(stat_res[0].description, "1".to_string());
-        assert_eq!(stat_res[0].variant_tag, StatType::Count as i32);
+        assert_eq!(stat_res[0].variant_tag, StatType::NotNullCount as i32);
         let stat_attr_res = StatisticToAttributeJunction::find()
             .filter(statistic_to_attribute_junction::Column::StatisticId.eq(stat_res[0].id))
             .all(&backend_manager.db)
@@ -696,7 +696,7 @@ mod tests {
             .await
             .unwrap();
         let stat2 = Stat {
-            stat_type: StatType::Count as i32,
+            stat_type: StatType::NotNullCount as i32,
             stat_value: json!(200),
             attr_ids: vec![1],
             table_id: None,
@@ -750,7 +750,7 @@ mod tests {
         // 3. Update existed stat with the same value
         let epoch_num = Event::find().all(&backend_manager.db).await.unwrap().len();
         let stat3 = Stat {
-            stat_type: StatType::Count as i32,
+            stat_type: StatType::NotNullCount as i32,
             stat_value: json!(200),
             attr_ids: vec![1],
             table_id: None,
@@ -791,21 +791,21 @@ mod tests {
 
         let statistics: Vec<Stat> = vec![
             Stat {
-                stat_type: StatType::Count as i32,
+                stat_type: StatType::TableRowCount as i32,
                 stat_value: json!(0),
                 attr_ids: vec![],
                 table_id: Some(1),
                 name: "row_count".to_string(),
             },
             Stat {
-                stat_type: StatType::Count as i32,
+                stat_type: StatType::TableRowCount as i32,
                 stat_value: json!(20),
                 attr_ids: vec![],
                 table_id: Some(1),
                 name: "row_count".to_string(),
             },
             Stat {
-                stat_type: StatType::Count as i32,
+                stat_type: StatType::TableRowCount as i32,
                 stat_value: json!(100),
                 attr_ids: vec![],
                 table_id: Some(table_inserted_res.last_insert_id),
@@ -969,7 +969,7 @@ mod tests {
         let backend_manager = binding.as_mut().unwrap();
         let epoch_id = 1;
         let table_id = 1;
-        let stat_type = StatType::Count as i32;
+        let stat_type = StatType::TableRowCount as i32;
 
         // Get initial stats
         let res = backend_manager
@@ -986,7 +986,7 @@ mod tests {
             .await
             .unwrap();
         let stat = Stat {
-            stat_type: StatType::Count as i32,
+            stat_type: StatType::TableRowCount as i32,
             stat_value: json!(100),
             attr_ids: vec![],
             table_id: Some(table_id),
