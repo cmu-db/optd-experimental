@@ -355,7 +355,8 @@ async fn init_all_tables() -> Result<(), sea_orm::error::DbErr> {
         id: Set(1),
         physical_expression_id: Set(1),
         epoch_id: Set(1),
-        cost: Set(10),
+        cost: Set(json!({"compute_cost":10, "io_cost":10})),
+        estimated_statistic: Set(10),
         is_valid: Set(true),
     };
     plan_cost::Entity::insert(plan_cost)
