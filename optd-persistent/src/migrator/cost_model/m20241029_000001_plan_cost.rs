@@ -12,7 +12,10 @@ pub enum PlanCost {
     Id,
     PhysicalExpressionId,
     EpochId,
+    // It is json type, including computation cost, I/O cost, etc.
     Cost,
+    // Raw estimated output row count of this expression
+    EstimatedStatistic,
     // Whether the cost is valid or not. If the latest cost for an expr is invalid, then we need to recompute the cost.
     // We need to invalidate the cost when the related stats are updated.
     IsValid,
@@ -46,7 +49,8 @@ impl MigrationTrait for Migration {
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
-                    .col(integer(PlanCost::Cost))
+                    .col(json(PlanCost::Cost))
+                    .col(integer(PlanCost::EstimatedStatistic))
                     .col(boolean(PlanCost::IsValid))
                     .to_owned(),
             )

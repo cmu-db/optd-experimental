@@ -2,6 +2,7 @@
 
 use std::ptr::null;
 
+use crate::cost_model::interface::Cost;
 use crate::entities::{prelude::*, *};
 use crate::{BackendError, BackendManager, CostModelError, CostModelStorageLayer, StorageResult};
 use sea_orm::prelude::{Expr, Json};
@@ -11,6 +12,7 @@ use sea_orm::{
     ActiveModelTrait, ColumnTrait, DbBackend, DbErr, DeleteResult, EntityOrSelect, ModelTrait,
     QueryFilter, QueryOrder, QuerySelect, QueryTrait, RuntimeErr, TransactionTrait,
 };
+use serde_json::json;
 
 use super::catalog::mock_catalog::{self, MockCatalog};
 use super::interface::{CatalogSource, EpochOption, Stat};
@@ -443,7 +445,7 @@ impl CostModelStorageLayer for BackendManager {
         &self,
         expr_id: Self::ExprId,
         epoch_id: Self::EpochId,
-    ) -> StorageResult<Option<i32>> {
+    ) -> StorageResult<Option<Cost>> {
         let cost = PlanCost::find()
             .filter(plan_cost::Column::PhysicalExpressionId.eq(expr_id))
             .filter(plan_cost::Column::EpochId.eq(epoch_id))
@@ -451,10 +453,14 @@ impl CostModelStorageLayer for BackendManager {
             .await?;
         assert!(cost.is_some(), "Cost not found in Cost table");
         assert!(cost.clone().unwrap().is_valid, "Cost is not valid");
-        Ok(cost.map(|c| c.cost))
+        Ok(cost.map(|c| Cost {
+            compute_cost: c.cost.get("compute_cost").unwrap().as_i64().unwrap() as i32,
+            io_cost: c.cost.get("io_cost").unwrap().as_i64().unwrap() as i32,
+            estimated_statistic: c.estimated_statistic,
+        }))
     }
 
-    async fn get_cost(&self, expr_id: Self::ExprId) -> StorageResult<Option<i32>> {
+    async fn get_cost(&self, expr_id: Self::ExprId) -> StorageResult<Option<Cost>> {
         let cost = PlanCost::find()
             .filter(plan_cost::Column::PhysicalExpressionId.eq(expr_id))
             .order_by_desc(plan_cost::Column::EpochId)
@@ -462,14 +468,18 @@ impl CostModelStorageLayer for BackendManager {
             .await?;
         assert!(cost.is_some(), "Cost not found in Cost table");
         assert!(cost.clone().unwrap().is_valid, "Cost is not valid");
-        Ok(cost.map(|c| c.cost))
+        Ok(cost.map(|c| Cost {
+            compute_cost: c.cost.get("compute_cost").unwrap().as_i64().unwrap() as i32,
+            io_cost: c.cost.get("io_cost").unwrap().as_i64().unwrap() as i32,
+            estimated_statistic: c.estimated_statistic,
+        }))
     }
 
     /// TODO: documentation
     async fn store_cost(
         &self,
         physical_expression_id: Self::ExprId,
-        cost: i32,
+        cost: Cost,
         epoch_id: Self::EpochId,
     ) -> StorageResult<()> {
         let expr_exists = PhysicalExpression::find_by_id(physical_expression_id)
@@ -496,7 +506,10 @@ impl CostModelStorageLayer for BackendManager {
         let new_cost = plan_cost::ActiveModel {
             physical_expression_id: sea_orm::ActiveValue::Set(physical_expression_id),
             epoch_id: sea_orm::ActiveValue::Set(epoch_id),
-            cost: sea_orm::ActiveValue::Set(cost),
+            cost: sea_orm::ActiveValue::Set(
+                json!({"compute_cost": cost.compute_cost, "io_cost": cost.io_cost}),
+            ),
+            estimated_statistic: sea_orm::ActiveValue::Set(cost.estimated_statistic),
             is_valid: sea_orm::ActiveValue::Set(true),
             ..Default::default()
         };
@@ -507,7 +520,7 @@ impl CostModelStorageLayer for BackendManager {
 
 #[cfg(test)]
 mod tests {
-    use crate::cost_model::interface::{EpochOption, StatType};
+    use crate::cost_model::interface::{Cost, EpochOption, StatType};
     use crate::{cost_model::interface::Stat, migrate, CostModelStorageLayer};
     use crate::{get_sqlite_url, TEST_DATABASE_FILE};
     use sea_orm::sqlx::database;
@@ -681,7 +694,17 @@ mod tests {
         .await
         .unwrap();
         backend_manager
-            .store_cost(expr_id, 42, versioned_stat_res[0].epoch_id)
+            .store_cost(
+                expr_id,
+                {
+                    Cost {
+                        compute_cost: 42,
+                        io_cost: 42,
+                        estimated_statistic: 42,
+                    }
+                },
+                versioned_stat_res[0].epoch_id,
+            )
             .await
             .unwrap();
         let cost_res = PlanCost::find()
@@ -744,7 +767,7 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(cost_res.len(), 1);
-        assert_eq!(cost_res[0].cost, 42);
+        assert_eq!(cost_res[0].cost, json!({"compute_cost": 42, "io_cost": 42}));
         assert_eq!(cost_res[0].epoch_id, epoch_id1);
         assert!(!cost_res[0].is_valid);
 
@@ -875,9 +898,13 @@ mod tests {
             .await
             .unwrap();
         let physical_expression_id = 1;
-        let cost = 42;
+        let cost = Cost {
+            compute_cost: 42,
+            io_cost: 42,
+            estimated_statistic: 42,
+        };
         backend_manager
-            .store_cost(physical_expression_id, cost, epoch_id)
+            .store_cost(physical_expression_id, cost.clone(), epoch_id)
             .await
             .unwrap();
         let costs = super::PlanCost::find()
@@ -887,7 +914,14 @@ mod tests {
         assert_eq!(costs.len(), 2); // The first row one is the initialized data
         assert_eq!(costs[1].epoch_id, epoch_id);
         assert_eq!(costs[1].physical_expression_id, physical_expression_id);
-        assert_eq!(costs[1].cost, cost);
+        assert_eq!(
+            costs[1].cost,
+            json!({"compute_cost": cost.compute_cost, "io_cost": cost.io_cost})
+        );
+        assert_eq!(
+            costs[1].estimated_statistic as i32,
+            cost.estimated_statistic
+        );
 
         remove_db_file(DATABASE_FILE);
     }
@@ -903,9 +937,13 @@ mod tests {
             .await
             .unwrap();
         let physical_expression_id = 1;
-        let cost = 42;
+        let cost = Cost {
+            compute_cost: 42,
+            io_cost: 42,
+            estimated_statistic: 42,
+        };
         let _ = backend_manager
-            .store_cost(physical_expression_id, cost, epoch_id)
+            .store_cost(physical_expression_id, cost.clone(), epoch_id)
             .await;
         let costs = super::PlanCost::find()
             .all(&backend_manager.db)
@@ -914,7 +952,14 @@ mod tests {
         assert_eq!(costs.len(), 2); // The first row one is the initialized data
         assert_eq!(costs[1].epoch_id, epoch_id);
         assert_eq!(costs[1].physical_expression_id, physical_expression_id);
-        assert_eq!(costs[1].cost, cost);
+        assert_eq!(
+            costs[1].cost,
+            json!({"compute_cost": cost.compute_cost, "io_cost": cost.io_cost})
+        );
+        assert_eq!(
+            costs[1].estimated_statistic as i32,
+            cost.estimated_statistic
+        );
 
         let res = backend_manager
             .get_cost(physical_expression_id)
@@ -936,9 +981,13 @@ mod tests {
             .await
             .unwrap();
         let physical_expression_id = 1;
-        let cost = 42;
+        let cost = Cost {
+            compute_cost: 1420,
+            io_cost: 42,
+            estimated_statistic: 42,
+        };
         let _ = backend_manager
-            .store_cost(physical_expression_id, cost, epoch_id)
+            .store_cost(physical_expression_id, cost.clone(), epoch_id)
             .await;
         let costs = super::PlanCost::find()
             .all(&backend_manager.db)
@@ -947,7 +996,14 @@ mod tests {
         assert_eq!(costs.len(), 2); // The first row one is the initialized data
         assert_eq!(costs[1].epoch_id, epoch_id);
         assert_eq!(costs[1].physical_expression_id, physical_expression_id);
-        assert_eq!(costs[1].cost, cost);
+        assert_eq!(
+            costs[1].cost,
+            json!({"compute_cost": cost.compute_cost, "io_cost": cost.io_cost})
+        );
+        assert_eq!(
+            costs[1].estimated_statistic as i32,
+            cost.estimated_statistic
+        );
         println!("{:?}", costs);
 
         // Retrieve physical_expression_id 1 and epoch_id 1
@@ -957,7 +1013,14 @@ mod tests {
             .unwrap();
 
         // The cost in the dummy data is 10
-        assert_eq!(res.unwrap(), 10);
+        assert_eq!(
+            res.unwrap(),
+            Cost {
+                compute_cost: 10,
+                io_cost: 10,
+                estimated_statistic: 10,
+            }
+        );
 
         remove_db_file(DATABASE_FILE);
     }

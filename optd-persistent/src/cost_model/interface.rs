@@ -68,6 +68,14 @@ pub struct Stat {
 }
 
 /// TODO: documentation
+#[derive(Clone, Debug, PartialEq)]
+pub struct Cost {
+    pub compute_cost: i32,
+    pub io_cost: i32,
+    pub estimated_statistic: i32,
+}
+
+/// TODO: documentation
 #[trait_variant::make(Send)]
 pub trait CostModelStorageLayer {
     type GroupId;
@@ -91,7 +99,7 @@ pub trait CostModelStorageLayer {
     async fn store_cost(
         &self,
         expr_id: Self::ExprId,
-        cost: i32,
+        cost: Cost,
         epoch_id: Self::EpochId,
     ) -> StorageResult<()>;
 
@@ -126,7 +134,7 @@ pub trait CostModelStorageLayer {
         &self,
         expr_id: Self::ExprId,
         epoch_id: Self::EpochId,
-    ) -> StorageResult<Option<i32>>;
+    ) -> StorageResult<Option<Cost>>;
 
-    async fn get_cost(&self, expr_id: Self::ExprId) -> StorageResult<Option<i32>>;
+    async fn get_cost(&self, expr_id: Self::ExprId) -> StorageResult<Option<Cost>>;
 }
