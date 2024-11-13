@@ -12,18 +12,22 @@ use crate::{
         nodes::{ArcPredicateNode, PhysicalNodeType},
         types::ExprId,
     },
+    storage::CostModelStorageManager,
     ComputeCostContext, CostModel, CostModelResult, EstimatedStatistic,
 };
 
 pub struct CostModelImpl<CMSL: CostModelStorageLayer> {
-    backend_manager: Arc<CMSL>,
+    storage_manager: CostModelStorageManager<CMSL>,
     default_catalog_source: CatalogSource,
 }
 
 impl<CMSL: CostModelStorageLayer> CostModelImpl<CMSL> {
-    pub fn new(backend_manager: Arc<CMSL>, default_catalog_source: CatalogSource) -> Self {
+    pub fn new(
+        storage_manager: CostModelStorageManager<CMSL>,
+        default_catalog_source: CatalogSource,
+    ) -> Self {
         Self {
-            backend_manager,
+            storage_manager,
             default_catalog_source,
         }
     }

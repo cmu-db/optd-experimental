@@ -46,8 +46,8 @@ impl std::fmt::Display for PhysicalNodeType {
 pub enum PredicateType {
     List,
     Constant(ConstantType),
-    ColumnRef,
-    ExternColumnRef,
+    AttributeRef,
+    ExternAttributeRef,
     UnOp(UnOpType),
     BinOp(BinOpType),
     LogOp(LogOpType),
