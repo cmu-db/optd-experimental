@@ -72,6 +72,7 @@ pub struct Stat {
 pub struct Cost {
     pub compute_cost: i32,
     pub io_cost: i32,
+    // Raw estimated output row count of targeted expression.
     pub estimated_statistic: i32,
 }
 
