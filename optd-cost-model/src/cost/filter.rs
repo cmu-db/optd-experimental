@@ -11,6 +11,7 @@ use crate::{
             constant_pred::{ConstantPred, ConstantType},
             un_op_pred::UnOpType,
         },
+        types::TableId,
         values::Value,
     },
     cost_model::CostModelImpl,
@@ -29,7 +30,7 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
     pub fn get_filter_row_cnt(
         &self,
         child_row_cnt: EstimatedStatistic,
-        table_id: i32,
+        table_id: TableId,
         cond: ArcPredicateNode,
     ) -> CostModelResult<EstimatedStatistic> {
         let selectivity = { self.get_filter_selectivity(cond, table_id)? };
@@ -42,7 +43,7 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
     pub fn get_filter_selectivity(
         &self,
         expr_tree: ArcPredicateNode,
-        table_id: i32,
+        table_id: TableId,
     ) -> CostModelResult<f64> {
         match &expr_tree.typ {
             PredicateType::Constant(_) => Ok(Self::get_constant_selectivity(expr_tree)),
@@ -112,29 +113,29 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
         comp_bin_op_typ: BinOpType,
         left: ArcPredicateNode,
         right: ArcPredicateNode,
-        table_id: i32,
+        table_id: TableId,
     ) -> CostModelResult<f64> {
         assert!(comp_bin_op_typ.is_comparison());
 
         // I intentionally performed moves on left and right. This way, we don't accidentally use
         // them after this block
-        let (col_ref_exprs, values, non_col_ref_exprs, is_left_col_ref) =
+        let (attr_ref_exprs, values, non_attr_ref_exprs, is_left_attr_ref) =
             self.get_semantic_nodes(left, right, table_id)?;
 
         // Handle the different cases of semantic nodes.
-        if col_ref_exprs.is_empty() {
+        if attr_ref_exprs.is_empty() {
             Ok(UNIMPLEMENTED_SEL)
-        } else if col_ref_exprs.len() == 1 {
-            let col_ref_expr = col_ref_exprs
+        } else if attr_ref_exprs.len() == 1 {
+            let attr_ref_expr = attr_ref_exprs
                 .first()
-                .expect("we just checked that col_ref_exprs.len() == 1");
-            let col_ref_idx = col_ref_expr.index();
+                .expect("we just checked that attr_ref_exprs.len() == 1");
+            let attr_ref_idx = attr_ref_expr.index();
 
             todo!()
-        } else if col_ref_exprs.len() == 2 {
+        } else if attr_ref_exprs.len() == 2 {
             Ok(Self::get_default_comparison_op_selectivity(comp_bin_op_typ))
         } else {
-            unreachable!("we could have at most pushed left and right into col_ref_exprs")
+            unreachable!("we could have at most pushed left and right into attr_ref_exprs")
         }
     }
 
@@ -146,17 +147,17 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
         &self,
         left: ArcPredicateNode,
         right: ArcPredicateNode,
-        table_id: i32,
+        table_id: TableId,
     ) -> CostModelResult<(
         Vec<AttributeRefPred>,
         Vec<Value>,
         Vec<ArcPredicateNode>,
         bool,
     )> {
-        let mut col_ref_exprs = vec![];
+        let mut attr_ref_exprs = vec![];
         let mut values = vec![];
-        let mut non_col_ref_exprs = vec![];
-        let is_left_col_ref;
+        let mut non_attr_ref_exprs = vec![];
+        let is_left_attr_ref;
 
         // Recursively unwrap casts as much as we can.
         let mut uncasted_left = left;
@@ -201,16 +202,16 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
                         false
                     }
                     PredicateType::AttributeRef => {
-                        let col_ref_expr = AttributeRefPred::from_pred_node(cast_expr_child)
+                        let attr_ref_expr = AttributeRefPred::from_pred_node(cast_expr_child)
                             .expect("we already checked that the type is ColumnRef");
-                        let col_ref_idx = col_ref_expr.index();
-                        cast_node = col_ref_expr.into_pred_node();
+                        let attr_ref_idx = attr_ref_expr.index();
+                        cast_node = attr_ref_expr.into_pred_node();
                         // The "invert" cast is to invert the cast so that we're casting the
                         // non_cast_node to the column's original type.
                         // TODO(migration): double check
                         let invert_cast_data_type = &(self
                             .storage_manager
-                            .get_attribute_info(table_id, col_ref_idx as i32)?
+                            .get_attribute_info(table_id, attr_ref_idx as i32)?
                             .typ
                             .into_data_type());
 
@@ -247,17 +248,17 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
             }
         }
 
-        // Sort nodes into col_ref_exprs, values, and non_col_ref_exprs
+        // Sort nodes into attr_ref_exprs, values, and non_attr_ref_exprs
         match uncasted_left.as_ref().typ {
             PredicateType::AttributeRef => {
-                is_left_col_ref = true;
-                col_ref_exprs.push(
+                is_left_attr_ref = true;
+                attr_ref_exprs.push(
                     AttributeRefPred::from_pred_node(uncasted_left)
                         .expect("we already checked that the type is ColumnRef"),
                 );
             }
             PredicateType::Constant(_) => {
-                is_left_col_ref = false;
+                is_left_attr_ref = false;
                 values.push(
                     ConstantPred::from_pred_node(uncasted_left)
                         .expect("we already checked that the type is Constant")
@@ -265,13 +266,13 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
                 )
             }
             _ => {
-                is_left_col_ref = false;
-                non_col_ref_exprs.push(uncasted_left);
+                is_left_attr_ref = false;
+                non_attr_ref_exprs.push(uncasted_left);
             }
         }
         match uncasted_right.as_ref().typ {
             PredicateType::AttributeRef => {
-                col_ref_exprs.push(
+                attr_ref_exprs.push(
                     AttributeRefPred::from_pred_node(uncasted_right)
                         .expect("we already checked that the type is ColumnRef"),
                 );
@@ -282,12 +283,12 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
                     .value(),
             ),
             _ => {
-                non_col_ref_exprs.push(uncasted_right);
+                non_attr_ref_exprs.push(uncasted_right);
             }
         }
 
-        assert!(col_ref_exprs.len() + values.len() + non_col_ref_exprs.len() == 2);
-        Ok((col_ref_exprs, values, non_col_ref_exprs, is_left_col_ref))
+        assert!(attr_ref_exprs.len() + values.len() + non_attr_ref_exprs.len() == 2);
+        Ok((attr_ref_exprs, values, non_attr_ref_exprs, is_left_attr_ref))
     }
 
     /// The default selectivity of a comparison expression

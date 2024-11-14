@@ -8,14 +8,14 @@ pub struct AttributeRefPred(pub ArcPredicateNode);
 
 impl AttributeRefPred {
     /// Creates a new `ColumnRef` expression.
-    pub fn new(column_idx: usize) -> AttributeRefPred {
+    pub fn new(attribute_idx: usize) -> AttributeRefPred {
         // this conversion is always safe since usize is at most u64
-        let u64_column_idx = column_idx as u64;
+        let u64_attribute_idx = attribute_idx as u64;
         AttributeRefPred(
             PredicateNode {
                 typ: PredicateType::AttributeRef,
                 children: vec![],
-                data: Some(Value::UInt64(u64_column_idx)),
+                data: Some(Value::UInt64(u64_attribute_idx)),
             }
             .into(),
         )
