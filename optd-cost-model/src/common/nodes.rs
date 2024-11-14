@@ -79,6 +79,9 @@ pub struct PredicateNode {
     /// Child predicate nodes, always materialized
     pub children: Vec<ArcPredicateNode>,
     /// Data associated with the predicate, if any
+    /// TODO: If it is PredicateType::AttributeRef, then
+    /// the data is attribute index. But we need more information
+    /// to represent this attribute in case it is a derived attribute.
     pub data: Option<Value>,
 }
 

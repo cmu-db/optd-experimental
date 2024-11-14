@@ -12,6 +12,7 @@ use crate::{
         nodes::{ArcPredicateNode, PhysicalNodeType},
         types::{AttrId, EpochId, ExprId, TableId},
     },
+    stats::AttributeCombValueStats,
     storage::CostModelStorageManager,
     ComputeCostContext, Cost, CostModel, CostModelResult, EstimatedStatistic, StatValue,
 };
@@ -67,7 +68,6 @@ impl<S: CostModelStorageLayer + std::marker::Sync + 'static> CostModel for CostM
 
     fn get_table_statistic_for_analysis(
         &self,
-        // TODO: i32 should be changed to TableId.
         table_id: TableId,
         stat_type: StatType,
         epoch_id: Option<EpochId>,
@@ -90,5 +90,19 @@ impl<S: CostModelStorageLayer + std::marker::Sync + 'static> CostModel for CostM
         epoch_id: Option<EpochId>,
     ) -> CostModelResult<Option<crate::Cost>> {
         todo!()
+    }
+}
+
+impl<S: CostModelStorageLayer> CostModelImpl<S> {
+    /// TODO: documentation
+    /// TODO: if we have memory cache,
+    /// we should add the reference. (&AttributeCombValueStats)
+    pub(crate) fn get_attribute_comb_stats(
+        &self,
+        table_id: TableId,
+        attr_comb: &[usize],
+    ) -> CostModelResult<AttributeCombValueStats> {
+        self.storage_manager
+            .get_attributes_comb_statistics(table_id, attr_comb)
     }
 }

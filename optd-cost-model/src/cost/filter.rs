@@ -263,43 +263,36 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
         is_eq: bool,
     ) -> CostModelResult<f64> {
         // TODO: The attribute could be a derived attribute
-        todo!()
-        // let ret_sel = if let Some(attribute_stats) =
-        //     self.get_attribute_comb_stats(table_id, &[attr_base_index])
-        // {
-        //     let eq_freq = if let Some(freq) = attribute_stats.mcvs.freq(&vec![Some(value.clone())]) {
-        //         freq
-        //     } else {
-        //         let non_mcv_freq = 1.0 - attribute_stats.mcvs.total_freq();
-        //         // always safe because usize is at least as large as i32
-        //         let ndistinct_as_usize = attribute_stats.ndistinct as usize;
-        //         let non_mcv_cnt = ndistinct_as_usize - attribute_stats.mcvs.cnt();
-        //         if non_mcv_cnt == 0 {
-        //             return 0.0;
-        //         }
-        //         // note that nulls are not included in ndistinct so we don't need to do non_mcv_cnt
-        //         // - 1 if null_frac > 0
-        //         (non_mcv_freq - attribute_stats.null_frac) / (non_mcv_cnt as f64)
-        //     };
-        //     if is_eq {
-        //         eq_freq
-        //     } else {
-        //         1.0 - eq_freq - attribute_stats.null_frac
-        //     }
-        // } else {
-        //     #[allow(clippy::collapsible_else_if)]
-        //     if is_eq {
-        //         DEFAULT_EQ_SEL
-        //     } else {
-        //         1.0 - DEFAULT_EQ_SEL
-        //     }
-        // };
-        // assert!(
-        //     (0.0..=1.0).contains(&ret_sel),
-        //     "ret_sel ({}) should be in [0, 1]",
-        //     ret_sel
-        // );
-        // ret_sel
+        let ret_sel = {
+            let attribute_stats = self.get_attribute_comb_stats(table_id, &[attr_base_index])?;
+            let eq_freq = if let Some(freq) = attribute_stats.mcvs.freq(&vec![Some(value.clone())])
+            {
+                freq
+            } else {
+                let non_mcv_freq = 1.0 - attribute_stats.mcvs.total_freq();
+                // always safe because usize is at least as large as i32
+                let ndistinct_as_usize = attribute_stats.ndistinct as usize;
+                let non_mcv_cnt = ndistinct_as_usize - attribute_stats.mcvs.cnt();
+                if non_mcv_cnt == 0 {
+                    return Ok(0.0);
+                }
+                // note that nulls are not included in ndistinct so we don't need to do non_mcv_cnt
+                // - 1 if null_frac > 0
+                (non_mcv_freq - attribute_stats.null_frac) / (non_mcv_cnt as f64)
+            };
+            if is_eq {
+                eq_freq
+            } else {
+                1.0 - eq_freq - attribute_stats.null_frac
+            }
+        };
+
+        assert!(
+            (0.0..=1.0).contains(&ret_sel),
+            "ret_sel ({}) should be in [0, 1]",
+            ret_sel
+        );
+        Ok(ret_sel)
     }
 
     /// Get the selectivity of an expression of the form "attribute </<=/>=/> value" (or "value
@@ -315,33 +308,33 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
         end: Bound<&Value>,
     ) -> CostModelResult<f64> {
         // TODO: Consider attribute is a derived attribute
+        let attribute_stats = self.get_attribute_comb_stats(table_id, &[attr_base_index])?;
         todo!()
-        // if let Some(attribute_stats) = self.get_attribute_comb_stats(table, &[attr_idx]) {
-        //     // Left and right quantile contain both Distribution and MCVs.
-        //     let left_quantile = match start {
-        //         Bound::Unbounded => 0.0,
-        //         Bound::Included(value) => {
-        //             self.get_attribute_lt_value_freq(attribute_stats, table, attr_idx, value)
-        //         }
-        //         Bound::Excluded(value) => Self::get_attribute_leq_value_freq(attribute_stats, value),
-        //     };
-        //     let right_quantile = match end {
-        //         Bound::Unbounded => 1.0,
-        //         Bound::Included(value) => Self::get_attribute_leq_value_freq(attribute_stats, value),
-        //         Bound::Excluded(value) => {
-        //             self.get_attribute_lt_value_freq(attribute_stats, table, attr_idx, value)
-        //         }
-        //     };
-        //     assert!(
-        //         left_quantile <= right_quantile,
-        //         "left_quantile ({}) should be <= right_quantile ({})",
-        //         left_quantile,
-        //         right_quantile
-        //     );
-        //     right_quantile - left_quantile
-        // } else {
-        //     DEFAULT_INEQ_SEL
-        // }
+        // let left_quantile = match start {
+        //     Bound::Unbounded => 0.0,
+        //     Bound::Included(value) => {
+        //         self.get_attribute_lt_value_freq(attribute_stats, table, attr_idx, value)
+        //     }
+        //     Bound::Excluded(value) => {
+        //         Self::get_attribute_leq_value_freq(attribute_stats, value)
+        //     }
+        // };
+        // let right_quantile = match end {
+        //     Bound::Unbounded => 1.0,
+        //     Bound::Included(value) => {
+        //         Self::get_attribute_leq_value_freq(attribute_stats, value)
+        //     }
+        //     Bound::Excluded(value) => {
+        //         self.get_attribute_lt_value_freq(attribute_stats, table, attr_idx, value)
+        //     }
+        // };
+        // assert!(
+        //     left_quantile <= right_quantile,
+        //     "left_quantile ({}) should be <= right_quantile ({})",
+        //     left_quantile,
+        //     right_quantile
+        // );
+        // right_quantile - left_quantile
     }
 
     /// Compute the selectivity of a (NOT) LIKE expression.
