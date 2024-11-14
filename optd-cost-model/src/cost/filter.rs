@@ -141,7 +141,7 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
 
     /// Convert the left and right child nodes of some operation to what they semantically are.
     /// This is convenient to avoid repeating the same logic just with "left" and "right" swapped.
-    /// The last return value is true when the input node (left) is a ColumnRefPred.
+    /// The last return value is true when the input node (left) is a AttributeRefPred.
     #[allow(clippy::type_complexity)]
     fn get_semantic_nodes(
         &self,
@@ -203,11 +203,11 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
                     }
                     PredicateType::AttributeRef => {
                         let attr_ref_expr = AttributeRefPred::from_pred_node(cast_expr_child)
-                            .expect("we already checked that the type is ColumnRef");
+                            .expect("we already checked that the type is AttributeRef");
                         let attr_ref_idx = attr_ref_expr.index();
                         cast_node = attr_ref_expr.into_pred_node();
                         // The "invert" cast is to invert the cast so that we're casting the
-                        // non_cast_node to the column's original type.
+                        // non_cast_node to the attribute's original type.
                         // TODO(migration): double check
                         let invert_cast_data_type = &(self
                             .storage_manager
@@ -218,7 +218,7 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
                         match non_cast_node.typ {
                             PredicateType::AttributeRef => {
                                 // In general, there's no way to remove the Cast here. We can't move
-                                // the Cast to the other ColumnRef
+                                // the Cast to the other AttributeRef
                                 // because that would lead to an infinite loop. Thus, we just leave
                                 // the cast where it is and break.
                                 true
@@ -254,7 +254,7 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
                 is_left_attr_ref = true;
                 attr_ref_exprs.push(
                     AttributeRefPred::from_pred_node(uncasted_left)
-                        .expect("we already checked that the type is ColumnRef"),
+                        .expect("we already checked that the type is AttributeRef"),
                 );
             }
             PredicateType::Constant(_) => {
@@ -274,7 +274,7 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
             PredicateType::AttributeRef => {
                 attr_ref_exprs.push(
                     AttributeRefPred::from_pred_node(uncasted_right)
-                        .expect("we already checked that the type is ColumnRef"),
+                        .expect("we already checked that the type is AttributeRef"),
                 );
             }
             PredicateType::Constant(_) => values.push(
@@ -292,8 +292,8 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
     }
 
     /// The default selectivity of a comparison expression
-    /// Used when one side of the comparison is a column while the other side is something too
-    ///   complex/impossible to evaluate (subquery, UDF, another column, we have no stats, etc.)
+    /// Used when one side of the comparison is a attribute while the other side is something too
+    ///   complex/impossible to evaluate (subquery, UDF, another attribute, we have no stats, etc.)
     fn get_default_comparison_op_selectivity(comp_bin_op_typ: BinOpType) -> f64 {
         assert!(comp_bin_op_typ.is_comparison());
         match comp_bin_op_typ {
