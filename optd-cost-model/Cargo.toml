@@ -1,0 +1,13 @@
+[package]
+name = "optd-cost-model"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+optd-persistent = { path = "../optd-persistent", version = "0.1" }
+serde = { version = "1.0", features = ["derive"] }
+arrow-schema = "53.2.0"
+datafusion-expr = "32.0.0"
+ordered-float = "4.0"
+chrono = "0.4"
+
