@@ -10,20 +10,22 @@ use optd_persistent::{
 use crate::{
     common::{
         nodes::{ArcPredicateNode, PhysicalNodeType},
-        types::ExprId,
+        types::{AttrId, EpochId, ExprId, TableId},
     },
     storage::CostModelStorageManager,
-    ComputeCostContext, CostModel, CostModelResult, EstimatedStatistic,
+    ComputeCostContext, Cost, CostModel, CostModelResult, EstimatedStatistic, StatValue,
 };
 
-pub struct CostModelImpl<CMSL: CostModelStorageLayer> {
-    storage_manager: CostModelStorageManager<CMSL>,
+/// TODO: documentation
+pub struct CostModelImpl<S: CostModelStorageLayer> {
+    storage_manager: CostModelStorageManager<S>,
     default_catalog_source: CatalogSource,
 }
 
-impl<CMSL: CostModelStorageLayer> CostModelImpl<CMSL> {
+impl<S: CostModelStorageLayer> CostModelImpl<S> {
+    /// TODO: documentation
     pub fn new(
-        storage_manager: CostModelStorageManager<CMSL>,
+        storage_manager: CostModelStorageManager<S>,
         default_catalog_source: CatalogSource,
     ) -> Self {
         Self {
@@ -33,7 +35,17 @@ impl<CMSL: CostModelStorageLayer> CostModelImpl<CMSL> {
     }
 }
 
-impl<CMSL: CostModelStorageLayer + std::marker::Sync + 'static> CostModel for CostModelImpl<CMSL> {
+impl<S: CostModelStorageLayer + std::marker::Sync + 'static> CostModel for CostModelImpl<S> {
+    fn compute_operation_cost(
+        &self,
+        node: &PhysicalNodeType,
+        predicates: &[ArcPredicateNode],
+        children_stats: &[Option<&EstimatedStatistic>],
+        context: Option<ComputeCostContext>,
+    ) -> CostModelResult<Cost> {
+        todo!()
+    }
+
     fn derive_statistics(
         &self,
         node: PhysicalNodeType,
@@ -56,27 +68,26 @@ impl<CMSL: CostModelStorageLayer + std::marker::Sync + 'static> CostModel for Co
     fn get_table_statistic_for_analysis(
         &self,
         // TODO: i32 should be changed to TableId.
-        table_id: i32,
+        table_id: TableId,
         stat_type: StatType,
-        epoch_id: Option<i32>,
-    ) -> CostModelResult<Option<crate::StatValue>> {
+        epoch_id: Option<EpochId>,
+    ) -> CostModelResult<Option<StatValue>> {
         todo!()
     }
 
     fn get_attribute_statistic_for_analysis(
         &self,
-        // TODO: i32 should be changed to AttrId or EpochId.
-        attr_ids: Vec<i32>,
+        attr_ids: Vec<AttrId>,
         stat_type: StatType,
-        epoch_id: Option<i32>,
-    ) -> CostModelResult<Option<crate::StatValue>> {
+        epoch_id: Option<EpochId>,
+    ) -> CostModelResult<Option<StatValue>> {
         todo!()
     }
 
     fn get_cost_for_analysis(
         &self,
         expr_id: ExprId,
-        epoch_id: Option<i32>,
+        epoch_id: Option<EpochId>,
     ) -> CostModelResult<Option<crate::Cost>> {
         todo!()
     }

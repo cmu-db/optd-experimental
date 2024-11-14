@@ -1,6 +1,6 @@
 use common::{
     nodes::{ArcPredicateNode, PhysicalNodeType},
-    types::{ExprId, GroupId},
+    types::{AttrId, EpochId, ExprId, GroupId, TableId},
 };
 use optd_persistent::cost_model::interface::{Stat, StatType};
 
@@ -39,8 +39,19 @@ pub enum CostModelError {
 
 pub trait CostModel: 'static + Send + Sync {
     /// TODO: documentation
+    fn compute_operation_cost(
+        &self,
+        node: &PhysicalNodeType,
+        predicates: &[ArcPredicateNode],
+        children_stats: &[Option<&EstimatedStatistic>],
+        context: Option<ComputeCostContext>,
+    ) -> CostModelResult<Cost>;
+
+    /// TODO: documentation
     /// It is for cardinality estimation. The output should be the estimated
     /// statistic calculated by the cost model.
+    /// TODO: Consider make it a helper function, so we can store Cost in the
+    /// ORM more easily.
     fn derive_statistics(
         &self,
         node: PhysicalNodeType,
@@ -59,25 +70,26 @@ pub trait CostModel: 'static + Send + Sync {
         data: String,
     ) -> CostModelResult<()>;
 
+    /// TODO: documentation
     fn get_table_statistic_for_analysis(
         &self,
-        // TODO: i32 should be changed to TableId.
-        table_id: i32,
+        table_id: TableId,
         stat_type: StatType,
-        epoch_id: Option<i32>,
+        epoch_id: Option<EpochId>,
     ) -> CostModelResult<Option<StatValue>>;
 
+    /// TODO: documentation
     fn get_attribute_statistic_for_analysis(
         &self,
-        // TODO: i32 should be changed to AttrId or EpochId.
-        attr_ids: Vec<i32>,
+        attr_ids: Vec<AttrId>,
         stat_type: StatType,
-        epoch_id: Option<i32>,
+        epoch_id: Option<EpochId>,
     ) -> CostModelResult<Option<StatValue>>;
 
+    /// TODO: documentation
     fn get_cost_for_analysis(
         &self,
         expr_id: ExprId,
-        epoch_id: Option<i32>,
+        epoch_id: Option<EpochId>,
     ) -> CostModelResult<Option<Cost>>;
 }

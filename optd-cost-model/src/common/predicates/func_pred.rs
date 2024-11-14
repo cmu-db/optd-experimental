@@ -1,3 +1,4 @@
+/// TODO: documentation
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub enum FuncType {
     Scalar(datafusion_expr::BuiltinScalarFunction),

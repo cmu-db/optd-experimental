@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+/// TODO: documentation
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Serialize, Deserialize)]
 pub enum ConstantType {
     Bool,

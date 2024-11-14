@@ -10,6 +10,7 @@ use super::{
     values::Value,
 };
 
+/// TODO: documentation
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum JoinType {
     Inner = 1,
@@ -23,6 +24,7 @@ pub enum JoinType {
     RightAnti,
 }
 
+/// TODO: documentation
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PhysicalNodeType {
     PhysicalProjection,
@@ -42,6 +44,7 @@ impl std::fmt::Display for PhysicalNodeType {
     }
 }
 
+/// TODO: documentation
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum PredicateType {
     List,
@@ -68,6 +71,7 @@ impl std::fmt::Display for PredicateType {
 
 pub type ArcPredicateNode = Arc<PredicateNode>;
 
+/// TODO: documentation
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct PredicateNode {
     /// A generic predicate node type

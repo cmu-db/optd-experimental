@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+/// TODO: documentation
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum LogOpType {
     And,

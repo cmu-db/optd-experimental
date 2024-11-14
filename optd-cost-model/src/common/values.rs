@@ -4,9 +4,11 @@ use ordered_float::OrderedFloat;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::sync::Arc;
 
+/// TODO: documentation
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct SerializableOrderedF64(pub OrderedFloat<f64>);
 
+/// TODO: documentation
 impl Serialize for SerializableOrderedF64 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -17,6 +19,7 @@ impl Serialize for SerializableOrderedF64 {
     }
 }
 
+/// TODO: documentation
 impl<'de> Deserialize<'de> for SerializableOrderedF64 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -28,6 +31,7 @@ impl<'de> Deserialize<'de> for SerializableOrderedF64 {
     }
 }
 
+/// TODO: documentation
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, PartialOrd, Ord)]
 pub enum Value {
     UInt8(u8),
@@ -69,6 +73,7 @@ impl std::fmt::Display for Value {
     }
 }
 
+/// TODO: documentation
 /// The `as_*()` functions do not perform conversions. This is *unlike* the `as`
 /// keyword in rust.
 ///
