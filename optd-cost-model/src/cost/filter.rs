@@ -1,5 +1,7 @@
 #![allow(unused_variables)]
-use optd_persistent::CostModelStorageLayer;
+use std::ops::Bound;
+
+use optd_persistent::{cost_model::interface::Cost, CostModelStorageLayer};
 
 use crate::{
     common::{
@@ -9,6 +11,9 @@ use crate::{
             bin_op_pred::BinOpType,
             cast_pred::CastPred,
             constant_pred::{ConstantPred, ConstantType},
+            in_list_pred::InListPred,
+            like_pred::LikePred,
+            log_op_pred::LogOpType,
             un_op_pred::UnOpType,
         },
         types::TableId,
@@ -25,6 +30,13 @@ const UNIMPLEMENTED_SEL: f64 = 0.01;
 const DEFAULT_EQ_SEL: f64 = 0.005;
 // Default selectivity estimate for inequalities such as "A < b"
 const DEFAULT_INEQ_SEL: f64 = 0.3333333333333333;
+// Used for estimating pattern selectivity character-by-character. These numbers
+// are not used on their own. Depending on the characters in the pattern, the
+// selectivity is multiplied by these factors.
+//
+// See `FULL_WILDCARD_SEL` and `FIXED_CHAR_SEL` in Postgres.
+const FULL_WILDCARD_SEL_FACTOR: f64 = 5.0;
+const FIXED_CHAR_SEL_FACTOR: f64 = 0.2;
 
 impl<S: CostModelStorageLayer> CostModelImpl<S> {
     pub fn get_filter_row_cnt(
@@ -76,7 +88,29 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
                     unreachable!("all BinOpTypes should be true for at least one is_*() function")
                 }
             }
-            _ => unimplemented!("check bool type or else panic"),
+            PredicateType::LogOp(log_op_typ) => {
+                self.get_log_op_selectivity(*log_op_typ, &expr_tree.children, table_id)
+            }
+            PredicateType::Func(_) => unimplemented!("check bool type or else panic"),
+            PredicateType::SortOrder(_) => {
+                panic!("the selectivity of sort order expressions is undefined")
+            }
+            PredicateType::Between => Ok(UNIMPLEMENTED_SEL),
+            PredicateType::Cast => unimplemented!("check bool type or else panic"),
+            PredicateType::Like => {
+                let like_expr = LikePred::from_pred_node(expr_tree).unwrap();
+                self.get_like_selectivity(&like_expr)
+            }
+            PredicateType::DataType(_) => {
+                panic!("the selectivity of a data type is not defined")
+            }
+            PredicateType::InList => {
+                let in_list_expr = InListPred::from_pred_node(expr_tree).unwrap();
+                self.get_in_list_selectivity(&in_list_expr, table_id)
+            }
+            _ => unreachable!(
+                "all expression DfPredType were enumerated. this should be unreachable"
+            ),
         }
     }
 
@@ -107,6 +141,27 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
         }
     }
 
+    fn get_log_op_selectivity(
+        &self,
+        log_op_typ: LogOpType,
+        children: &[ArcPredicateNode],
+        table_id: TableId,
+    ) -> CostModelResult<f64> {
+        match log_op_typ {
+            LogOpType::And => children.iter().try_fold(1.0, |acc, child| {
+                let selectivity = self.get_filter_selectivity(child.clone(), table_id)?;
+                Ok(acc * selectivity)
+            }),
+            LogOpType::Or => {
+                let product = children.iter().try_fold(1.0, |acc, child| {
+                    let selectivity = self.get_filter_selectivity(child.clone(), table_id)?;
+                    Ok(acc * (1.0 - selectivity))
+                })?;
+                Ok(1.0 - product)
+            }
+        }
+    }
+
     /// Comparison operators are the base case for recursion in get_filter_selectivity()
     fn get_comp_op_selectivity(
         &self,
@@ -131,11 +186,291 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
                 .expect("we just checked that attr_ref_exprs.len() == 1");
             let attr_ref_idx = attr_ref_expr.index();
 
-            todo!()
+            // TODO: Consider attribute is a derived attribute
+            if values.len() == 1 {
+                let value = values
+                    .first()
+                    .expect("we just checked that values.len() == 1");
+                match comp_bin_op_typ {
+                    BinOpType::Eq => {
+                        self.get_attribute_equality_selectivity(table_id, attr_ref_idx, value, true)
+                    }
+                    BinOpType::Neq => self.get_attribute_equality_selectivity(
+                        table_id,
+                        attr_ref_idx,
+                        value,
+                        false,
+                    ),
+                    BinOpType::Lt | BinOpType::Leq | BinOpType::Gt | BinOpType::Geq => {
+                        let start = match (comp_bin_op_typ, is_left_attr_ref) {
+                            (BinOpType::Lt, true) | (BinOpType::Geq, false) => Bound::Unbounded,
+                            (BinOpType::Leq, true) | (BinOpType::Gt, false) => Bound::Unbounded,
+                            (BinOpType::Gt, true) | (BinOpType::Leq, false) => Bound::Excluded(value),
+                            (BinOpType::Geq, true) | (BinOpType::Lt, false) => Bound::Included(value),
+                            _ => unreachable!("all comparison BinOpTypes were enumerated. this should be unreachable"),
+                        };
+                        let end = match (comp_bin_op_typ, is_left_attr_ref) {
+                            (BinOpType::Lt, true) | (BinOpType::Geq, false) => Bound::Excluded(value),
+                            (BinOpType::Leq, true) | (BinOpType::Gt, false) => Bound::Included(value),
+                            (BinOpType::Gt, true) | (BinOpType::Leq, false) => Bound::Unbounded,
+                            (BinOpType::Geq, true) | (BinOpType::Lt, false) => Bound::Unbounded,
+                            _ => unreachable!("all comparison BinOpTypes were enumerated. this should be unreachable"),
+                        };
+                        self.get_attribute_range_selectivity(table_id, attr_ref_idx, start, end)
+                    }
+                    _ => unreachable!(
+                        "all comparison BinOpTypes were enumerated. this should be unreachable"
+                    ),
+                }
+            } else {
+                let non_attr_ref_expr = non_attr_ref_exprs.first().expect(
+                    "non_attr_ref_exprs should have a value since attr_ref_exprs.len() == 1",
+                );
+
+                match non_attr_ref_expr.as_ref().typ {
+                    PredicateType::BinOp(_) => {
+                        Ok(Self::get_default_comparison_op_selectivity(comp_bin_op_typ))
+                    }
+                    PredicateType::Cast => Ok(UNIMPLEMENTED_SEL),
+                    PredicateType::Constant(_) => {
+                        unreachable!("we should have handled this in the values.len() == 1 branch")
+                    }
+                    _ => unimplemented!(
+                        "unhandled case of comparing a attribute ref node to {}",
+                        non_attr_ref_expr.as_ref().typ
+                    ),
+                }
+            }
         } else if attr_ref_exprs.len() == 2 {
             Ok(Self::get_default_comparison_op_selectivity(comp_bin_op_typ))
         } else {
             unreachable!("we could have at most pushed left and right into attr_ref_exprs")
+        }
+    }
+
+    /// Get the selectivity of an expression of the form "attribute equals value" (or "value equals
+    /// attribute") Will handle the case of statistics missing
+    /// Equality predicates are handled entirely differently from range predicates so this is its
+    /// own function
+    /// Also, get_attribute_equality_selectivity is a subroutine when computing range
+    /// selectivity, which is another     reason for separating these into two functions
+    /// is_eq means whether it's == or !=
+    fn get_attribute_equality_selectivity(
+        &self,
+        table_id: TableId,
+        attr_base_index: usize,
+        value: &Value,
+        is_eq: bool,
+    ) -> CostModelResult<f64> {
+        // TODO: The attribute could be a derived attribute
+        todo!()
+        // let ret_sel = if let Some(attribute_stats) =
+        //     self.get_attribute_comb_stats(table_id, &[attr_base_index])
+        // {
+        //     let eq_freq = if let Some(freq) = attribute_stats.mcvs.freq(&vec![Some(value.clone())]) {
+        //         freq
+        //     } else {
+        //         let non_mcv_freq = 1.0 - attribute_stats.mcvs.total_freq();
+        //         // always safe because usize is at least as large as i32
+        //         let ndistinct_as_usize = attribute_stats.ndistinct as usize;
+        //         let non_mcv_cnt = ndistinct_as_usize - attribute_stats.mcvs.cnt();
+        //         if non_mcv_cnt == 0 {
+        //             return 0.0;
+        //         }
+        //         // note that nulls are not included in ndistinct so we don't need to do non_mcv_cnt
+        //         // - 1 if null_frac > 0
+        //         (non_mcv_freq - attribute_stats.null_frac) / (non_mcv_cnt as f64)
+        //     };
+        //     if is_eq {
+        //         eq_freq
+        //     } else {
+        //         1.0 - eq_freq - attribute_stats.null_frac
+        //     }
+        // } else {
+        //     #[allow(clippy::collapsible_else_if)]
+        //     if is_eq {
+        //         DEFAULT_EQ_SEL
+        //     } else {
+        //         1.0 - DEFAULT_EQ_SEL
+        //     }
+        // };
+        // assert!(
+        //     (0.0..=1.0).contains(&ret_sel),
+        //     "ret_sel ({}) should be in [0, 1]",
+        //     ret_sel
+        // );
+        // ret_sel
+    }
+
+    /// Get the selectivity of an expression of the form "attribute </<=/>=/> value" (or "value
+    /// </<=/>=/> attribute"). Computes selectivity based off of statistics.
+    /// Range predicates are handled entirely differently from equality predicates so this is its
+    /// own function. If it is unable to find the statistics, it returns DEFAULT_INEQ_SEL.
+    /// The selectivity is computed as quantile of the right bound minus quantile of the left bound.
+    fn get_attribute_range_selectivity(
+        &self,
+        table_id: TableId,
+        attr_base_index: usize,
+        start: Bound<&Value>,
+        end: Bound<&Value>,
+    ) -> CostModelResult<f64> {
+        // TODO: Consider attribute is a derived attribute
+        todo!()
+        // if let Some(attribute_stats) = self.get_attribute_comb_stats(table, &[attr_idx]) {
+        //     // Left and right quantile contain both Distribution and MCVs.
+        //     let left_quantile = match start {
+        //         Bound::Unbounded => 0.0,
+        //         Bound::Included(value) => {
+        //             self.get_attribute_lt_value_freq(attribute_stats, table, attr_idx, value)
+        //         }
+        //         Bound::Excluded(value) => Self::get_attribute_leq_value_freq(attribute_stats, value),
+        //     };
+        //     let right_quantile = match end {
+        //         Bound::Unbounded => 1.0,
+        //         Bound::Included(value) => Self::get_attribute_leq_value_freq(attribute_stats, value),
+        //         Bound::Excluded(value) => {
+        //             self.get_attribute_lt_value_freq(attribute_stats, table, attr_idx, value)
+        //         }
+        //     };
+        //     assert!(
+        //         left_quantile <= right_quantile,
+        //         "left_quantile ({}) should be <= right_quantile ({})",
+        //         left_quantile,
+        //         right_quantile
+        //     );
+        //     right_quantile - left_quantile
+        // } else {
+        //     DEFAULT_INEQ_SEL
+        // }
+    }
+
+    /// Compute the selectivity of a (NOT) LIKE expression.
+    ///
+    /// The logic is somewhat similar to Postgres but different. Postgres first estimates the
+    /// histogram part of the population and then add up data for any MCV values. If the
+    /// histogram is large enough, it just uses the number of matches in the histogram,
+    /// otherwise it estimates the fixed prefix and remainder of pattern separately and
+    /// combine them.
+    ///
+    /// Our approach is simpler and less selective. Firstly, we don't use histogram. The selectivity
+    /// is composed of MCV frequency and non-MCV selectivity. MCV frequency is computed by
+    /// adding up frequencies of MCVs that match the pattern. Non-MCV  selectivity is computed
+    /// in the same way that Postgres computes selectivity for the wildcard part of the pattern.
+    fn get_like_selectivity(&self, like_expr: &LikePred) -> CostModelResult<f64> {
+        let child = like_expr.child();
+
+        // Check child is a attribute ref.
+        if !matches!(child.typ, PredicateType::AttributeRef) {
+            return Ok(UNIMPLEMENTED_SEL);
+        }
+
+        // Check pattern is a constant.
+        let pattern = like_expr.pattern();
+        if !matches!(pattern.typ, PredicateType::Constant(_)) {
+            return Ok(UNIMPLEMENTED_SEL);
+        }
+
+        let attr_ref_idx = AttributeRefPred::from_pred_node(child).unwrap().index();
+
+        // TODO: Consider attribute is a derived attribute
+        let pattern = ConstantPred::from_pred_node(pattern)
+            .expect("we already checked pattern is a constant")
+            .value()
+            .as_str();
+
+        // Compute the selectivity exculuding MCVs.
+        // See Postgres `like_selectivity`.
+        let non_mcv_sel = pattern
+            .chars()
+            .fold(1.0, |acc, c| {
+                if c == '%' {
+                    acc * FULL_WILDCARD_SEL_FACTOR
+                } else {
+                    acc * FIXED_CHAR_SEL_FACTOR
+                }
+            })
+            .min(1.0);
+        todo!()
+
+        // // Compute the selectivity in MCVs.
+        // let attribute_stats = self.get_attribute_comb_stats(table, &[*attr_idx]);
+        // let (mcv_freq, null_frac) = if let Some(attribute_stats) = attribute_stats {
+        //     let pred = Box::new(move |val: &AttributeCombValue| {
+        //         let string = StringArray::from(vec![val[0].as_ref().unwrap().as_str().as_ref()]);
+        //         let pattern = StringArray::from(vec![pattern.as_ref()]);
+        //         like(&string, &pattern).unwrap().value(0)
+        //     });
+        //     (
+        //         attribute_stats.mcvs.freq_over_pred(pred),
+        //         attribute_stats.null_frac,
+        //     )
+        // } else {
+        //     (0.0, 0.0)
+        // };
+
+        // let result = non_mcv_sel + mcv_freq;
+
+        // if like_expr.negated() {
+        //     1.0 - result - null_frac
+        // } else {
+        //     result
+        // }
+        // // Postgres clamps the result after histogram and before MCV. See Postgres
+        // // `patternsel_common`.
+        // .clamp(0.0001, 0.9999)
+    }
+
+    /// Only support colA in (val1, val2, val3) where colA is a attribute ref and
+    /// val1, val2, val3 are constants.
+    pub fn get_in_list_selectivity(
+        &self,
+        expr: &InListPred,
+        table_id: TableId,
+    ) -> CostModelResult<f64> {
+        let child = expr.child();
+
+        // Check child is a attribute ref.
+        if !matches!(child.typ, PredicateType::AttributeRef) {
+            return Ok(UNIMPLEMENTED_SEL);
+        }
+
+        // Check all expressions in the list are constants.
+        let list_exprs = expr.list().to_vec();
+        if list_exprs
+            .iter()
+            .any(|expr| !matches!(expr.typ, PredicateType::Constant(_)))
+        {
+            return Ok(UNIMPLEMENTED_SEL);
+        }
+
+        // Convert child and const expressions to concrete types.
+        let attr_ref_idx = AttributeRefPred::from_pred_node(child).unwrap().index();
+        let list_exprs = list_exprs
+            .into_iter()
+            .map(|expr| {
+                ConstantPred::from_pred_node(expr)
+                    .expect("we already checked all list elements are constants")
+            })
+            .collect::<Vec<_>>();
+        let negated = expr.negated();
+
+        // TODO: Consider attribute is a derived attribute
+        let in_sel = list_exprs
+            .iter()
+            .try_fold(0.0, |acc, expr| {
+                let selectivity = self.get_attribute_equality_selectivity(
+                    table_id,
+                    attr_ref_idx,
+                    &expr.value(),
+                    /* is_equality */ true,
+                )?;
+                Ok(acc + selectivity)
+            })?
+            .min(1.0);
+        if negated {
+            Ok(1.0 - in_sel)
+        } else {
+            Ok(in_sel)
         }
     }
 
