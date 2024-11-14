@@ -11,6 +11,7 @@ serde_json = "1.0"
 serde_with = { version = "3.7.0", features = ["json"] }
 arrow-schema = "53.2.0"
 datafusion-expr = "32.0.0"
+datafusion = "32.0.0"
 ordered-float = "4.0"
 chrono = "0.4"
 itertools = "0.13"

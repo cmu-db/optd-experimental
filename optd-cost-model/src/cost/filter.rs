@@ -1,6 +1,8 @@
 #![allow(unused_variables)]
 use std::ops::Bound;
 
+use datafusion::arrow::array::StringArray;
+use datafusion::arrow::compute::like;
 use optd_persistent::{cost_model::interface::Cost, CostModelStorageLayer};
 
 use crate::{
@@ -20,6 +22,7 @@ use crate::{
         values::Value,
     },
     cost_model::CostModelImpl,
+    stats::{AttributeCombValue, AttributeCombValueStats},
     CostModelResult, EstimatedStatistic,
 };
 
@@ -39,6 +42,8 @@ const FULL_WILDCARD_SEL_FACTOR: f64 = 5.0;
 const FIXED_CHAR_SEL_FACTOR: f64 = 0.2;
 
 impl<S: CostModelStorageLayer> CostModelImpl<S> {
+    // TODO: is it a good design to pass table_id here? I think it needs to be refactored.
+    // Consider to remove table_id.
     pub fn get_filter_row_cnt(
         &self,
         child_row_cnt: EstimatedStatistic,
@@ -99,7 +104,7 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
             PredicateType::Cast => unimplemented!("check bool type or else panic"),
             PredicateType::Like => {
                 let like_expr = LikePred::from_pred_node(expr_tree).unwrap();
-                self.get_like_selectivity(&like_expr)
+                self.get_like_selectivity(&like_expr, table_id)
             }
             PredicateType::DataType(_) => {
                 panic!("the selectivity of a data type is not defined")
@@ -295,6 +300,48 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
         Ok(ret_sel)
     }
 
+    /// Compute the frequency of values in a attribute less than or equal to the given value.
+    fn get_attribute_leq_value_freq(
+        per_attribute_stats: &AttributeCombValueStats,
+        value: &Value,
+    ) -> f64 {
+        // because distr does not include the values in MCVs, we need to compute the CDFs there as
+        // well because nulls return false in any comparison, they are never included when
+        // computing range selectivity
+        let distr_leq_freq = per_attribute_stats.distr.as_ref().unwrap().cdf(value);
+        let value = value.clone();
+        let pred = Box::new(move |val: &AttributeCombValue| *val[0].as_ref().unwrap() <= value);
+        let mcvs_leq_freq = per_attribute_stats.mcvs.freq_over_pred(pred);
+        let ret_freq = distr_leq_freq + mcvs_leq_freq;
+        assert!(
+            (0.0..=1.0).contains(&ret_freq),
+            "ret_freq ({}) should be in [0, 1]",
+            ret_freq
+        );
+        ret_freq
+    }
+
+    /// Compute the frequency of values in a attribute less than the given value.
+    fn get_attribute_lt_value_freq(
+        &self,
+        attribute_stats: &AttributeCombValueStats,
+        table_id: TableId,
+        attr_base_index: usize,
+        value: &Value,
+    ) -> CostModelResult<f64> {
+        // depending on whether value is in mcvs or not, we use different logic to turn total_lt_cdf
+        // into total_leq_cdf this logic just so happens to be the exact same logic as
+        // get_attribute_equality_selectivity implements
+        let ret_freq = Self::get_attribute_leq_value_freq(attribute_stats, value)
+            - self.get_attribute_equality_selectivity(table_id, attr_base_index, value, true)?;
+        assert!(
+            (0.0..=1.0).contains(&ret_freq),
+            "ret_freq ({}) should be in [0, 1]",
+            ret_freq
+        );
+        Ok(ret_freq)
+    }
+
     /// Get the selectivity of an expression of the form "attribute </<=/>=/> value" (or "value
     /// </<=/>=/> attribute"). Computes selectivity based off of statistics.
     /// Range predicates are handled entirely differently from equality predicates so this is its
@@ -309,32 +356,33 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
     ) -> CostModelResult<f64> {
         // TODO: Consider attribute is a derived attribute
         let attribute_stats = self.get_attribute_comb_stats(table_id, &[attr_base_index])?;
-        todo!()
-        // let left_quantile = match start {
-        //     Bound::Unbounded => 0.0,
-        //     Bound::Included(value) => {
-        //         self.get_attribute_lt_value_freq(attribute_stats, table, attr_idx, value)
-        //     }
-        //     Bound::Excluded(value) => {
-        //         Self::get_attribute_leq_value_freq(attribute_stats, value)
-        //     }
-        // };
-        // let right_quantile = match end {
-        //     Bound::Unbounded => 1.0,
-        //     Bound::Included(value) => {
-        //         Self::get_attribute_leq_value_freq(attribute_stats, value)
-        //     }
-        //     Bound::Excluded(value) => {
-        //         self.get_attribute_lt_value_freq(attribute_stats, table, attr_idx, value)
-        //     }
-        // };
-        // assert!(
-        //     left_quantile <= right_quantile,
-        //     "left_quantile ({}) should be <= right_quantile ({})",
-        //     left_quantile,
-        //     right_quantile
-        // );
-        // right_quantile - left_quantile
+        let left_quantile = match start {
+            Bound::Unbounded => 0.0,
+            Bound::Included(value) => self.get_attribute_lt_value_freq(
+                &attribute_stats,
+                table_id,
+                attr_base_index,
+                value,
+            )?,
+            Bound::Excluded(value) => Self::get_attribute_leq_value_freq(&attribute_stats, value),
+        };
+        let right_quantile = match end {
+            Bound::Unbounded => 1.0,
+            Bound::Included(value) => Self::get_attribute_leq_value_freq(&attribute_stats, value),
+            Bound::Excluded(value) => self.get_attribute_lt_value_freq(
+                &attribute_stats,
+                table_id,
+                attr_base_index,
+                value,
+            )?,
+        };
+        assert!(
+            left_quantile <= right_quantile,
+            "left_quantile ({}) should be <= right_quantile ({})",
+            left_quantile,
+            right_quantile
+        );
+        Ok(right_quantile - left_quantile)
     }
 
     /// Compute the selectivity of a (NOT) LIKE expression.
@@ -349,7 +397,11 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
     /// is composed of MCV frequency and non-MCV selectivity. MCV frequency is computed by
     /// adding up frequencies of MCVs that match the pattern. Non-MCV  selectivity is computed
     /// in the same way that Postgres computes selectivity for the wildcard part of the pattern.
-    fn get_like_selectivity(&self, like_expr: &LikePred) -> CostModelResult<f64> {
+    fn get_like_selectivity(
+        &self,
+        like_expr: &LikePred,
+        table_id: TableId,
+    ) -> CostModelResult<f64> {
         let child = like_expr.child();
 
         // Check child is a attribute ref.
@@ -383,37 +435,34 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
                 }
             })
             .min(1.0);
-        todo!()
 
-        // // Compute the selectivity in MCVs.
-        // let attribute_stats = self.get_attribute_comb_stats(table, &[*attr_idx]);
-        // let (mcv_freq, null_frac) = if let Some(attribute_stats) = attribute_stats {
-        //     let pred = Box::new(move |val: &AttributeCombValue| {
-        //         let string = StringArray::from(vec![val[0].as_ref().unwrap().as_str().as_ref()]);
-        //         let pattern = StringArray::from(vec![pattern.as_ref()]);
-        //         like(&string, &pattern).unwrap().value(0)
-        //     });
-        //     (
-        //         attribute_stats.mcvs.freq_over_pred(pred),
-        //         attribute_stats.null_frac,
-        //     )
-        // } else {
-        //     (0.0, 0.0)
-        // };
+        // Compute the selectivity in MCVs.
+        let attribute_stats = self.get_attribute_comb_stats(table_id, &[attr_ref_idx])?;
+        let (mcv_freq, null_frac) = {
+            let pred = Box::new(move |val: &AttributeCombValue| {
+                let string = StringArray::from(vec![val[0].as_ref().unwrap().as_str().as_ref()]);
+                let pattern = StringArray::from(vec![pattern.as_ref()]);
+                like(&string, &pattern).unwrap().value(0)
+            });
+            (
+                attribute_stats.mcvs.freq_over_pred(pred),
+                attribute_stats.null_frac,
+            )
+        };
 
-        // let result = non_mcv_sel + mcv_freq;
+        let result = non_mcv_sel + mcv_freq;
 
-        // if like_expr.negated() {
-        //     1.0 - result - null_frac
-        // } else {
-        //     result
-        // }
-        // // Postgres clamps the result after histogram and before MCV. See Postgres
-        // // `patternsel_common`.
-        // .clamp(0.0001, 0.9999)
+        Ok(if like_expr.negated() {
+            1.0 - result - null_frac
+        } else {
+            result
+        }
+        // Postgres clamps the result after histogram and before MCV. See Postgres
+        // `patternsel_common`.
+        .clamp(0.0001, 0.9999))
     }
 
-    /// Only support colA in (val1, val2, val3) where colA is a attribute ref and
+    /// Only support attrA in (val1, val2, val3) where attrA is a attribute ref and
     /// val1, val2, val3 are constants.
     pub fn get_in_list_selectivity(
         &self,
