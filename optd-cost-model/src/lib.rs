@@ -31,6 +31,7 @@ pub struct Cost(pub Vec<f64>);
 
 /// Estimated statistic calculated by the cost model.
 /// It is the estimated output row count of the targeted expression.
+#[derive(Eq, Ord, PartialEq, PartialOrd)]
 pub struct EstimatedStatistic(pub u64);
 
 pub type CostModelResult<T> = Result<T, CostModelError>;

@@ -18,8 +18,8 @@ use crate::{
 
 /// TODO: documentation
 pub struct CostModelImpl<S: CostModelStorageLayer> {
-    storage_manager: CostModelStorageManager<S>,
-    default_catalog_source: CatalogSource,
+    pub storage_manager: CostModelStorageManager<S>,
+    pub default_catalog_source: CatalogSource,
 }
 
 impl<S: CostModelStorageLayer> CostModelImpl<S> {

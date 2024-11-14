@@ -1,5 +1,8 @@
+pub mod attr_ref_pred;
 pub mod bin_op_pred;
+pub mod cast_pred;
 pub mod constant_pred;
+pub mod data_type_pred;
 pub mod func_pred;
 pub mod log_op_pred;
 pub mod sort_order_pred;
