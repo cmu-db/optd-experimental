@@ -82,6 +82,13 @@ pub struct PredicateNode {
     /// TODO: If it is PredicateType::AttributeRef, then
     /// the data is attribute index. But we need more information
     /// to represent this attribute in case it is a derived attribute.
+    /// 1. We can use Vec<Value>, but the disadvantage is that the optimizer
+    /// may need to do some memory copy. (However, if we want to provide a
+    /// general API, the memory copy is unavoidable. It applies for both 1
+    /// and 2 designs). And Vec<Value> lacks readability.
+    /// 2. Also we can use enum, but if Rust uses something like `union` to
+    /// implement enum, then if some members are large, it will waste memory space,
+    /// also causing unnecessary memory copy. But enum provides better readability.
     pub data: Option<Value>,
 }
 
