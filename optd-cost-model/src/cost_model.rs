@@ -101,7 +101,7 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
         &self,
         table_id: TableId,
         attr_comb: &[usize],
-    ) -> CostModelResult<AttributeCombValueStats> {
+    ) -> CostModelResult<Option<AttributeCombValueStats>> {
         self.storage_manager
             .get_attributes_comb_statistics(table_id, attr_comb)
     }

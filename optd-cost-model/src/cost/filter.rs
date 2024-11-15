@@ -269,7 +269,10 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
     ) -> CostModelResult<f64> {
         // TODO: The attribute could be a derived attribute
         let ret_sel = {
-            let attribute_stats = self.get_attribute_comb_stats(table_id, &[attr_base_index])?;
+            // TODO: Handle the case where `attribute_stats` is None.
+            let attribute_stats = self
+                .get_attribute_comb_stats(table_id, &[attr_base_index])?
+                .unwrap();
             let eq_freq = if let Some(freq) = attribute_stats.mcvs.freq(&vec![Some(value.clone())])
             {
                 freq
@@ -355,7 +358,10 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
         end: Bound<&Value>,
     ) -> CostModelResult<f64> {
         // TODO: Consider attribute is a derived attribute
-        let attribute_stats = self.get_attribute_comb_stats(table_id, &[attr_base_index])?;
+        // TODO: Handle the case where `attribute_stats` is None.
+        let attribute_stats = self
+            .get_attribute_comb_stats(table_id, &[attr_base_index])?
+            .unwrap();
         let left_quantile = match start {
             Bound::Unbounded => 0.0,
             Bound::Included(value) => self.get_attribute_lt_value_freq(
@@ -439,7 +445,10 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
             .min(1.0);
 
         // Compute the selectivity in MCVs.
-        let attribute_stats = self.get_attribute_comb_stats(table_id, &[attr_ref_idx])?;
+        // TODO: Handle the case where `attribute_stats` is None.
+        let attribute_stats = self
+            .get_attribute_comb_stats(table_id, &[attr_ref_idx])?
+            .unwrap();
         let (mcv_freq, null_frac) = {
             let pred = Box::new(move |val: &AttributeCombValue| {
                 let string = StringArray::from(vec![val[0].as_ref().unwrap().as_str().as_ref()]);
