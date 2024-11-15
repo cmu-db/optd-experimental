@@ -40,7 +40,7 @@ pub enum SemanticError {
     // TODO: Add more error types
     UnknownStatisticType,
     VersionedStatisticNotFound,
-    AttributeNotFound,
+    AttributeNotFound(TableId, i32), // (table_id, attribute_base_index)
 }
 
 #[derive(Debug)]
@@ -48,6 +48,12 @@ pub enum CostModelError {
     // TODO: Add more error types
     ORMError(BackendError),
     SemanticError(SemanticError),
+}
+
+impl From<BackendError> for CostModelError {
+    fn from(err: BackendError) -> Self {
+        CostModelError::ORMError(err)
+    }
 }
 
 pub trait CostModel: 'static + Send + Sync {

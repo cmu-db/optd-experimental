@@ -1,6 +1,5 @@
 #![allow(dead_code, unused_imports)]
 
-use crate::entities::attribute::Model as AttributeEntity;
 use crate::entities::cascades_group;
 use crate::entities::logical_expression;
 use crate::entities::physical_expression;
@@ -83,6 +82,16 @@ pub struct Cost {
     pub estimated_statistic: i32,
 }
 
+#[derive(Clone, Debug)]
+pub struct Attr {
+    pub table_id: i32,
+    pub name: String,
+    pub compression_method: String,
+    pub attr_type: i32,
+    pub base_index: i32,
+    pub nullable: bool,
+}
+
 /// TODO: documentation
 #[trait_variant::make(Send)]
 pub trait CostModelStorageLayer {
@@ -133,4 +142,10 @@ pub trait CostModelStorageLayer {
     ) -> StorageResult<Option<Cost>>;
 
     async fn get_cost(&self, expr_id: ExprId) -> StorageResult<Option<Cost>>;
+
+    async fn get_attribute(
+        &self,
+        table_id: TableId,
+        attribute_base_index: i32,
+    ) -> StorageResult<Option<Attr>>;
 }

@@ -13,7 +13,9 @@ use sea_orm::{
 use serde_json::json;
 
 use super::catalog::mock_catalog::{self, MockCatalog};
-use super::interface::{AttrId, CatalogSource, EpochId, EpochOption, ExprId, Stat, StatId};
+use super::interface::{
+    Attr, AttrId, CatalogSource, EpochId, EpochOption, ExprId, Stat, StatId, TableId,
+};
 
 impl BackendManager {
     fn get_description_from_attr_ids(&self, attr_ids: Vec<AttrId>) -> String {
@@ -504,6 +506,26 @@ impl CostModelStorageLayer for BackendManager {
         };
         let _ = PlanCost::insert(new_cost).exec(&self.db).await?;
         Ok(())
+    }
+
+    async fn get_attribute(
+        &self,
+        table_id: TableId,
+        attribute_base_index: i32,
+    ) -> StorageResult<Option<Attr>> {
+        Ok(Attribute::find()
+            .filter(attribute::Column::TableId.eq(table_id))
+            .filter(attribute::Column::BaseAttributeNumber.eq(attribute_base_index))
+            .one(&self.db)
+            .await?
+            .map(|attr| Attr {
+                table_id,
+                name: attr.name,
+                compression_method: attr.compression_method,
+                attr_type: attr.variant_tag,
+                base_index: attribute_base_index,
+                nullable: !attr.is_not_null,
+            }))
     }
 }
 
