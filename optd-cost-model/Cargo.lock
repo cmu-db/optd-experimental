@@ -1799,7 +1799,7 @@ dependencies = [
  "crossbeam",
  "datafusion-expr",
  "itertools 0.13.0",
- "lazy_static",
+ "once_cell",
  "optd-persistent",
  "ordered-float 4.5.0",
  "rand",
