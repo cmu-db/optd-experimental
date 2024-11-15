@@ -7,6 +7,7 @@ use optd_persistent::cost_model::interface::{Stat, StatType};
 pub mod common;
 pub mod cost;
 pub mod cost_model;
+pub mod stats;
 pub mod storage;
 
 pub enum StatValue {
