@@ -7,8 +7,8 @@ use sea_orm::prelude::{Expr, Json};
 use sea_orm::sea_query::Query;
 use sea_orm::{sqlx::types::chrono::Utc, EntityTrait};
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DbBackend, DbErr, DeleteResult, EntityOrSelect, ModelTrait,
-    QueryFilter, QueryOrder, QuerySelect, QueryTrait, RuntimeErr, TransactionTrait,
+    ActiveModelTrait, ColumnTrait, Condition, DbBackend, DbErr, DeleteResult, EntityOrSelect,
+    ModelTrait, QueryFilter, QueryOrder, QuerySelect, QueryTrait, RuntimeErr, TransactionTrait,
 };
 use serde_json::json;
 
@@ -18,8 +18,10 @@ use super::interface::{
 };
 
 impl BackendManager {
-    fn get_description_from_attr_ids(&self, attr_ids: Vec<AttrId>) -> String {
-        let mut attr_ids = attr_ids;
+    /// The description is to concat `attr_ids` using commas
+    /// Note that `attr_ids` should be sorted before concatenation
+    /// e.g. [1, 2, 3] -> "1,2,3"
+    fn get_description_from_attr_ids(&self, mut attr_ids: Vec<AttrId>) -> String {
         attr_ids.sort();
         attr_ids
             .iter()
@@ -399,9 +401,6 @@ impl CostModelStorageLayer for BackendManager {
         epoch_id: Option<EpochId>,
     ) -> StorageResult<Option<Json>> {
         let attr_num = attr_ids.len() as i32;
-        // The description is to concat `attr_ids` using commas
-        // Note that `attr_ids` should be sorted before concatenation
-        // e.g. [1, 2, 3] -> "1,2,3"
         attr_ids.sort();
         let description = self.get_description_from_attr_ids(attr_ids);
 
@@ -427,6 +426,37 @@ impl CostModelStorageLayer for BackendManager {
                 .await?
                 .map(|stat| stat.statistic_value)),
         }
+    }
+
+    async fn get_stats_for_attr_indices_based(
+        &self,
+        table_id: TableId,
+        attr_base_indices: Vec<i32>,
+        stat_type: StatType,
+        epoch_id: Option<EpochId>,
+    ) -> StorageResult<Option<Json>> {
+        // Get the attribute ids based on table id and attribute base indices
+        let mut condition = Condition::any();
+        for attr_base_index in &attr_base_indices {
+            condition = condition.add(attribute::Column::BaseAttributeNumber.eq(*attr_base_index));
+        }
+        let attr_ids = Attribute::find()
+            .filter(attribute::Column::TableId.eq(table_id))
+            .filter(condition)
+            .all(&self.db)
+            .await?
+            .iter()
+            .map(|attr| attr.id)
+            .collect::<Vec<_>>();
+
+        if attr_ids.len() != attr_base_indices.len() {
+            return Err(BackendError::BackendError(format!(
+                "Not all attributes found for table_id {} and base indices {:?}",
+                table_id, attr_base_indices
+            )));
+        }
+
+        self.get_stats_for_attr(attr_ids, stat_type, epoch_id).await
     }
 
     /// TODO: documentation
@@ -1209,6 +1239,44 @@ mod tests {
             .unwrap();
         let cardinality = res.as_i64().unwrap();
         assert_eq!(cardinality, 0);
+
+        remove_db_file(DATABASE_FILE);
+    }
+
+    #[tokio::test]
+    async fn test_get_stats_for_attr_indices_based() {
+        const DATABASE_FILE: &str = "test_get_stats_for_attr_indices_based.db";
+        let database_url = copy_init_db(DATABASE_FILE).await;
+        let mut binding = super::BackendManager::new(Some(&database_url)).await;
+        let backend_manager = binding.as_mut().unwrap();
+        let epoch_id = 1;
+        let table_id = 1;
+        let attr_base_indices = vec![0, 1];
+        let stat_type = StatType::Cardinality;
+
+        // Statistics exist in the database
+        let res = backend_manager
+            .get_stats_for_attr_indices_based(table_id, attr_base_indices.clone(), stat_type, None)
+            .await
+            .unwrap()
+            .unwrap();
+        let cardinality = res.as_i64().unwrap();
+        assert_eq!(cardinality, 0);
+
+        // Statistics do not exist in the database
+        let attr_base_indices = vec![1];
+        let res = backend_manager
+            .get_stats_for_attr_indices_based(table_id, attr_base_indices.clone(), stat_type, None)
+            .await
+            .unwrap();
+        assert!(res.is_none());
+
+        // Attribute base indices not valid.
+        let attr_base_indices = vec![1, 2];
+        let res = backend_manager
+            .get_stats_for_attr_indices_based(table_id, attr_base_indices.clone(), stat_type, None)
+            .await;
+        assert!(res.is_err());
 
         remove_db_file(DATABASE_FILE);
     }

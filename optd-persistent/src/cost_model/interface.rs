@@ -48,6 +48,8 @@ pub enum ConstraintType {
 /// TODO: documentation
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum StatType {
+    /// A combination of multiple statistics, e.g. most common values, distribution.
+    Comb,
     /// `TableRowCount` only applies to table statistics.
     TableRowCount,
     NotNullCount,
@@ -131,6 +133,17 @@ pub trait CostModelStorageLayer {
     async fn get_stats_for_attr(
         &self,
         attr_ids: Vec<AttrId>,
+        stat_type: StatType,
+        epoch_id: Option<EpochId>,
+    ) -> StorageResult<Option<Json>>;
+
+    /// Get the (joint) statistics for one or more attributes based on attribute base indices.
+    ///
+    /// If `epoch_id` is None, it will return the latest statistics.
+    async fn get_stats_for_attr_indices_based(
+        &self,
+        table_id: TableId,
+        attr_base_indices: Vec<i32>,
         stat_type: StatType,
         epoch_id: Option<EpochId>,
     ) -> StorageResult<Option<Json>>;

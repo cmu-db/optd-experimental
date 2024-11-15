@@ -1,7 +1,10 @@
 #![allow(unused_variables)]
 use std::sync::Arc;
 
-use optd_persistent::{cost_model::interface::Attr, BackendManager, CostModelStorageLayer};
+use optd_persistent::{
+    cost_model::interface::{Attr, StatType},
+    BackendManager, CostModelStorageLayer,
+};
 
 use crate::{
     common::types::TableId, stats::AttributeCombValueStats, CostModelError, CostModelResult,
@@ -14,8 +17,8 @@ pub struct CostModelStorageManager<S: CostModelStorageLayer> {
     // TODO: in-memory cache
 }
 
-impl CostModelStorageManager<BackendManager> {
-    pub fn new(backend_manager: Arc<BackendManager>) -> Self {
+impl<S: CostModelStorageLayer> CostModelStorageManager<S> {
+    pub fn new(backend_manager: Arc<S>) -> Self {
         Self { backend_manager }
     }
 
@@ -25,16 +28,16 @@ impl CostModelStorageManager<BackendManager> {
     pub async fn get_attribute_info(
         &self,
         table_id: TableId,
-        attribute_base_index: i32,
+        attr_base_index: i32,
     ) -> CostModelResult<Attr> {
         let attr = self
             .backend_manager
-            .get_attribute(table_id.into(), attribute_base_index)
+            .get_attribute(table_id.into(), attr_base_index)
             .await?;
         attr.ok_or_else(|| {
             CostModelError::SemanticError(SemanticError::AttributeNotFound(
                 table_id,
-                attribute_base_index,
+                attr_base_index,
             ))
         })
     }
@@ -42,11 +45,20 @@ impl CostModelStorageManager<BackendManager> {
     /// TODO: documentation
     /// TODO: if we have memory cache,
     /// we should add the reference. (&AttributeCombValueStats)
-    pub fn get_attributes_comb_statistics(
+    pub async fn get_attributes_comb_statistics(
         &self,
         table_id: TableId,
-        attr_comb: &[usize],
+        attr_base_indices: &[i32],
     ) -> CostModelResult<Option<AttributeCombValueStats>> {
-        todo!()
+        Ok(self
+            .backend_manager
+            .get_stats_for_attr_indices_based(
+                table_id.into(),
+                attr_base_indices.to_vec(),
+                StatType::Comb,
+                None,
+            )
+            .await?
+            .map(|json| json.into()))
     }
 }
