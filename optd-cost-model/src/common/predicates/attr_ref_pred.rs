@@ -11,6 +11,8 @@ use super::id_pred::IdPred;
 /// Currently, [`AttributeRefPred`] only holds base table attributes, i.e. attributes
 /// that already exist in the table. More complex structures may be introduced in the
 /// future to represent derived attributes (e.g. t.v1 + t.v2).
+///
+/// TODO: Support derived column in `AttributeRefPred`.
 #[derive(Clone, Debug)]
 pub struct AttributeRefPred(pub ArcPredicateNode);
 

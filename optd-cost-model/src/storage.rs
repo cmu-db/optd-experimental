@@ -53,6 +53,7 @@ impl<S: CostModelStorageLayer> CostModelStorageManager<S> {
     pub async fn get_attributes_comb_statistics(
         &self,
         table_id: TableId,
+        attr_base_indices: &[i32],
     ) -> CostModelResult<Option<AttributeCombValueStats>> {
         let dist: Option<Distribution> = self
             .backend_manager
@@ -125,3 +126,4 @@ impl<S: CostModelStorageLayer> CostModelStorageManager<S> {
             mcvs, ndistinct, null_frac, dist,
         )))
     }
+}

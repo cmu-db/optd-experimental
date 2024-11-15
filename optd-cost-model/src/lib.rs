@@ -46,9 +46,9 @@ pub enum SemanticError {
 
 #[derive(Debug)]
 pub enum CostModelError {
-    // TODO: Add more error types
     ORMError(BackendError),
     SemanticError(SemanticError),
+    InvalidPredicate(String),
 }
 
 impl From<BackendError> for CostModelError {
