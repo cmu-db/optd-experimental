@@ -38,6 +38,12 @@ impl AttributeRefPred {
     pub fn attr_index(&self) -> usize {
         self.0.child(1).data.as_ref().unwrap().as_u64() as usize
     }
+
+    /// Checks whether the attribute is a derived attribute. Currently, this will always return
+    /// false, since derived attribute is not yet supported.
+    pub fn is_derived(&self) -> bool {
+        false
+    }
 }
 
 impl ReprPredicateNode for AttributeRefPred {
