@@ -1,10 +1,8 @@
 #![allow(dead_code, unused_imports, unused_variables)]
 
-use std::ptr::null;
-
 use crate::cost_model::interface::Cost;
 use crate::entities::{prelude::*, *};
-use crate::{BackendError, BackendManager, CostModelError, CostModelStorageLayer, StorageResult};
+use crate::{BackendError, BackendManager, CostModelStorageLayer, StorageResult};
 use sea_orm::prelude::{Expr, Json};
 use sea_orm::sea_query::Query;
 use sea_orm::{sqlx::types::chrono::Utc, EntityTrait};
@@ -246,10 +244,9 @@ impl CostModelStorageLayer for BackendManager {
                         match res {
                             Ok(insert_res) => insert_res.last_insert_id,
                             Err(_) => {
-                                return Err(BackendError::Database(DbErr::Exec(
-                                    RuntimeErr::Internal(
-                                        "Failed to insert into statistic table".to_string(),
-                                    ),
+                                return Err(BackendError::BackendError(format!(
+                                    "failed to insert statistic {:?} into statistic table",
+                                    stat
                                 )))
                             }
                         }
@@ -486,8 +483,9 @@ impl CostModelStorageLayer for BackendManager {
             .one(&self.db)
             .await?;
         if expr_exists.is_none() {
-            return Err(BackendError::Database(DbErr::RecordNotFound(
-                "ExprId not found in PhysicalExpression table".to_string(),
+            return Err(BackendError::BackendError(format!(
+                "physical expression id {} not found when storing cost",
+                physical_expression_id
             )));
         }
 
@@ -498,8 +496,9 @@ impl CostModelStorageLayer for BackendManager {
             .await
             .unwrap();
         if epoch_exists.is_none() {
-            return Err(BackendError::Database(DbErr::RecordNotFound(
-                "EpochId not found in Event table".to_string(),
+            return Err(BackendError::BackendError(format!(
+                "epoch id {} not found when storing cost",
+                epoch_id
             )));
         }
 

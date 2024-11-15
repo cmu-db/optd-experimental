@@ -1,7 +1,7 @@
 #![allow(dead_code, unused_imports)]
 
+use crate::entities::attribute::Model as AttributeEntity;
 use crate::entities::cascades_group;
-use crate::entities::event::Model as event_model;
 use crate::entities::logical_expression;
 use crate::entities::physical_expression;
 use crate::StorageResult;
@@ -58,7 +58,7 @@ pub enum EpochOption {
 }
 
 /// TODO: documentation
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Stat {
     pub stat_type: i32,
     pub stat_value: Json,

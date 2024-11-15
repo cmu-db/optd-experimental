@@ -42,28 +42,20 @@ fn get_sqlite_url(file: &str) -> String {
 pub type StorageResult<T> = Result<T, BackendError>;
 
 #[derive(Debug)]
-pub enum CostModelError {
-    // TODO: Add more error types
-    UnknownStatisticType,
-    VersionedStatisticNotFound,
-}
-
-#[derive(Debug)]
 pub enum BackendError {
-    CostModel(CostModelError),
-    Database(DbErr),
-    // TODO: Add other variants as needed for different error types
+    DatabaseError(DbErr),
+    BackendError(String),
 }
 
-impl From<CostModelError> for BackendError {
-    fn from(value: CostModelError) -> Self {
-        BackendError::CostModel(value)
+impl From<String> for BackendError {
+    fn from(value: String) -> Self {
+        BackendError::BackendError(value)
     }
 }
 
 impl From<DbErr> for BackendError {
     fn from(value: DbErr) -> Self {
-        BackendError::Database(value)
+        BackendError::DatabaseError(value)
     }
 }
 

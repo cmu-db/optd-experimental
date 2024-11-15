@@ -2,7 +2,10 @@ use common::{
     nodes::{ArcPredicateNode, PhysicalNodeType},
     types::{AttrId, EpochId, ExprId, GroupId, TableId},
 };
-use optd_persistent::cost_model::interface::{Stat, StatType};
+use optd_persistent::{
+    cost_model::interface::{Stat, StatType},
+    BackendError,
+};
 
 pub mod common;
 pub mod cost;
@@ -33,9 +36,18 @@ pub struct EstimatedStatistic(pub u64);
 pub type CostModelResult<T> = Result<T, CostModelError>;
 
 #[derive(Debug)]
+pub enum SemanticError {
+    // TODO: Add more error types
+    UnknownStatisticType,
+    VersionedStatisticNotFound,
+    AttributeNotFound,
+}
+
+#[derive(Debug)]
 pub enum CostModelError {
     // TODO: Add more error types
-    ORMError,
+    ORMError(BackendError),
+    SemanticError(SemanticError),
 }
 
 pub trait CostModel: 'static + Send + Sync {
