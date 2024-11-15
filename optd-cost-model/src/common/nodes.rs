@@ -51,6 +51,7 @@ pub enum PredicateType {
     Constant(ConstantType),
     AttributeRef,
     ExternAttributeRef,
+    // TODO(lanlou): Id -> Id(IdType)
     Id,
     UnOp(UnOpType),
     BinOp(BinOpType),

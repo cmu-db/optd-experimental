@@ -22,11 +22,14 @@ use crate::{
         values::Value,
     },
     cost_model::CostModelImpl,
+    // TODO: If we return the default value, consider tell the upper level that we cannot
+    // compute the selectivity.
     stats::{
         AttributeCombValue, AttributeCombValueStats, DEFAULT_EQ_SEL, DEFAULT_INEQ_SEL,
         FIXED_CHAR_SEL_FACTOR, FULL_WILDCARD_SEL_FACTOR, UNIMPLEMENTED_SEL,
     },
-    CostModelResult, EstimatedStatistic,
+    CostModelResult,
+    EstimatedStatistic,
 };
 
 impl<S: CostModelStorageLayer> CostModelImpl<S> {
@@ -35,21 +38,16 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
     pub fn get_filter_row_cnt(
         &self,
         child_row_cnt: EstimatedStatistic,
-        table_id: TableId,
         cond: ArcPredicateNode,
     ) -> CostModelResult<EstimatedStatistic> {
-        let selectivity = { self.get_filter_selectivity(cond, table_id)? };
+        let selectivity = { self.get_filter_selectivity(cond)? };
         Ok(
             EstimatedStatistic((child_row_cnt.0 as f64 * selectivity) as u64)
                 .max(EstimatedStatistic(1)),
         )
     }
 
-    pub fn get_filter_selectivity(
-        &self,
-        expr_tree: ArcPredicateNode,
-        table_id: TableId,
-    ) -> CostModelResult<f64> {
+    pub fn get_filter_selectivity(&self, expr_tree: ArcPredicateNode) -> CostModelResult<f64> {
         match &expr_tree.typ {
             PredicateType::Constant(_) => Ok(Self::get_constant_selectivity(expr_tree)),
             PredicateType::AttributeRef => unimplemented!("check bool type or else panic"),
@@ -60,7 +58,7 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
                     // not doesn't care about nulls so there's no complex logic. it just reverses
                     // the selectivity for instance, != _will not_ include nulls
                     // but "NOT ==" _will_ include nulls
-                    UnOpType::Not => Ok(1.0 - self.get_filter_selectivity(child, table_id)?),
+                    UnOpType::Not => Ok(1.0 - self.get_filter_selectivity(child)?),
                     UnOpType::Neg => panic!(
                         "the selectivity of operations that return numerical values is undefined"
                     ),
@@ -72,7 +70,7 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
                 let right_child = expr_tree.child(1);
 
                 if bin_op_typ.is_comparison() {
-                    self.get_comp_op_selectivity(*bin_op_typ, left_child, right_child, table_id)
+                    self.get_comp_op_selectivity(*bin_op_typ, left_child, right_child)
                 } else if bin_op_typ.is_numerical() {
                     panic!(
                         "the selectivity of operations that return numerical values is undefined"
@@ -82,7 +80,7 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
                 }
             }
             PredicateType::LogOp(log_op_typ) => {
-                self.get_log_op_selectivity(*log_op_typ, &expr_tree.children, table_id)
+                self.get_log_op_selectivity(*log_op_typ, &expr_tree.children)
             }
             PredicateType::Func(_) => unimplemented!("check bool type or else panic"),
             PredicateType::SortOrder(_) => {
@@ -92,14 +90,14 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
             PredicateType::Cast => unimplemented!("check bool type or else panic"),
             PredicateType::Like => {
                 let like_expr = LikePred::from_pred_node(expr_tree).unwrap();
-                self.get_like_selectivity(&like_expr, table_id)
+                self.get_like_selectivity(&like_expr)
             }
             PredicateType::DataType(_) => {
                 panic!("the selectivity of a data type is not defined")
             }
             PredicateType::InList => {
                 let in_list_expr = InListPred::from_pred_node(expr_tree).unwrap();
-                self.get_in_list_selectivity(&in_list_expr, table_id)
+                self.get_in_list_selectivity(&in_list_expr)
             }
             _ => unreachable!(
                 "all expression DfPredType were enumerated. this should be unreachable"
@@ -138,16 +136,15 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
         &self,
         log_op_typ: LogOpType,
         children: &[ArcPredicateNode],
-        table_id: TableId,
     ) -> CostModelResult<f64> {
         match log_op_typ {
             LogOpType::And => children.iter().try_fold(1.0, |acc, child| {
-                let selectivity = self.get_filter_selectivity(child.clone(), table_id)?;
+                let selectivity = self.get_filter_selectivity(child.clone())?;
                 Ok(acc * selectivity)
             }),
             LogOpType::Or => {
                 let product = children.iter().try_fold(1.0, |acc, child| {
-                    let selectivity = self.get_filter_selectivity(child.clone(), table_id)?;
+                    let selectivity = self.get_filter_selectivity(child.clone())?;
                     Ok(acc * (1.0 - selectivity))
                 })?;
                 Ok(1.0 - product)
@@ -161,14 +158,13 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
         comp_bin_op_typ: BinOpType,
         left: ArcPredicateNode,
         right: ArcPredicateNode,
-        table_id: TableId,
     ) -> CostModelResult<f64> {
         assert!(comp_bin_op_typ.is_comparison());
 
         // I intentionally performed moves on left and right. This way, we don't accidentally use
         // them after this block
         let (attr_ref_exprs, values, non_attr_ref_exprs, is_left_attr_ref) =
-            self.get_semantic_nodes(left, right, table_id)?;
+            self.get_semantic_nodes(left, right)?;
 
         // Handle the different cases of semantic nodes.
         if attr_ref_exprs.is_empty() {
@@ -178,6 +174,7 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
                 .first()
                 .expect("we just checked that attr_ref_exprs.len() == 1");
             let attr_ref_idx = attr_ref_expr.attr_index();
+            let table_id = attr_ref_expr.table_id();
 
             // TODO: Consider attribute is a derived attribute
             if values.len() == 1 {
@@ -257,29 +254,36 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
     ) -> CostModelResult<f64> {
         // TODO: The attribute could be a derived attribute
         let ret_sel = {
-            // TODO: Handle the case where `attribute_stats` is None.
-            let attribute_stats = self
-                .get_attribute_comb_stats(table_id, &[attr_base_index])?
-                .unwrap();
-            let eq_freq = if let Some(freq) = attribute_stats.mcvs.freq(&vec![Some(value.clone())])
+            if let Some(attribute_stats) =
+                self.get_attribute_comb_stats(table_id, &[attr_base_index])?
             {
-                freq
-            } else {
-                let non_mcv_freq = 1.0 - attribute_stats.mcvs.total_freq();
-                // always safe because usize is at least as large as i32
-                let ndistinct_as_usize = attribute_stats.ndistinct as usize;
-                let non_mcv_cnt = ndistinct_as_usize - attribute_stats.mcvs.cnt();
-                if non_mcv_cnt == 0 {
-                    return Ok(0.0);
+                let eq_freq =
+                    if let Some(freq) = attribute_stats.mcvs.freq(&vec![Some(value.clone())]) {
+                        freq
+                    } else {
+                        let non_mcv_freq = 1.0 - attribute_stats.mcvs.total_freq();
+                        // always safe because usize is at least as large as i32
+                        let ndistinct_as_usize = attribute_stats.ndistinct as usize;
+                        let non_mcv_cnt = ndistinct_as_usize - attribute_stats.mcvs.cnt();
+                        if non_mcv_cnt == 0 {
+                            return Ok(0.0);
+                        }
+                        // note that nulls are not included in ndistinct so we don't need to do non_mcv_cnt
+                        // - 1 if null_frac > 0
+                        (non_mcv_freq - attribute_stats.null_frac) / (non_mcv_cnt as f64)
+                    };
+                if is_eq {
+                    eq_freq
+                } else {
+                    1.0 - eq_freq - attribute_stats.null_frac
                 }
-                // note that nulls are not included in ndistinct so we don't need to do non_mcv_cnt
-                // - 1 if null_frac > 0
-                (non_mcv_freq - attribute_stats.null_frac) / (non_mcv_cnt as f64)
-            };
-            if is_eq {
-                eq_freq
             } else {
-                1.0 - eq_freq - attribute_stats.null_frac
+                #[allow(clippy::collapsible_else_if)]
+                if is_eq {
+                    DEFAULT_EQ_SEL
+                } else {
+                    1.0 - DEFAULT_EQ_SEL
+                }
             }
         };
 
@@ -346,37 +350,43 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
         end: Bound<&Value>,
     ) -> CostModelResult<f64> {
         // TODO: Consider attribute is a derived attribute
-        // TODO: Handle the case where `attribute_stats` is None.
-        let attribute_stats = self
-            .get_attribute_comb_stats(table_id, &[attr_base_index])?
-            .unwrap();
-        let left_quantile = match start {
-            Bound::Unbounded => 0.0,
-            Bound::Included(value) => self.get_attribute_lt_value_freq(
-                &attribute_stats,
-                table_id,
-                attr_base_index,
-                value,
-            )?,
-            Bound::Excluded(value) => Self::get_attribute_leq_value_freq(&attribute_stats, value),
-        };
-        let right_quantile = match end {
-            Bound::Unbounded => 1.0,
-            Bound::Included(value) => Self::get_attribute_leq_value_freq(&attribute_stats, value),
-            Bound::Excluded(value) => self.get_attribute_lt_value_freq(
-                &attribute_stats,
-                table_id,
-                attr_base_index,
-                value,
-            )?,
-        };
-        assert!(
-            left_quantile <= right_quantile,
-            "left_quantile ({}) should be <= right_quantile ({})",
-            left_quantile,
-            right_quantile
-        );
-        Ok(right_quantile - left_quantile)
+        if let Some(attribute_stats) =
+            self.get_attribute_comb_stats(table_id, &[attr_base_index])?
+        {
+            let left_quantile = match start {
+                Bound::Unbounded => 0.0,
+                Bound::Included(value) => self.get_attribute_lt_value_freq(
+                    &attribute_stats,
+                    table_id,
+                    attr_base_index,
+                    value,
+                )?,
+                Bound::Excluded(value) => {
+                    Self::get_attribute_leq_value_freq(&attribute_stats, value)
+                }
+            };
+            let right_quantile = match end {
+                Bound::Unbounded => 1.0,
+                Bound::Included(value) => {
+                    Self::get_attribute_leq_value_freq(&attribute_stats, value)
+                }
+                Bound::Excluded(value) => self.get_attribute_lt_value_freq(
+                    &attribute_stats,
+                    table_id,
+                    attr_base_index,
+                    value,
+                )?,
+            };
+            assert!(
+                left_quantile <= right_quantile,
+                "left_quantile ({}) should be <= right_quantile ({})",
+                left_quantile,
+                right_quantile
+            );
+            Ok(right_quantile - left_quantile)
+        } else {
+            Ok(DEFAULT_INEQ_SEL)
+        }
     }
 
     /// Compute the selectivity of a (NOT) LIKE expression.
@@ -391,11 +401,7 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
     /// is composed of MCV frequency and non-MCV selectivity. MCV frequency is computed by
     /// adding up frequencies of MCVs that match the pattern. Non-MCV  selectivity is computed
     /// in the same way that Postgres computes selectivity for the wildcard part of the pattern.
-    fn get_like_selectivity(
-        &self,
-        like_expr: &LikePred,
-        table_id: TableId,
-    ) -> CostModelResult<f64> {
+    fn get_like_selectivity(&self, like_expr: &LikePred) -> CostModelResult<f64> {
         let child = like_expr.child();
 
         // Check child is a attribute ref.
@@ -409,9 +415,9 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
             return Ok(UNIMPLEMENTED_SEL);
         }
 
-        let attr_ref_idx = AttributeRefPred::from_pred_node(child)
-            .unwrap()
-            .attr_index();
+        let attr_ref_pred = AttributeRefPred::from_pred_node(child).unwrap();
+        let attr_ref_idx = attr_ref_pred.attr_index();
+        let table_id = attr_ref_pred.table_id();
 
         // TODO: Consider attribute is a derived attribute
         let pattern = ConstantPred::from_pred_node(pattern)
@@ -434,40 +440,38 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
 
         // Compute the selectivity in MCVs.
         // TODO: Handle the case where `attribute_stats` is None.
-        let attribute_stats = self
-            .get_attribute_comb_stats(table_id, &[attr_ref_idx])?
-            .unwrap();
-        let (mcv_freq, null_frac) = {
-            let pred = Box::new(move |val: &AttributeCombValue| {
-                let string = StringArray::from(vec![val[0].as_ref().unwrap().as_str().as_ref()]);
-                let pattern = StringArray::from(vec![pattern.as_ref()]);
-                like(&string, &pattern).unwrap().value(0)
-            });
-            (
-                attribute_stats.mcvs.freq_over_pred(pred),
-                attribute_stats.null_frac,
-            )
-        };
+        if let Some(attribute_stats) = self.get_attribute_comb_stats(table_id, &[attr_ref_idx])? {
+            let (mcv_freq, null_frac) = {
+                let pred = Box::new(move |val: &AttributeCombValue| {
+                    let string =
+                        StringArray::from(vec![val[0].as_ref().unwrap().as_str().as_ref()]);
+                    let pattern = StringArray::from(vec![pattern.as_ref()]);
+                    like(&string, &pattern).unwrap().value(0)
+                });
+                (
+                    attribute_stats.mcvs.freq_over_pred(pred),
+                    attribute_stats.null_frac,
+                )
+            };
 
-        let result = non_mcv_sel + mcv_freq;
+            let result = non_mcv_sel + mcv_freq;
 
-        Ok(if like_expr.negated() {
-            1.0 - result - null_frac
+            Ok(if like_expr.negated() {
+                1.0 - result - null_frac
+            } else {
+                result
+            }
+            // Postgres clamps the result after histogram and before MCV. See Postgres
+            // `patternsel_common`.
+            .clamp(0.0001, 0.9999))
         } else {
-            result
+            Ok(UNIMPLEMENTED_SEL)
         }
-        // Postgres clamps the result after histogram and before MCV. See Postgres
-        // `patternsel_common`.
-        .clamp(0.0001, 0.9999))
     }
 
     /// Only support attrA in (val1, val2, val3) where attrA is a attribute ref and
     /// val1, val2, val3 are constants.
-    pub fn get_in_list_selectivity(
-        &self,
-        expr: &InListPred,
-        table_id: TableId,
-    ) -> CostModelResult<f64> {
+    pub fn get_in_list_selectivity(&self, expr: &InListPred) -> CostModelResult<f64> {
         let child = expr.child();
 
         // Check child is a attribute ref.
@@ -485,9 +489,9 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
         }
 
         // Convert child and const expressions to concrete types.
-        let attr_ref_idx = AttributeRefPred::from_pred_node(child)
-            .unwrap()
-            .attr_index();
+        let attr_ref_pred = AttributeRefPred::from_pred_node(child).unwrap();
+        let attr_ref_idx = attr_ref_pred.attr_index();
+        let table_id = attr_ref_pred.table_id();
         let list_exprs = list_exprs
             .into_iter()
             .map(|expr| {
@@ -525,7 +529,6 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
         &self,
         left: ArcPredicateNode,
         right: ArcPredicateNode,
-        table_id: TableId,
     ) -> CostModelResult<(
         Vec<AttributeRefPred>,
         Vec<Value>,
@@ -583,6 +586,7 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
                         let attr_ref_expr = AttributeRefPred::from_pred_node(cast_expr_child)
                             .expect("we already checked that the type is AttributeRef");
                         let attr_ref_idx = attr_ref_expr.attr_index();
+                        let table_id = attr_ref_expr.table_id();
                         cast_node = attr_ref_expr.into_pred_node();
                         // The "invert" cast is to invert the cast so that we're casting the
                         // non_cast_node to the attribute's original type.

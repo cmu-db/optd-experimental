@@ -1,4 +1,7 @@
-use crate::common::nodes::{ArcPredicateNode, PredicateNode, PredicateType, ReprPredicateNode};
+use crate::common::{
+    nodes::{ArcPredicateNode, PredicateNode, PredicateType, ReprPredicateNode},
+    types::TableId,
+};
 
 use super::id_pred::IdPred;
 
@@ -8,11 +11,14 @@ use super::id_pred::IdPred;
 /// 1. The table id, represented by an [`IdPred`].
 /// 2. The index of the column, represented by an [`IdPred`].
 ///
+/// **TODO**: Now we assume any IdPred is as same as the ones in the ORM layer.
+///
 /// Currently, [`AttributeRefPred`] only holds base table attributes, i.e. attributes
 /// that already exist in the table. More complex structures may be introduced in the
 /// future to represent derived attributes (e.g. t.v1 + t.v2).
 ///
 /// TODO: Support derived column in `AttributeRefPred`.
+/// Proposal: Data field can store the column type (base or derived).
 #[derive(Clone, Debug)]
 pub struct AttributeRefPred(pub ArcPredicateNode);
 
@@ -32,11 +38,12 @@ impl AttributeRefPred {
     }
 
     /// Gets the table id.
-    pub fn table_id(&self) -> usize {
-        self.0.child(0).data.as_ref().unwrap().as_u64() as usize
+    pub fn table_id(&self) -> TableId {
+        TableId(self.0.child(0).data.as_ref().unwrap().as_u64() as usize)
     }
 
     /// Gets the attribute index.
+    /// Note: The attribute index is the **base** index, which is table specific.
     pub fn attr_index(&self) -> usize {
         self.0.child(1).data.as_ref().unwrap().as_u64() as usize
     }
