@@ -7,9 +7,7 @@
 //! Non-alpha-numeric characters are relegated to the end of the encoded value,
 //! rendering them indistinguishable from one another in this context.
 
-use std::collections::HashMap;
-
-use once_cell::sync::Lazy;
+use std::{collections::HashMap, sync::LazyLock};
 
 // The alphanumerical ordering.
 const ALPHANUMERIC_ORDER: [char; 95] = [
@@ -22,7 +20,7 @@ const ALPHANUMERIC_ORDER: [char; 95] = [
 
 const PMF: f64 = 1.0 / (ALPHANUMERIC_ORDER.len() as f64);
 
-static CDF: Lazy<HashMap<char, f64>> = Lazy::new(|| {
+static CDF: LazyLock<HashMap<char, f64>> = LazyLock::new(|| {
     let length = ALPHANUMERIC_ORDER.len() + 1; // To account for non-alpha-numeric characters.
     let mut cdf = HashMap::with_capacity(length);
     for (index, &char) in ALPHANUMERIC_ORDER.iter().enumerate() {
