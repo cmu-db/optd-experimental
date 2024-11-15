@@ -46,6 +46,7 @@ pub enum ConstraintType {
 }
 
 /// TODO: documentation
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum StatType {
     /// `TableRowCount` only applies to table statistics.
     TableRowCount,
@@ -66,7 +67,7 @@ pub enum EpochOption {
 /// TODO: documentation
 #[derive(Clone, Debug)]
 pub struct Stat {
-    pub stat_type: i32,
+    pub stat_type: StatType,
     pub stat_value: Json,
     pub attr_ids: Vec<i32>,
     pub table_id: Option<i32>,
@@ -120,8 +121,7 @@ pub trait CostModelStorageLayer {
     async fn get_stats_for_table(
         &self,
         table_id: TableId,
-        // TODO: Add enum for stat_type
-        stat_type: i32,
+        stat_type: StatType,
         epoch_id: Option<EpochId>,
     ) -> StorageResult<Option<Json>>;
 
@@ -131,7 +131,7 @@ pub trait CostModelStorageLayer {
     async fn get_stats_for_attr(
         &self,
         attr_ids: Vec<AttrId>,
-        stat_type: i32,
+        stat_type: StatType,
         epoch_id: Option<EpochId>,
     ) -> StorageResult<Option<Json>>;
 

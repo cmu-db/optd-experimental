@@ -14,7 +14,7 @@ use serde_json::json;
 
 use super::catalog::mock_catalog::{self, MockCatalog};
 use super::interface::{
-    Attr, AttrId, CatalogSource, EpochId, EpochOption, ExprId, Stat, StatId, TableId,
+    Attr, AttrId, CatalogSource, EpochId, EpochOption, ExprId, Stat, StatId, StatType, TableId,
 };
 
 impl BackendManager {
@@ -228,7 +228,7 @@ impl CostModelStorageLayer for BackendManager {
                                 stat.attr_ids.len() as i32
                             ),
                             creation_time: sea_orm::ActiveValue::Set(Utc::now()),
-                            variant_tag: sea_orm::ActiveValue::Set(stat.stat_type),
+                            variant_tag: sea_orm::ActiveValue::Set(stat.stat_type as i32),
                             description: sea_orm::ActiveValue::Set("".to_string()),
                             ..Default::default()
                         };
@@ -250,7 +250,7 @@ impl CostModelStorageLayer for BackendManager {
                 let res = Statistic::find()
                     .filter(statistic::Column::NumberOfAttributes.eq(stat.attr_ids.len() as i32))
                     .filter(statistic::Column::Description.eq(description.clone()))
-                    .filter(statistic::Column::VariantTag.eq(stat.stat_type))
+                    .filter(statistic::Column::VariantTag.eq(stat.stat_type as i32))
                     .inner_join(versioned_statistic::Entity)
                     .select_also(versioned_statistic::Entity)
                     .order_by_desc(versioned_statistic::Column::EpochId)
@@ -270,7 +270,7 @@ impl CostModelStorageLayer for BackendManager {
                                 stat.attr_ids.len() as i32
                             ),
                             creation_time: sea_orm::ActiveValue::Set(Utc::now()),
-                            variant_tag: sea_orm::ActiveValue::Set(stat.stat_type),
+                            variant_tag: sea_orm::ActiveValue::Set(stat.stat_type as i32),
                             description: sea_orm::ActiveValue::Set(description),
                             ..Default::default()
                         };
@@ -366,8 +366,8 @@ impl CostModelStorageLayer for BackendManager {
     /// TODO: documentation
     async fn get_stats_for_table(
         &self,
-        table_id: i32,
-        stat_type: i32,
+        table_id: TableId,
+        stat_type: StatType,
         epoch_id: Option<EpochId>,
     ) -> StorageResult<Option<Json>> {
         match epoch_id {
@@ -375,7 +375,7 @@ impl CostModelStorageLayer for BackendManager {
                 .filter(versioned_statistic::Column::EpochId.eq(epoch_id))
                 .inner_join(statistic::Entity)
                 .filter(statistic::Column::TableId.eq(table_id))
-                .filter(statistic::Column::VariantTag.eq(stat_type))
+                .filter(statistic::Column::VariantTag.eq(stat_type as i32))
                 .one(&self.db)
                 .await?
                 .map(|stat| stat.statistic_value)),
@@ -383,7 +383,7 @@ impl CostModelStorageLayer for BackendManager {
             None => Ok(VersionedStatistic::find()
                 .inner_join(statistic::Entity)
                 .filter(statistic::Column::TableId.eq(table_id))
-                .filter(statistic::Column::VariantTag.eq(stat_type))
+                .filter(statistic::Column::VariantTag.eq(stat_type as i32))
                 .order_by_desc(versioned_statistic::Column::EpochId)
                 .one(&self.db)
                 .await?
@@ -395,7 +395,7 @@ impl CostModelStorageLayer for BackendManager {
     async fn get_stats_for_attr(
         &self,
         mut attr_ids: Vec<AttrId>,
-        stat_type: i32,
+        stat_type: StatType,
         epoch_id: Option<EpochId>,
     ) -> StorageResult<Option<Json>> {
         let attr_num = attr_ids.len() as i32;
@@ -412,7 +412,7 @@ impl CostModelStorageLayer for BackendManager {
                 .inner_join(statistic::Entity)
                 .filter(statistic::Column::NumberOfAttributes.eq(attr_num))
                 .filter(statistic::Column::Description.eq(description))
-                .filter(statistic::Column::VariantTag.eq(stat_type))
+                .filter(statistic::Column::VariantTag.eq(stat_type as i32))
                 .one(&self.db)
                 .await?
                 .map(|stat| stat.statistic_value)),
@@ -421,7 +421,7 @@ impl CostModelStorageLayer for BackendManager {
                 .inner_join(statistic::Entity)
                 .filter(statistic::Column::NumberOfAttributes.eq(attr_num))
                 .filter(statistic::Column::Description.eq(description))
-                .filter(statistic::Column::VariantTag.eq(stat_type))
+                .filter(statistic::Column::VariantTag.eq(stat_type as i32))
                 .order_by_desc(versioned_statistic::Column::EpochId)
                 .one(&self.db)
                 .await?
@@ -624,12 +624,12 @@ mod tests {
         assert_eq!(lookup_res.len(), 3);
 
         let stat_res = backend_manager
-            .get_stats_for_table(1, StatType::TableRowCount as i32, Some(epoch_id))
+            .get_stats_for_table(1, StatType::TableRowCount, Some(epoch_id))
             .await;
         assert!(stat_res.is_ok());
         assert_eq!(stat_res.unwrap().unwrap(), json!(300));
         let stat_res = backend_manager
-            .get_stats_for_attr([2].to_vec(), StatType::NotNullCount as i32, None)
+            .get_stats_for_attr([2].to_vec(), StatType::NotNullCount, None)
             .await;
         assert!(stat_res.is_ok());
         assert_eq!(stat_res.unwrap().unwrap(), json!(200));
@@ -649,7 +649,7 @@ mod tests {
             .await
             .unwrap();
         let stat = Stat {
-            stat_type: StatType::NotNullCount as i32,
+            stat_type: StatType::NotNullCount,
             stat_value: json!(100),
             attr_ids: vec![1],
             table_id: None,
@@ -731,7 +731,7 @@ mod tests {
             .await
             .unwrap();
         let stat2 = Stat {
-            stat_type: StatType::NotNullCount as i32,
+            stat_type: StatType::NotNullCount,
             stat_value: json!(200),
             attr_ids: vec![1],
             table_id: None,
@@ -785,7 +785,7 @@ mod tests {
         // 3. Update existed stat with the same value
         let epoch_num = Event::find().all(&backend_manager.db).await.unwrap().len();
         let stat3 = Stat {
-            stat_type: StatType::NotNullCount as i32,
+            stat_type: StatType::NotNullCount,
             stat_value: json!(200),
             attr_ids: vec![1],
             table_id: None,
@@ -826,21 +826,21 @@ mod tests {
 
         let statistics: Vec<Stat> = vec![
             Stat {
-                stat_type: StatType::TableRowCount as i32,
+                stat_type: StatType::TableRowCount,
                 stat_value: json!(0),
                 attr_ids: vec![],
                 table_id: Some(1),
                 name: "row_count".to_string(),
             },
             Stat {
-                stat_type: StatType::TableRowCount as i32,
+                stat_type: StatType::TableRowCount,
                 stat_value: json!(20),
                 attr_ids: vec![],
                 table_id: Some(1),
                 name: "row_count".to_string(),
             },
             Stat {
-                stat_type: StatType::TableRowCount as i32,
+                stat_type: StatType::TableRowCount,
                 stat_value: json!(100),
                 attr_ids: vec![],
                 table_id: Some(table_inserted_res.last_insert_id),
@@ -1044,7 +1044,7 @@ mod tests {
         let backend_manager = binding.as_mut().unwrap();
         let epoch_id = 1;
         let table_id = 1;
-        let stat_type = StatType::TableRowCount as i32;
+        let stat_type = StatType::TableRowCount;
 
         // Get initial stats
         let res = backend_manager
@@ -1061,7 +1061,7 @@ mod tests {
             .await
             .unwrap();
         let stat = Stat {
-            stat_type: StatType::TableRowCount as i32,
+            stat_type: StatType::TableRowCount,
             stat_value: json!(100),
             attr_ids: vec![],
             table_id: Some(table_id),
@@ -1101,7 +1101,7 @@ mod tests {
         let backend_manager = binding.as_mut().unwrap();
         let epoch_id = 1;
         let attr_ids = vec![1];
-        let stat_type = StatType::Cardinality as i32;
+        let stat_type = StatType::Cardinality;
 
         // Get initial stats
         let res = backend_manager
@@ -1121,7 +1121,7 @@ mod tests {
             .await
             .unwrap();
         let stat = Stat {
-            stat_type: StatType::Cardinality as i32,
+            stat_type: StatType::Cardinality,
             stat_value: json!(100),
             attr_ids: attr_ids.clone(),
             table_id: None,
@@ -1161,7 +1161,7 @@ mod tests {
         let backend_manager = binding.as_mut().unwrap();
         let epoch_id = 1;
         let attr_ids = vec![2, 1];
-        let stat_type = StatType::Cardinality as i32;
+        let stat_type = StatType::Cardinality;
 
         // Get initial stats
         let res = backend_manager
@@ -1181,7 +1181,7 @@ mod tests {
             .await
             .unwrap();
         let stat = Stat {
-            stat_type: StatType::Cardinality as i32,
+            stat_type: StatType::Cardinality,
             stat_value: json!(111),
             attr_ids: attr_ids.clone(),
             table_id: None,
