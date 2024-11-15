@@ -11,6 +11,13 @@ use sea_orm_migration::prelude::*;
 use serde_json::json;
 use std::sync::Arc;
 
+pub type GroupId = i32;
+pub type TableId = i32;
+pub type AttrId = i32;
+pub type ExprId = i32;
+pub type EpochId = i32;
+pub type StatId = i32;
+
 /// TODO: documentation
 pub enum CatalogSource {
     Iceberg(),
@@ -79,35 +86,23 @@ pub struct Cost {
 /// TODO: documentation
 #[trait_variant::make(Send)]
 pub trait CostModelStorageLayer {
-    type GroupId;
-    type TableId;
-    type AttrId;
-    type ExprId;
-    type EpochId;
-    type StatId;
+    async fn create_new_epoch(&self, source: String, data: String) -> StorageResult<EpochId>;
 
-    // TODO: Change EpochId to event::Model::epoch_id
-    async fn create_new_epoch(&self, source: String, data: String) -> StorageResult<Self::EpochId>;
-
-    async fn update_stats_from_catalog(&self, c: CatalogSource) -> StorageResult<Self::EpochId>;
+    async fn update_stats_from_catalog(&self, c: CatalogSource) -> StorageResult<EpochId>;
 
     async fn update_stats(
         &self,
         stat: Stat,
         epoch_option: EpochOption,
-    ) -> StorageResult<Option<Self::EpochId>>;
+    ) -> StorageResult<Option<EpochId>>;
 
-    async fn store_cost(
-        &self,
-        expr_id: Self::ExprId,
-        cost: Cost,
-        epoch_id: Self::EpochId,
-    ) -> StorageResult<()>;
+    async fn store_cost(&self, expr_id: ExprId, cost: Cost, epoch_id: EpochId)
+        -> StorageResult<()>;
 
     async fn store_expr_stats_mappings(
         &self,
-        expr_id: Self::ExprId,
-        stat_ids: Vec<Self::StatId>,
+        expr_id: ExprId,
+        stat_ids: Vec<StatId>,
     ) -> StorageResult<()>;
 
     /// Get the statistics for a given table.
@@ -115,10 +110,10 @@ pub trait CostModelStorageLayer {
     /// If `epoch_id` is None, it will return the latest statistics.
     async fn get_stats_for_table(
         &self,
-        table_id: Self::TableId,
+        table_id: TableId,
         // TODO: Add enum for stat_type
         stat_type: i32,
-        epoch_id: Option<Self::EpochId>,
+        epoch_id: Option<EpochId>,
     ) -> StorageResult<Option<Json>>;
 
     /// Get the (joint) statistics for one or more attributes.
@@ -126,16 +121,16 @@ pub trait CostModelStorageLayer {
     /// If `epoch_id` is None, it will return the latest statistics.
     async fn get_stats_for_attr(
         &self,
-        attr_ids: Vec<Self::AttrId>,
+        attr_ids: Vec<AttrId>,
         stat_type: i32,
-        epoch_id: Option<Self::EpochId>,
+        epoch_id: Option<EpochId>,
     ) -> StorageResult<Option<Json>>;
 
     async fn get_cost_analysis(
         &self,
-        expr_id: Self::ExprId,
-        epoch_id: Self::EpochId,
+        expr_id: ExprId,
+        epoch_id: EpochId,
     ) -> StorageResult<Option<Cost>>;
 
-    async fn get_cost(&self, expr_id: Self::ExprId) -> StorageResult<Option<Cost>>;
+    async fn get_cost(&self, expr_id: ExprId) -> StorageResult<Option<Cost>>;
 }

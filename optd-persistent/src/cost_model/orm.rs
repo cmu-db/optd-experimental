@@ -13,13 +13,10 @@ use sea_orm::{
 use serde_json::json;
 
 use super::catalog::mock_catalog::{self, MockCatalog};
-use super::interface::{CatalogSource, EpochOption, Stat};
+use super::interface::{AttrId, CatalogSource, EpochId, EpochOption, ExprId, Stat, StatId};
 
 impl BackendManager {
-    fn get_description_from_attr_ids(
-        &self,
-        attr_ids: Vec<<BackendManager as CostModelStorageLayer>::AttrId>,
-    ) -> String {
+    fn get_description_from_attr_ids(&self, attr_ids: Vec<AttrId>) -> String {
         let mut attr_ids = attr_ids;
         attr_ids.sort();
         attr_ids
@@ -31,15 +28,8 @@ impl BackendManager {
 }
 
 impl CostModelStorageLayer for BackendManager {
-    type GroupId = i32;
-    type TableId = i32;
-    type AttrId = i32;
-    type ExprId = i32;
-    type EpochId = i32;
-    type StatId = i32;
-
     /// TODO: documentation
-    async fn create_new_epoch(&self, source: String, data: String) -> StorageResult<Self::EpochId> {
+    async fn create_new_epoch(&self, source: String, data: String) -> StorageResult<EpochId> {
         let new_event = event::ActiveModel {
             source_variant: sea_orm::ActiveValue::Set(source),
             timestamp: sea_orm::ActiveValue::Set(Utc::now()),
@@ -51,7 +41,7 @@ impl CostModelStorageLayer for BackendManager {
     }
 
     /// TODO: documentation
-    async fn update_stats_from_catalog(&self, c: CatalogSource) -> StorageResult<Self::EpochId> {
+    async fn update_stats_from_catalog(&self, c: CatalogSource) -> StorageResult<EpochId> {
         let transaction = self.db.begin().await?;
         let source = match c {
             CatalogSource::Mock => "Mock",
@@ -208,7 +198,7 @@ impl CostModelStorageLayer for BackendManager {
         &self,
         stat: Stat,
         epoch_option: EpochOption,
-    ) -> StorageResult<Option<Self::EpochId>> {
+    ) -> StorageResult<Option<EpochId>> {
         let transaction = self.db.begin().await?;
         // 0. Check if the stat already exists. If exists, get stat_id, else insert into statistic table.
         let stat_id = match stat.table_id {
@@ -353,8 +343,8 @@ impl CostModelStorageLayer for BackendManager {
     /// TODO: documentation
     async fn store_expr_stats_mappings(
         &self,
-        expr_id: Self::ExprId,
-        stat_ids: Vec<Self::StatId>,
+        expr_id: ExprId,
+        stat_ids: Vec<StatId>,
     ) -> StorageResult<()> {
         let to_insert_mappings = stat_ids
             .iter()
@@ -376,7 +366,7 @@ impl CostModelStorageLayer for BackendManager {
         &self,
         table_id: i32,
         stat_type: i32,
-        epoch_id: Option<Self::EpochId>,
+        epoch_id: Option<EpochId>,
     ) -> StorageResult<Option<Json>> {
         match epoch_id {
             Some(epoch_id) => Ok(VersionedStatistic::find()
@@ -402,9 +392,9 @@ impl CostModelStorageLayer for BackendManager {
     /// TODO: documentation
     async fn get_stats_for_attr(
         &self,
-        mut attr_ids: Vec<Self::AttrId>,
+        mut attr_ids: Vec<AttrId>,
         stat_type: i32,
-        epoch_id: Option<Self::EpochId>,
+        epoch_id: Option<EpochId>,
     ) -> StorageResult<Option<Json>> {
         let attr_num = attr_ids.len() as i32;
         // The description is to concat `attr_ids` using commas
@@ -440,8 +430,8 @@ impl CostModelStorageLayer for BackendManager {
     /// TODO: documentation
     async fn get_cost_analysis(
         &self,
-        expr_id: Self::ExprId,
-        epoch_id: Self::EpochId,
+        expr_id: ExprId,
+        epoch_id: EpochId,
     ) -> StorageResult<Option<Cost>> {
         let cost = PlanCost::find()
             .filter(plan_cost::Column::PhysicalExpressionId.eq(expr_id))
@@ -457,7 +447,7 @@ impl CostModelStorageLayer for BackendManager {
         }))
     }
 
-    async fn get_cost(&self, expr_id: Self::ExprId) -> StorageResult<Option<Cost>> {
+    async fn get_cost(&self, expr_id: ExprId) -> StorageResult<Option<Cost>> {
         let cost = PlanCost::find()
             .filter(plan_cost::Column::PhysicalExpressionId.eq(expr_id))
             .order_by_desc(plan_cost::Column::EpochId)
@@ -475,9 +465,9 @@ impl CostModelStorageLayer for BackendManager {
     /// TODO: documentation
     async fn store_cost(
         &self,
-        physical_expression_id: Self::ExprId,
+        physical_expression_id: ExprId,
         cost: Cost,
-        epoch_id: Self::EpochId,
+        epoch_id: EpochId,
     ) -> StorageResult<()> {
         let expr_exists = PhysicalExpression::find_by_id(physical_expression_id)
             .one(&self.db)
