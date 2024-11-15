@@ -7,6 +7,10 @@ use super::id_pred::IdPred;
 /// An [`AttributeRefPred`] has two children:
 /// 1. The table id, represented by an [`IdPred`].
 /// 2. The index of the column, represented by an [`IdPred`].
+///
+/// Currently, [`AttributeRefPred`] only holds base table attributes, i.e. attributes
+/// that already exist in the table. More complex structures may be introduced in the
+/// future to represent derived attributes (e.g. t.v1 + t.v2).
 #[derive(Clone, Debug)]
 pub struct AttributeRefPred(pub ArcPredicateNode);
 

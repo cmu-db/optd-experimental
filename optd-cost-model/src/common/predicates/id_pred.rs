@@ -23,6 +23,11 @@ impl IdPred {
             .into(),
         )
     }
+
+    /// Gets the id stored in the predicate.
+    pub fn id(&self) -> usize {
+        self.0.data.clone().unwrap().as_u64() as usize
+    }
 }
 
 impl ReprPredicateNode for IdPred {
