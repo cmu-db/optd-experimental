@@ -189,7 +189,7 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
             let attr_ref_expr = attr_ref_exprs
                 .first()
                 .expect("we just checked that attr_ref_exprs.len() == 1");
-            let attr_ref_idx = attr_ref_expr.index();
+            let attr_ref_idx = attr_ref_expr.attr_index();
 
             // TODO: Consider attribute is a derived attribute
             if values.len() == 1 {
@@ -415,7 +415,9 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
             return Ok(UNIMPLEMENTED_SEL);
         }
 
-        let attr_ref_idx = AttributeRefPred::from_pred_node(child).unwrap().index();
+        let attr_ref_idx = AttributeRefPred::from_pred_node(child)
+            .unwrap()
+            .attr_index();
 
         // TODO: Consider attribute is a derived attribute
         let pattern = ConstantPred::from_pred_node(pattern)
@@ -486,7 +488,9 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
         }
 
         // Convert child and const expressions to concrete types.
-        let attr_ref_idx = AttributeRefPred::from_pred_node(child).unwrap().index();
+        let attr_ref_idx = AttributeRefPred::from_pred_node(child)
+            .unwrap()
+            .attr_index();
         let list_exprs = list_exprs
             .into_iter()
             .map(|expr| {
@@ -581,7 +585,7 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
                     PredicateType::AttributeRef => {
                         let attr_ref_expr = AttributeRefPred::from_pred_node(cast_expr_child)
                             .expect("we already checked that the type is AttributeRef");
-                        let attr_ref_idx = attr_ref_expr.index();
+                        let attr_ref_idx = attr_ref_expr.attr_index();
                         cast_node = attr_ref_expr.into_pred_node();
                         // The "invert" cast is to invert the cast so that we're casting the
                         // non_cast_node to the attribute's original type.

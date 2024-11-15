@@ -1,33 +1,38 @@
-use crate::common::{
-    nodes::{ArcPredicateNode, PredicateNode, PredicateType, ReprPredicateNode},
-    values::Value,
-};
+use crate::common::nodes::{ArcPredicateNode, PredicateNode, PredicateType, ReprPredicateNode};
 
+use super::id_pred::IdPred;
+
+/// [`AttributeRefPred`] represents a reference to a column in a relation.
+///
+/// An [`AttributeRefPred`] has two children:
+/// 1. The table id, represented by an [`IdPred`].
+/// 2. The index of the column, represented by an [`IdPred`].
 #[derive(Clone, Debug)]
 pub struct AttributeRefPred(pub ArcPredicateNode);
 
 impl AttributeRefPred {
-    /// Creates a new `ColumnRef` expression.
-    pub fn new(attribute_idx: usize) -> AttributeRefPred {
-        // this conversion is always safe since usize is at most u64
-        let u64_attribute_idx = attribute_idx as u64;
+    pub fn new(table_id: usize, attribute_idx: usize) -> AttributeRefPred {
         AttributeRefPred(
             PredicateNode {
                 typ: PredicateType::AttributeRef,
-                children: vec![],
-                data: Some(Value::UInt64(u64_attribute_idx)),
+                children: vec![
+                    IdPred::new(table_id).into_pred_node(),
+                    IdPred::new(attribute_idx).into_pred_node(),
+                ],
+                data: None,
             }
             .into(),
         )
     }
 
-    fn get_data_usize(&self) -> usize {
-        self.0.data.as_ref().unwrap().as_u64() as usize
+    /// Gets the table id.
+    pub fn table_id(&self) -> usize {
+        self.0.child(0).data.as_ref().unwrap().as_u64() as usize
     }
 
-    /// Gets the column index.
-    pub fn index(&self) -> usize {
-        self.get_data_usize()
+    /// Gets the attribute index.
+    pub fn attr_index(&self) -> usize {
+        self.0.child(1).data.as_ref().unwrap().as_u64() as usize
     }
 }
 

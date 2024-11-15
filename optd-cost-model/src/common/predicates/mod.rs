@@ -4,6 +4,7 @@ pub mod cast_pred;
 pub mod constant_pred;
 pub mod data_type_pred;
 pub mod func_pred;
+pub mod id_pred;
 pub mod in_list_pred;
 pub mod like_pred;
 pub mod list_pred;

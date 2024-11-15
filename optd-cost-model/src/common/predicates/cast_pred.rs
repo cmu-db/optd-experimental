@@ -4,6 +4,11 @@ use crate::common::nodes::{ArcPredicateNode, PredicateNode, PredicateType, ReprP
 
 use super::data_type_pred::DataTypePred;
 
+/// [`CastPred`] casts a column from one data type to another.
+///
+/// A [`CastPred`] has two children:
+/// 1. The original data to cast
+/// 2. The target data type to cast to
 #[derive(Clone, Debug)]
 pub struct CastPred(pub ArcPredicateNode);
 
