@@ -37,7 +37,7 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
                             let table_id = attr_ref.table_id();
                             let attr_idx = attr_ref.attr_index();
                             let stats_option =
-                                self.get_attribute_comb_stats(TableId(table_id), &vec![attr_idx])?;
+                                self.get_attribute_comb_stats(TableId(table_id), &[attr_idx])?;
 
                             let ndistinct = match stats_option {
                                 Some(stats) => stats.ndistinct,
