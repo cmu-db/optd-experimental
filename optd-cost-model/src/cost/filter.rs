@@ -22,24 +22,12 @@ use crate::{
         values::Value,
     },
     cost_model::CostModelImpl,
-    stats::{AttributeCombValue, AttributeCombValueStats},
+    stats::{
+        AttributeCombValue, AttributeCombValueStats, DEFAULT_EQ_SEL, DEFAULT_INEQ_SEL,
+        FIXED_CHAR_SEL_FACTOR, FULL_WILDCARD_SEL_FACTOR, UNIMPLEMENTED_SEL,
+    },
     CostModelResult, EstimatedStatistic,
 };
-
-// A placeholder for unimplemented!() for codepaths which are accessed by plannertest
-const UNIMPLEMENTED_SEL: f64 = 0.01;
-// Default statistics. All are from selfuncs.h in Postgres unless specified otherwise
-// Default selectivity estimate for equalities such as "A = b"
-const DEFAULT_EQ_SEL: f64 = 0.005;
-// Default selectivity estimate for inequalities such as "A < b"
-const DEFAULT_INEQ_SEL: f64 = 0.3333333333333333;
-// Used for estimating pattern selectivity character-by-character. These numbers
-// are not used on their own. Depending on the characters in the pattern, the
-// selectivity is multiplied by these factors.
-//
-// See `FULL_WILDCARD_SEL` and `FIXED_CHAR_SEL` in Postgres.
-const FULL_WILDCARD_SEL_FACTOR: f64 = 5.0;
-const FIXED_CHAR_SEL_FACTOR: f64 = 0.2;
 
 impl<S: CostModelStorageLayer> CostModelImpl<S> {
     // TODO: is it a good design to pass table_id here? I think it needs to be refactored.
