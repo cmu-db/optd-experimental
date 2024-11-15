@@ -118,6 +118,7 @@ impl Memo for BackendManager {
         &self,
         group_id: Self::GroupId,
         logical_expression: Self::LogicalExpression,
+        children: Vec<Self::LogicalExpressionId>,
     ) -> StorageResult<()> {
         if logical_expression.group_id != group_id {
             Err(MemoError::InvalidExpression)?
@@ -139,6 +140,7 @@ impl Memo for BackendManager {
         &self,
         group_id: Self::GroupId,
         physical_expression: Self::PhysicalExpression,
+        children: Vec<Self::LogicalExpressionId>,
     ) -> StorageResult<()> {
         if physical_expression.group_id != group_id {
             Err(MemoError::InvalidExpression)?
@@ -160,6 +162,7 @@ impl Memo for BackendManager {
     async fn add_logical_expression(
         &self,
         expression: Self::LogicalExpression,
+        children: Vec<Self::LogicalExpressionId>,
     ) -> StorageResult<(Self::GroupId, Self::LogicalExpressionId)> {
         // Lookup all expressions that have the same fingerprint. There may be false positives, but
         // we will check for those later.

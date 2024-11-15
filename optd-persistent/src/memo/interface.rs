@@ -108,6 +108,7 @@ pub trait Memo {
         &self,
         group_id: Self::GroupId,
         logical_expression: Self::LogicalExpression,
+        children: Vec<Self::LogicalExpressionId>,
     ) -> StorageResult<()>;
 
     /// Adds a physical expression to an existing group via its [`Self::GroupId`].
@@ -117,6 +118,7 @@ pub trait Memo {
         &self,
         group_id: Self::GroupId,
         physical_expression: Self::PhysicalExpression,
+        children: Vec<Self::LogicalExpressionId>,
     ) -> StorageResult<()>;
 
     /// Adds a new logical expression into the memo table, creating a new group if the expression
@@ -134,5 +136,6 @@ pub trait Memo {
     async fn add_logical_expression(
         &self,
         expression: Self::LogicalExpression,
+        children: Vec<Self::LogicalExpressionId>,
     ) -> StorageResult<(Self::GroupId, Self::LogicalExpressionId)>;
 }
