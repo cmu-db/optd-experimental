@@ -3,13 +3,10 @@ use std::sync::Arc;
 
 use optd_persistent::{
     cost_model::interface::{Attr, StatType},
-    BackendManager, CostModelStorageLayer,
+    CostModelStorageLayer,
 };
 
-use crate::{
-    common::types::TableId, stats::AttributeCombValueStats, CostModelError, CostModelResult,
-    SemanticError,
-};
+use crate::{common::types::TableId, stats::AttributeCombValueStats, CostModelResult};
 
 /// TODO: documentation
 pub struct CostModelStorageManager<S: CostModelStorageLayer> {
@@ -29,17 +26,11 @@ impl<S: CostModelStorageLayer> CostModelStorageManager<S> {
         &self,
         table_id: TableId,
         attr_base_index: i32,
-    ) -> CostModelResult<Attr> {
-        let attr = self
+    ) -> CostModelResult<Option<Attr>> {
+        Ok(self
             .backend_manager
             .get_attribute(table_id.into(), attr_base_index)
-            .await?;
-        attr.ok_or_else(|| {
-            CostModelError::SemanticError(SemanticError::AttributeNotFound(
-                table_id,
-                attr_base_index,
-            ))
-        })
+            .await?)
     }
 
     /// TODO: documentation
