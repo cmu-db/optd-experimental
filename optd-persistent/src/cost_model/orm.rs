@@ -659,7 +659,7 @@ mod tests {
         assert!(stat_res.is_ok());
         assert_eq!(stat_res.unwrap().unwrap(), json!(300));
         let stat_res = backend_manager
-            .get_stats_for_attr([2].to_vec(), StatType::NotNullCount, None)
+            .get_stats_for_attr([2].to_vec(), StatType::NonNullCount, None)
             .await;
         assert!(stat_res.is_ok());
         assert_eq!(stat_res.unwrap().unwrap(), json!(200));
@@ -679,7 +679,7 @@ mod tests {
             .await
             .unwrap();
         let stat = Stat {
-            stat_type: StatType::NotNullCount,
+            stat_type: StatType::NonNullCount,
             stat_value: json!(100),
             attr_ids: vec![1],
             table_id: None,
@@ -698,7 +698,7 @@ mod tests {
         println!("{:?}", stat_res);
         assert_eq!(stat_res[0].number_of_attributes, 1);
         assert_eq!(stat_res[0].description, "1".to_string());
-        assert_eq!(stat_res[0].variant_tag, StatType::NotNullCount as i32);
+        assert_eq!(stat_res[0].variant_tag, StatType::NonNullCount as i32);
         let stat_attr_res = StatisticToAttributeJunction::find()
             .filter(statistic_to_attribute_junction::Column::StatisticId.eq(stat_res[0].id))
             .all(&backend_manager.db)
@@ -761,7 +761,7 @@ mod tests {
             .await
             .unwrap();
         let stat2 = Stat {
-            stat_type: StatType::NotNullCount,
+            stat_type: StatType::NonNullCount,
             stat_value: json!(200),
             attr_ids: vec![1],
             table_id: None,
@@ -815,7 +815,7 @@ mod tests {
         // 3. Update existed stat with the same value
         let epoch_num = Event::find().all(&backend_manager.db).await.unwrap().len();
         let stat3 = Stat {
-            stat_type: StatType::NotNullCount,
+            stat_type: StatType::NonNullCount,
             stat_value: json!(200),
             attr_ids: vec![1],
             table_id: None,

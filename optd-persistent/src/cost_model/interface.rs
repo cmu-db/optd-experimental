@@ -48,14 +48,20 @@ pub enum ConstraintType {
 /// TODO: documentation
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum StatType {
-    /// A combination of multiple statistics, e.g. most common values, distribution.
-    Comb,
-    /// `TableRowCount` only applies to table statistics.
+    /// The row count in a table. `TableRowCount` only applies to table statistics.
     TableRowCount,
-    NotNullCount,
+    /// The number of non-null values in a column.
+    NonNullCount,
+    /// The number of distinct values in a column.
     Cardinality,
+    /// The minimum value in a column.
     Min,
+    /// The maximum value in a column.
     Max,
+    /// The frequency of each value in a column.
+    MostCommonValues,
+    /// The distribution of values in a column.
+    Distribution,
 }
 
 /// TODO: documentation
