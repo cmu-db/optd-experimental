@@ -116,8 +116,59 @@ impl AttributeCombValueStats {
     }
 }
 
-impl From<serde_json::Value> for AttributeCombValueStats {
-    fn from(value: serde_json::Value) -> Self {
-        serde_json::from_value(value).unwrap()
+#[cfg(test)]
+mod tests {
+    use super::{Counter, MostCommonValues};
+    use crate::{common::values::Value, stats::AttributeCombValue};
+    use serde_json::json;
+
+    #[test]
+    fn test_most_common_values() {
+        let elem1 = vec![Some(Value::Int32(1))];
+        let elem2 = vec![Some(Value::Int32(2))];
+        let mut counter = Counter::new(&[elem1.clone(), elem2.clone()]);
+        counter.insert_element(elem1.clone(), 5);
+        counter.insert_element(elem2.clone(), 15);
+
+        let mcvs = MostCommonValues::Counter(counter);
+        assert_eq!(mcvs.freq(&elem1), Some(0.25));
+        assert_eq!(mcvs.freq(&elem2), Some(0.75));
+        assert_eq!(mcvs.total_freq(), 1.0);
+
+        let elem1_cloned = elem1.clone();
+        let pred1 = Box::new(move |x: &AttributeCombValue| x == &elem1_cloned);
+        let pred2 = Box::new(move |x: &AttributeCombValue| x != &elem1);
+        assert_eq!(mcvs.freq_over_pred(pred1), 0.25);
+        assert_eq!(mcvs.freq_over_pred(pred2), 0.75);
+
+        assert_eq!(mcvs.cnt(), 2);
     }
+
+    #[test]
+    fn test_most_common_values_serde() {
+        let elem1 = vec![Some(Value::Int32(1))];
+        let elem2 = vec![Some(Value::Int32(2))];
+        let mut counter = Counter::new(&[elem1.clone(), elem2.clone()]);
+        counter.insert_element(elem1.clone(), 5);
+        counter.insert_element(elem2.clone(), 15);
+
+        let mcvs = MostCommonValues::Counter(counter);
+        let serialized = serde_json::to_value(&mcvs).unwrap();
+        println!("serialized: {:?}", serialized);
+
+        let deserialized: MostCommonValues = serde_json::from_value(serialized).unwrap();
+        assert_eq!(mcvs.freq(&elem1), Some(0.25));
+        assert_eq!(mcvs.freq(&elem2), Some(0.75));
+        assert_eq!(mcvs.total_freq(), 1.0);
+
+        let elem1_cloned = elem1.clone();
+        let pred1 = Box::new(move |x: &AttributeCombValue| x == &elem1_cloned);
+        let pred2 = Box::new(move |x: &AttributeCombValue| x != &elem1);
+        assert_eq!(mcvs.freq_over_pred(pred1), 0.25);
+        assert_eq!(mcvs.freq_over_pred(pred2), 0.75);
+
+        assert_eq!(mcvs.cnt(), 2);
+    }
+
+    // TODO: Add tests for Distribution
 }
