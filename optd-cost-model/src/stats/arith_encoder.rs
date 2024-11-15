@@ -7,7 +7,7 @@
 //! Non-alpha-numeric characters are relegated to the end of the encoded value,
 //! rendering them indistinguishable from one another in this context.
 
-use std::{cell::LazyCell, collections::HashMap};
+use std::collections::HashMap;
 
 use once_cell::sync::Lazy;
 
