@@ -33,11 +33,10 @@ where
     }
 
     // Inserts an element in the Counter if it is being tracked.
-    pub fn insert_element(&mut self, elem: T, occ: i32) {
+    fn insert_element(&mut self, elem: T, occ: i32) {
         if let Some(frequency) = self.counts.get_mut(&elem) {
             *frequency += occ;
         }
-        self.total_count += occ;
     }
 
     /// Digests an array of data into the Counter structure.
