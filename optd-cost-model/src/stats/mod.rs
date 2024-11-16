@@ -72,6 +72,7 @@ impl MostCommonValues {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(tag = "type")]
 pub enum Distribution {
     TDigest(tdigest::TDigest<Value>),
     // Add more types here...
