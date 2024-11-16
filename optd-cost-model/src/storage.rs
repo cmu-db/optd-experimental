@@ -26,7 +26,7 @@ impl<S: CostModelStorageLayer> CostModelStorageManager<S> {
     /// Gets the attribute information for a given table and attribute base index.
     ///
     /// TODO: if we have memory cache,
-    /// we should add the reference. (&&Attr)
+    /// we should add the reference. (&Attr)
     pub async fn get_attribute_info(
         &self,
         table_id: TableId,
