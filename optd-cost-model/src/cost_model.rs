@@ -97,12 +97,13 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
     /// TODO: documentation
     /// TODO: if we have memory cache,
     /// we should add the reference. (&AttributeCombValueStats)
-    pub(crate) fn get_attribute_comb_stats(
+    pub(crate) async fn get_attribute_comb_stats(
         &self,
         table_id: TableId,
         attr_comb: &[usize],
     ) -> CostModelResult<Option<AttributeCombValueStats>> {
         self.storage_manager
             .get_attributes_comb_statistics(table_id, attr_comb)
+            .await
     }
 }

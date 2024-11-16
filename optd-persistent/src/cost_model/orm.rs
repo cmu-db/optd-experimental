@@ -14,7 +14,8 @@ use serde_json::json;
 
 use super::catalog::mock_catalog::{self, MockCatalog};
 use super::interface::{
-    Attr, AttrId, CatalogSource, EpochId, EpochOption, ExprId, Stat, StatId, StatType, TableId,
+    Attr, AttrId, AttrType, CatalogSource, EpochId, EpochOption, ExprId, Stat, StatId, StatType,
+    TableId,
 };
 
 impl BackendManager {
@@ -543,19 +544,28 @@ impl CostModelStorageLayer for BackendManager {
         table_id: TableId,
         attribute_base_index: i32,
     ) -> StorageResult<Option<Attr>> {
-        Ok(Attribute::find()
+        let attr_res = Attribute::find()
             .filter(attribute::Column::TableId.eq(table_id))
             .filter(attribute::Column::BaseAttributeNumber.eq(attribute_base_index))
             .one(&self.db)
-            .await?
-            .map(|attr| Attr {
-                table_id,
-                name: attr.name,
-                compression_method: attr.compression_method,
-                attr_type: attr.variant_tag,
-                base_index: attribute_base_index,
-                nullable: !attr.is_not_null,
-            }))
+            .await?;
+        match attr_res {
+            Some(attr) => match AttrType::try_from(attr.variant_tag) {
+                Ok(attr_type) => Ok(Some(Attr {
+                    table_id: attr.table_id,
+                    name: attr.name,
+                    compression_method: attr.compression_method,
+                    attr_type,
+                    base_index: attr.base_attribute_number,
+                    nullable: attr.is_not_null,
+                })),
+                Err(_) => Err(BackendError::BackendError(format!(
+                    "Failed to convert variant tag {} to AttrType",
+                    attr.variant_tag
+                ))),
+            },
+            None => Ok(None),
+        }
     }
 }
 

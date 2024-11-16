@@ -28,7 +28,7 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
     /// is composed of MCV frequency and non-MCV selectivity. MCV frequency is computed by
     /// adding up frequencies of MCVs that match the pattern. Non-MCV  selectivity is computed
     /// in the same way that Postgres computes selectivity for the wildcard part of the pattern.
-    pub(crate) fn get_like_selectivity(&self, like_expr: &LikePred) -> CostModelResult<f64> {
+    pub(crate) async fn get_like_selectivity(&self, like_expr: &LikePred) -> CostModelResult<f64> {
         let child = like_expr.child();
 
         // Check child is a attribute ref.
@@ -67,7 +67,10 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
 
         // Compute the selectivity in MCVs.
         // TODO: Handle the case where `attribute_stats` is None.
-        if let Some(attribute_stats) = self.get_attribute_comb_stats(table_id, &[attr_ref_idx])? {
+        if let Some(attribute_stats) = self
+            .get_attribute_comb_stats(table_id, &[attr_ref_idx])
+            .await?
+        {
             let (mcv_freq, null_frac) = {
                 let pred = Box::new(move |val: &AttributeCombValue| {
                     let string =

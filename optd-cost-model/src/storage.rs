@@ -1,16 +1,21 @@
 #![allow(unused_variables)]
 use std::sync::Arc;
 
-use optd_persistent::{
-    cost_model::interface::{Attr, StatType},
-    CostModelStorageLayer,
-};
+use optd_persistent::{cost_model::interface::StatType, CostModelStorageLayer};
+use serde::{Deserialize, Serialize};
 
 use crate::{
-    common::types::TableId,
+    common::{predicates::constant_pred::ConstantType, types::TableId},
     stats::{counter::Counter, AttributeCombValueStats, Distribution, MostCommonValues},
     CostModelResult,
 };
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Attribute {
+    pub name: String,
+    pub typ: ConstantType,
+    pub nullable: bool,
+}
 
 /// TODO: documentation
 pub struct CostModelStorageManager<S: CostModelStorageLayer> {
@@ -31,11 +36,16 @@ impl<S: CostModelStorageLayer> CostModelStorageManager<S> {
         &self,
         table_id: TableId,
         attr_base_index: i32,
-    ) -> CostModelResult<Option<Attr>> {
+    ) -> CostModelResult<Option<Attribute>> {
         Ok(self
             .backend_manager
             .get_attribute(table_id.into(), attr_base_index)
-            .await?)
+            .await?
+            .map(|attr| Attribute {
+                name: attr.name,
+                typ: ConstantType::from_persistent_attr_type(attr.attr_type),
+                nullable: attr.nullable,
+            }))
     }
 
     /// Gets the latest statistics for a given table.
@@ -53,13 +63,13 @@ impl<S: CostModelStorageLayer> CostModelStorageManager<S> {
     pub async fn get_attributes_comb_statistics(
         &self,
         table_id: TableId,
-        attr_base_indices: &[i32],
+        attr_base_indices: &[usize],
     ) -> CostModelResult<Option<AttributeCombValueStats>> {
         let dist: Option<Distribution> = self
             .backend_manager
             .get_stats_for_attr_indices_based(
                 table_id.into(),
-                attr_base_indices.to_vec(),
+                attr_base_indices.iter().map(|&x| x as i32).collect(),
                 StatType::Distribution,
                 None,
             )
@@ -70,7 +80,7 @@ impl<S: CostModelStorageLayer> CostModelStorageManager<S> {
             .backend_manager
             .get_stats_for_attr_indices_based(
                 table_id.into(),
-                attr_base_indices.to_vec(),
+                attr_base_indices.iter().map(|&x| x as i32).collect(),
                 StatType::MostCommonValues,
                 None,
             )
@@ -82,7 +92,7 @@ impl<S: CostModelStorageLayer> CostModelStorageManager<S> {
             .backend_manager
             .get_stats_for_attr_indices_based(
                 table_id.into(),
-                attr_base_indices.to_vec(),
+                attr_base_indices.iter().map(|&x| x as i32).collect(),
                 StatType::Cardinality,
                 None,
             )
@@ -94,7 +104,7 @@ impl<S: CostModelStorageLayer> CostModelStorageManager<S> {
             .backend_manager
             .get_stats_for_attr_indices_based(
                 table_id.into(),
-                attr_base_indices.to_vec(),
+                attr_base_indices.iter().map(|&x| x as i32).collect(),
                 StatType::TableRowCount,
                 None,
             )
@@ -105,7 +115,7 @@ impl<S: CostModelStorageLayer> CostModelStorageManager<S> {
             .backend_manager
             .get_stats_for_attr_indices_based(
                 table_id.into(),
-                attr_base_indices.to_vec(),
+                attr_base_indices.iter().map(|&x| x as i32).collect(),
                 StatType::NonNullCount,
                 None,
             )

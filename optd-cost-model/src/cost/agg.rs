@@ -8,11 +8,11 @@ use crate::{
     },
     cost_model::CostModelImpl,
     stats::DEFAULT_NUM_DISTINCT,
-    CostModelError, CostModelResult, EstimatedStatistic,
+    CostModelError, CostModelResult, EstimatedStatistic, SemanticError,
 };
 
 impl<S: CostModelStorageLayer> CostModelImpl<S> {
-    pub fn get_agg_row_cnt(
+    pub async fn get_agg_row_cnt(
         &self,
         group_by: ArcPredicateNode,
     ) -> CostModelResult<EstimatedStatistic> {
@@ -22,22 +22,24 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
         } else {
             // Multiply the n-distinct of all the group by columns.
             // TODO: improve with multi-dimensional n-distinct
-            let row_cnt = group_by.0.children.iter().try_fold(1, |acc, node| {
+            let mut row_cnt = 1;
+
+            for node in &group_by.0.children {
                 match node.typ {
                     PredicateType::AttributeRef => {
                         let attr_ref =
                             AttributeRefPred::from_pred_node(node.clone()).ok_or_else(|| {
-                                CostModelError::InvalidPredicate(
+                                SemanticError::InvalidPredicate(
                                     "Expected AttributeRef predicate".to_string(),
                                 )
                             })?;
                         if attr_ref.is_derived() {
-                            Ok(acc * DEFAULT_NUM_DISTINCT)
+                            row_cnt *= DEFAULT_NUM_DISTINCT;
                         } else {
                             let table_id = attr_ref.table_id();
                             let attr_idx = attr_ref.attr_index();
                             let stats_option =
-                                self.get_attribute_comb_stats(table_id, &[attr_idx])?;
+                                self.get_attribute_comb_stats(table_id, &[attr_idx]).await?;
 
                             let ndistinct = match stats_option {
                                 Some(stats) => stats.ndistinct,
@@ -46,15 +48,15 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
                                     DEFAULT_NUM_DISTINCT
                                 }
                             };
-                            Ok(acc * ndistinct)
+                            row_cnt *= ndistinct;
                         }
                     }
                     _ => {
                         // TODO: Consider the case where `GROUP BY 1`.
-                        panic!("GROUP BY must have attribute ref predicate")
+                        panic!("GROUP BY must have attribute ref predicate");
                     }
                 }
-            })?;
+            }
             Ok(EstimatedStatistic(row_cnt))
         }
     }

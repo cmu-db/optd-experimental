@@ -42,18 +42,25 @@ pub enum SemanticError {
     UnknownStatisticType,
     VersionedStatisticNotFound,
     AttributeNotFound(TableId, i32), // (table_id, attribute_base_index)
+    // FIXME: not sure if this should be put here
+    InvalidPredicate(String),
 }
 
 #[derive(Debug)]
 pub enum CostModelError {
     ORMError(BackendError),
     SemanticError(SemanticError),
-    InvalidPredicate(String),
 }
 
 impl From<BackendError> for CostModelError {
     fn from(err: BackendError) -> Self {
         CostModelError::ORMError(err)
+    }
+}
+
+impl From<SemanticError> for CostModelError {
+    fn from(err: SemanticError) -> Self {
+        CostModelError::SemanticError(err)
     }
 }
 

@@ -19,7 +19,7 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
     /// Also, get_attribute_equality_selectivity is a subroutine when computing range
     /// selectivity, which is another     reason for separating these into two functions
     /// is_eq means whether it's == or !=
-    pub(crate) fn get_attribute_equality_selectivity(
+    pub(crate) async fn get_attribute_equality_selectivity(
         &self,
         table_id: TableId,
         attr_base_index: usize,
@@ -28,8 +28,9 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
     ) -> CostModelResult<f64> {
         // TODO: The attribute could be a derived attribute
         let ret_sel = {
-            if let Some(attribute_stats) =
-                self.get_attribute_comb_stats(table_id, &[attr_base_index])?
+            if let Some(attribute_stats) = self
+                .get_attribute_comb_stats(table_id, &[attr_base_index])
+                .await?
             {
                 let eq_freq =
                     if let Some(freq) = attribute_stats.mcvs.freq(&vec![Some(value.clone())]) {
@@ -91,7 +92,7 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
     }
 
     /// Compute the frequency of values in a attribute less than the given value.
-    fn get_attribute_lt_value_freq(
+    async fn get_attribute_lt_value_freq(
         &self,
         attribute_stats: &AttributeCombValueStats,
         table_id: TableId,
@@ -102,7 +103,9 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
         // into total_leq_cdf this logic just so happens to be the exact same logic as
         // get_attribute_equality_selectivity implements
         let ret_freq = Self::get_attribute_leq_value_freq(attribute_stats, value)
-            - self.get_attribute_equality_selectivity(table_id, attr_base_index, value, true)?;
+            - self
+                .get_attribute_equality_selectivity(table_id, attr_base_index, value, true)
+                .await?;
         assert!(
             (0.0..=1.0).contains(&ret_freq),
             "ret_freq ({}) should be in [0, 1]",
@@ -116,7 +119,7 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
     /// Range predicates are handled entirely differently from equality predicates so this is its
     /// own function. If it is unable to find the statistics, it returns DEFAULT_INEQ_SEL.
     /// The selectivity is computed as quantile of the right bound minus quantile of the left bound.
-    pub(crate) fn get_attribute_range_selectivity(
+    pub(crate) async fn get_attribute_range_selectivity(
         &self,
         table_id: TableId,
         attr_base_index: usize,
@@ -124,17 +127,21 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
         end: Bound<&Value>,
     ) -> CostModelResult<f64> {
         // TODO: Consider attribute is a derived attribute
-        if let Some(attribute_stats) =
-            self.get_attribute_comb_stats(table_id, &[attr_base_index])?
+        if let Some(attribute_stats) = self
+            .get_attribute_comb_stats(table_id, &[attr_base_index])
+            .await?
         {
             let left_quantile = match start {
                 Bound::Unbounded => 0.0,
-                Bound::Included(value) => self.get_attribute_lt_value_freq(
-                    &attribute_stats,
-                    table_id,
-                    attr_base_index,
-                    value,
-                )?,
+                Bound::Included(value) => {
+                    self.get_attribute_lt_value_freq(
+                        &attribute_stats,
+                        table_id,
+                        attr_base_index,
+                        value,
+                    )
+                    .await?
+                }
                 Bound::Excluded(value) => {
                     Self::get_attribute_leq_value_freq(&attribute_stats, value)
                 }
@@ -144,12 +151,15 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
                 Bound::Included(value) => {
                     Self::get_attribute_leq_value_freq(&attribute_stats, value)
                 }
-                Bound::Excluded(value) => self.get_attribute_lt_value_freq(
-                    &attribute_stats,
-                    table_id,
-                    attr_base_index,
-                    value,
-                )?,
+                Bound::Excluded(value) => {
+                    self.get_attribute_lt_value_freq(
+                        &attribute_stats,
+                        table_id,
+                        attr_base_index,
+                        value,
+                    )
+                    .await?
+                }
             };
             assert!(
                 left_quantile <= right_quantile,

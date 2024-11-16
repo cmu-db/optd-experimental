@@ -4,6 +4,7 @@ use crate::entities::cascades_group;
 use crate::entities::logical_expression;
 use crate::entities::physical_expression;
 use crate::StorageResult;
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 use sea_orm::prelude::Json;
 use sea_orm::*;
 use sea_orm_migration::prelude::*;
@@ -24,8 +25,10 @@ pub enum CatalogSource {
 }
 
 /// TODO: documentation
+#[repr(i32)]
+#[derive(Copy, Clone, Debug, PartialEq, IntoPrimitive, TryFromPrimitive)]
 pub enum AttrType {
-    Integer,
+    Integer = 1,
     Float,
     Varchar,
     Boolean,
@@ -96,7 +99,7 @@ pub struct Attr {
     pub table_id: i32,
     pub name: String,
     pub compression_method: String,
-    pub attr_type: i32,
+    pub attr_type: AttrType,
     pub base_index: i32,
     pub nullable: bool,
 }

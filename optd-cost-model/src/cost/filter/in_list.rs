@@ -15,7 +15,7 @@ use crate::{
 impl<S: CostModelStorageLayer> CostModelImpl<S> {
     /// Only support attrA in (val1, val2, val3) where attrA is a attribute ref and
     /// val1, val2, val3 are constants.
-    pub(crate) fn get_in_list_selectivity(&self, expr: &InListPred) -> CostModelResult<f64> {
+    pub(crate) async fn get_in_list_selectivity(&self, expr: &InListPred) -> CostModelResult<f64> {
         let child = expr.child();
 
         // Check child is a attribute ref.
@@ -46,18 +46,19 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
         let negated = expr.negated();
 
         // TODO: Consider attribute is a derived attribute
-        let in_sel = list_exprs
-            .iter()
-            .try_fold(0.0, |acc, expr| {
-                let selectivity = self.get_attribute_equality_selectivity(
+        let mut in_sel = 0.0;
+        for expr in &list_exprs {
+            let selectivity = self
+                .get_attribute_equality_selectivity(
                     table_id,
                     attr_ref_idx,
                     &expr.value(),
                     /* is_equality */ true,
-                )?;
-                Ok(acc + selectivity)
-            })?
-            .min(1.0);
+                )
+                .await?;
+            in_sel += selectivity;
+        }
+        in_sel = in_sel.min(1.0);
         if negated {
             Ok(1.0 - in_sel)
         } else {

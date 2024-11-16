@@ -16,11 +16,12 @@ use crate::{
     // compute the selectivity.
     stats::{DEFAULT_EQ_SEL, DEFAULT_INEQ_SEL, UNIMPLEMENTED_SEL},
     CostModelResult,
+    SemanticError,
 };
 
 impl<S: CostModelStorageLayer> CostModelImpl<S> {
     /// Comparison operators are the base case for recursion in get_filter_selectivity()
-    pub(crate) fn get_comp_op_selectivity(
+    pub(crate) async fn get_comp_op_selectivity(
         &self,
         comp_bin_op_typ: BinOpType,
         left: ArcPredicateNode,
@@ -30,8 +31,11 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
 
         // I intentionally performed moves on left and right. This way, we don't accidentally use
         // them after this block
-        let (attr_ref_exprs, values, non_attr_ref_exprs, is_left_attr_ref) =
-            self.get_semantic_nodes(left, right)?;
+        let semantic_res = self.get_semantic_nodes(left, right).await;
+        if semantic_res.is_err() {
+            return Ok(Self::get_default_comparison_op_selectivity(comp_bin_op_typ));
+        }
+        let (attr_ref_exprs, values, non_attr_ref_exprs, is_left_attr_ref) = semantic_res.unwrap();
 
         // Handle the different cases of semantic nodes.
         if attr_ref_exprs.is_empty() {
@@ -51,13 +55,17 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
                 match comp_bin_op_typ {
                     BinOpType::Eq => {
                         self.get_attribute_equality_selectivity(table_id, attr_ref_idx, value, true)
+                            .await
                     }
-                    BinOpType::Neq => self.get_attribute_equality_selectivity(
-                        table_id,
-                        attr_ref_idx,
-                        value,
-                        false,
-                    ),
+                    BinOpType::Neq => {
+                        self.get_attribute_equality_selectivity(
+                            table_id,
+                            attr_ref_idx,
+                            value,
+                            false,
+                        )
+                        .await
+                    }
                     BinOpType::Lt | BinOpType::Leq | BinOpType::Gt | BinOpType::Geq => {
                         let start = match (comp_bin_op_typ, is_left_attr_ref) {
                                 (BinOpType::Lt, true) | (BinOpType::Geq, false) => Bound::Unbounded,
@@ -74,6 +82,7 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
                                 _ => unreachable!("all comparison BinOpTypes were enumerated. this should be unreachable"),
                             };
                         self.get_attribute_range_selectivity(table_id, attr_ref_idx, start, end)
+                            .await
                     }
                     _ => unreachable!(
                         "all comparison BinOpTypes were enumerated. this should be unreachable"
@@ -109,7 +118,7 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
     /// This is convenient to avoid repeating the same logic just with "left" and "right" swapped.
     /// The last return value is true when the input node (left) is a AttributeRefPred.
     #[allow(clippy::type_complexity)]
-    fn get_semantic_nodes(
+    async fn get_semantic_nodes(
         &self,
         left: ArcPredicateNode,
         right: ArcPredicateNode,
@@ -175,11 +184,16 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
                         // The "invert" cast is to invert the cast so that we're casting the
                         // non_cast_node to the attribute's original type.
                         // TODO(migration): double check
-                        let invert_cast_data_type = &(self
+                        // TODO: Consider attribute info is None.
+                        let attribute_info = self
                             .storage_manager
-                            .get_attribute_info(table_id, attr_ref_idx as i32)?
-                            .typ
-                            .into_data_type());
+                            .get_attribute_info(table_id, attr_ref_idx as i32)
+                            .await?
+                            .ok_or({
+                                SemanticError::AttributeNotFound(table_id, attr_ref_idx as i32)
+                            })?;
+
+                        let invert_cast_data_type = &attribute_info.typ.into_data_type();
 
                         match non_cast_node.typ {
                             PredicateType::AttributeRef => {

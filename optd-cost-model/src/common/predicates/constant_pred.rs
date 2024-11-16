@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use arrow_schema::{DataType, IntervalUnit};
+use optd_persistent::cost_model::interface::AttrType;
 use serde::{Deserialize, Serialize};
 
 use crate::common::{
@@ -88,6 +89,15 @@ impl ConstantType {
             ConstantType::IntervalMonthDateNano => DataType::Interval(IntervalUnit::MonthDayNano),
             ConstantType::Decimal => DataType::Float64,
             ConstantType::Utf8String => DataType::Utf8,
+        }
+    }
+
+    pub fn from_persistent_attr_type(attr_type: AttrType) -> Self {
+        match attr_type {
+            AttrType::Integer => ConstantType::Int32,
+            AttrType::Float => ConstantType::Float64,
+            AttrType::Varchar => ConstantType::Utf8String,
+            AttrType::Boolean => ConstantType::Bool,
         }
     }
 }
