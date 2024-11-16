@@ -9,7 +9,12 @@ use super::id_pred::IdPred;
 ///
 /// An [`AttributeRefPred`] has two children:
 /// 1. The table id, represented by an [`IdPred`].
-/// 2. The index of the column, represented by an [`IdPred`].
+/// 2. The index of the attribute, represented by an [`IdPred`].
+///
+/// Although it may be strange at first glance (table id and attribute base index
+/// aren't children of the attribute reference), but considering the attribute reference
+/// can be represented as table_id.attr_base_index, and it enables the cost model to
+/// obtain the information in a simple way without refactoring `data` field.
 ///
 /// **TODO**: Now we assume any IdPred is as same as the ones in the ORM layer.
 ///
@@ -23,12 +28,12 @@ use super::id_pred::IdPred;
 pub struct AttributeRefPred(pub ArcPredicateNode);
 
 impl AttributeRefPred {
-    pub fn new(table_id: usize, attribute_idx: usize) -> AttributeRefPred {
+    pub fn new(table_id: TableId, attribute_idx: usize) -> AttributeRefPred {
         AttributeRefPred(
             PredicateNode {
                 typ: PredicateType::AttributeRef,
                 children: vec![
-                    IdPred::new(table_id).into_pred_node(),
+                    IdPred::new(table_id.0).into_pred_node(),
                     IdPred::new(attribute_idx).into_pred_node(),
                 ],
                 data: None,
