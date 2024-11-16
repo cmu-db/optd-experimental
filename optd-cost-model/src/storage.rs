@@ -26,7 +26,7 @@ impl<S: CostModelStorageLayer> CostModelStorageManager<S> {
     /// Gets the attribute information for a given table and attribute base index.
     ///
     /// TODO: if we have memory cache,
-    /// we should add the reference. (&Field)
+    /// we should add the reference. (&&Attr)
     pub async fn get_attribute_info(
         &self,
         table_id: TableId,
@@ -40,7 +40,7 @@ impl<S: CostModelStorageLayer> CostModelStorageManager<S> {
 
     /// Gets the latest statistics for a given table.
     ///
-    /// Currently, in `AttributeCombValueStats`, only `Distribution` is optional.
+    /// TODO: Currently, in `AttributeCombValueStats`, only `Distribution` is optional.
     /// This poses a question about the behavior of the system if there is no corresponding
     /// `MostCommonValues`, `ndistinct`, or other statistics. We should have a clear
     /// specification about the behavior of the system in the presence of missing statistics.
@@ -127,3 +127,5 @@ impl<S: CostModelStorageLayer> CostModelStorageManager<S> {
         )))
     }
 }
+
+// TODO: add some tests, especially cover the error cases.
