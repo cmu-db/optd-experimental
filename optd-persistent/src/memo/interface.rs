@@ -9,7 +9,7 @@ use crate::StorageResult;
 ///
 /// TODO Figure out for each when to get the ID of a record or the entire record itself.
 #[trait_variant::make(Send)]
-pub trait Memo {
+pub trait MemoStorage {
     /// A type representing a group in the Cascades framework.
     type Group;
     /// A type representing a unique identifier for a group.

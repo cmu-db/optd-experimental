@@ -14,7 +14,7 @@ pub mod cost_model;
 pub use cost_model::interface::CostModelStorageLayer;
 
 mod memo;
-pub use memo::interface::Memo;
+pub use memo::interface::MemoStorage;
 
 /// The filename of the SQLite database for migration.
 pub const DATABASE_FILENAME: &str = "sqlite.db";
