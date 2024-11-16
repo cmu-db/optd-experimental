@@ -26,6 +26,12 @@ Finally, run this command to generate / overwrite the `entities` module in the `
 $ sea-orm-cli generate entity -u sqlite:./sqlite.db -o src/entities
 ```
 
+Detailed ORM documentation resides in the `migrator` module instead of the generated `entities` module. To view as rustdoc, run
+
+```sh
+$ cargo doc --document-private-items --open
+```
+
 # Demo
 
 To run the demo, run the root binary crate:
