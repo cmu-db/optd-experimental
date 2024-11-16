@@ -1,5 +1,3 @@
-use optd_persistent::CostModelStorageLayer;
-
 use crate::{
     common::{
         nodes::{ArcPredicateNode, PredicateType, ReprPredicateNode},
@@ -8,10 +6,11 @@ use crate::{
     },
     cost_model::CostModelImpl,
     stats::DEFAULT_NUM_DISTINCT,
+    storage::CostModelStorageManager,
     CostModelError, CostModelResult, EstimatedStatistic, SemanticError,
 };
 
-impl<S: CostModelStorageLayer> CostModelImpl<S> {
+impl<S: CostModelStorageManager> CostModelImpl<S> {
     pub async fn get_agg_row_cnt(
         &self,
         group_by: ArcPredicateNode,

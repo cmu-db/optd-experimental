@@ -375,6 +375,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "assert_approx_eq"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3c07dab4369547dbe5114677b33fbbf724971019f3818172d59a97a61c774ffd"
+
+[[package]]
 name = "async-compression"
 version = "0.4.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2239,6 +2245,7 @@ name = "optd-cost-model"
 version = "0.1.0"
 dependencies = [
  "arrow-schema 53.2.0",
+ "assert_approx_eq",
  "chrono",
  "crossbeam",
  "datafusion",
@@ -2250,6 +2257,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with",
+ "trait-variant",
 ]
 
 [[package]]

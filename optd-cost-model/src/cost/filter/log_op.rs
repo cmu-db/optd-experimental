@@ -1,12 +1,11 @@
-use optd_persistent::CostModelStorageLayer;
-
 use crate::{
     common::{nodes::ArcPredicateNode, predicates::log_op_pred::LogOpType},
     cost_model::CostModelImpl,
+    storage::CostModelStorageManager,
     CostModelResult,
 };
 
-impl<S: CostModelStorageLayer> CostModelImpl<S> {
+impl<S: CostModelStorageManager> CostModelImpl<S> {
     pub(crate) async fn get_log_op_selectivity(
         &self,
         log_op_typ: LogOpType,

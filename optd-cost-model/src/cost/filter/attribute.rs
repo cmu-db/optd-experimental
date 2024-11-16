@@ -1,17 +1,14 @@
 use std::ops::Bound;
 
-use optd_persistent::CostModelStorageLayer;
-
 use crate::{
     common::{types::TableId, values::Value},
     cost_model::CostModelImpl,
-    // TODO: If we return the default value, consider tell the upper level that we cannot
-    // compute the selectivity.
     stats::{AttributeCombValue, AttributeCombValueStats, DEFAULT_EQ_SEL, DEFAULT_INEQ_SEL},
+    storage::CostModelStorageManager,
     CostModelResult,
 };
 
-impl<S: CostModelStorageLayer> CostModelImpl<S> {
+impl<S: CostModelStorageManager> CostModelImpl<S> {
     /// Get the selectivity of an expression of the form "attribute equals value" (or "value equals
     /// attribute") Will handle the case of statistics missing
     /// Equality predicates are handled entirely differently from range predicates so this is its

@@ -1,5 +1,8 @@
 use std::fmt::Display;
 
+/// TODO: Implement from and to methods for the following types to enable conversion
+/// to and from their persistent counterparts.
+
 /// TODO: documentation
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Hash)]
 pub struct GroupId(pub usize);

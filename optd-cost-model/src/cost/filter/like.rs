@@ -1,5 +1,4 @@
 use datafusion::arrow::{array::StringArray, compute::like};
-use optd_persistent::CostModelStorageLayer;
 
 use crate::{
     common::{
@@ -12,10 +11,11 @@ use crate::{
     stats::{
         AttributeCombValue, FIXED_CHAR_SEL_FACTOR, FULL_WILDCARD_SEL_FACTOR, UNIMPLEMENTED_SEL,
     },
+    storage::CostModelStorageManager,
     CostModelResult,
 };
 
-impl<S: CostModelStorageLayer> CostModelImpl<S> {
+impl<S: CostModelStorageManager> CostModelImpl<S> {
     /// Compute the selectivity of a (NOT) LIKE expression.
     ///
     /// The logic is somewhat similar to Postgres but different. Postgres first estimates the

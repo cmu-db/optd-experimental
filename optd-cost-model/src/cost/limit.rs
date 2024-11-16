@@ -1,15 +1,14 @@
-use optd_persistent::CostModelStorageLayer;
-
 use crate::{
     common::{
         nodes::{ArcPredicateNode, ReprPredicateNode},
         predicates::constant_pred::ConstantPred,
     },
     cost_model::CostModelImpl,
+    storage::CostModelStorageManager,
     CostModelResult, EstimatedStatistic,
 };
 
-impl<S: CostModelStorageLayer> CostModelImpl<S> {
+impl<S: CostModelStorageManager> CostModelImpl<S> {
     pub(crate) fn get_limit_row_cnt(
         &self,
         child_row_cnt: EstimatedStatistic,

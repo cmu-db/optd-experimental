@@ -1,5 +1,3 @@
-use optd_persistent::CostModelStorageLayer;
-
 use crate::{
     common::{
         nodes::{PredicateType, ReprPredicateNode},
@@ -9,10 +7,11 @@ use crate::{
     },
     cost_model::CostModelImpl,
     stats::UNIMPLEMENTED_SEL,
+    storage::CostModelStorageManager,
     CostModelResult,
 };
 
-impl<S: CostModelStorageLayer> CostModelImpl<S> {
+impl<S: CostModelStorageManager> CostModelImpl<S> {
     /// Only support attrA in (val1, val2, val3) where attrA is a attribute ref and
     /// val1, val2, val3 are constants.
     pub(crate) async fn get_in_list_selectivity(&self, expr: &InListPred) -> CostModelResult<f64> {

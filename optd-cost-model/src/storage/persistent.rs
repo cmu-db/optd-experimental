@@ -10,6 +10,8 @@ use crate::{
     CostModelResult,
 };
 
+use super::CostModelStorageManager;
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Attribute {
     pub name: String,
@@ -18,21 +20,25 @@ pub struct Attribute {
 }
 
 /// TODO: documentation
-pub struct CostModelStorageManager<S: CostModelStorageLayer> {
+pub struct CostModelStorageManagerImpl<S: CostModelStorageLayer + Send + Sync> {
     pub backend_manager: Arc<S>,
     // TODO: in-memory cache
 }
 
-impl<S: CostModelStorageLayer> CostModelStorageManager<S> {
+impl<S: CostModelStorageLayer + Send + Sync> CostModelStorageManagerImpl<S> {
     pub fn new(backend_manager: Arc<S>) -> Self {
         Self { backend_manager }
     }
+}
 
+impl<S: CostModelStorageLayer + Send + Sync> CostModelStorageManager
+    for CostModelStorageManagerImpl<S>
+{
     /// Gets the attribute information for a given table and attribute base index.
     ///
     /// TODO: if we have memory cache,
     /// we should add the reference. (&Attr)
-    pub async fn get_attribute_info(
+    async fn get_attribute_info(
         &self,
         table_id: TableId,
         attr_base_index: i32,
@@ -60,7 +66,7 @@ impl<S: CostModelStorageLayer> CostModelStorageManager<S> {
     ///
     /// TODO: Shall we pass in an epoch here to make sure that the statistics are from the same
     /// epoch?
-    pub async fn get_attributes_comb_statistics(
+    async fn get_attributes_comb_statistics(
         &self,
         table_id: TableId,
         attr_base_indices: &[usize],

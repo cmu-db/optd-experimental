@@ -1,5 +1,3 @@
-use optd_persistent::CostModelStorageLayer;
-
 use crate::{
     common::{
         nodes::{ArcPredicateNode, PredicateType, ReprPredicateNode},
@@ -7,10 +5,11 @@ use crate::{
     },
     cost_model::CostModelImpl,
     stats::UNIMPLEMENTED_SEL,
+    storage::CostModelStorageManager,
     CostModelResult, EstimatedStatistic,
 };
 
-impl<S: CostModelStorageLayer> CostModelImpl<S> {
+impl<S: CostModelStorageManager> CostModelImpl<S> {
     // TODO: is it a good design to pass table_id here? I think it needs to be refactored.
     // Consider to remove table_id.
     pub async fn get_filter_row_cnt(

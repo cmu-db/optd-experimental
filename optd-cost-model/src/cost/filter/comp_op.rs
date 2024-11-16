@@ -1,7 +1,5 @@
 use std::ops::Bound;
 
-use optd_persistent::CostModelStorageLayer;
-
 use crate::{
     common::{
         nodes::{ArcPredicateNode, PredicateType, ReprPredicateNode},
@@ -12,14 +10,12 @@ use crate::{
         values::Value,
     },
     cost_model::CostModelImpl,
-    // TODO: If we return the default value, consider tell the upper level that we cannot
-    // compute the selectivity.
     stats::{DEFAULT_EQ_SEL, DEFAULT_INEQ_SEL, UNIMPLEMENTED_SEL},
-    CostModelResult,
-    SemanticError,
+    storage::CostModelStorageManager,
+    CostModelResult, SemanticError,
 };
 
-impl<S: CostModelStorageLayer> CostModelImpl<S> {
+impl<S: CostModelStorageManager> CostModelImpl<S> {
     /// Comparison operators are the base case for recursion in get_filter_selectivity()
     pub(crate) async fn get_comp_op_selectivity(
         &self,

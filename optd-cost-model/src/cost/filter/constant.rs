@@ -1,5 +1,3 @@
-use optd_persistent::CostModelStorageLayer;
-
 use crate::{
     common::{
         nodes::{ArcPredicateNode, PredicateType},
@@ -7,9 +5,10 @@ use crate::{
         values::Value,
     },
     cost_model::CostModelImpl,
+    storage::CostModelStorageManager,
 };
 
-impl<S: CostModelStorageLayer> CostModelImpl<S> {
+impl<S: CostModelStorageManager> CostModelImpl<S> {
     pub(crate) fn get_constant_selectivity(const_node: ArcPredicateNode) -> f64 {
         if let PredicateType::Constant(const_typ) = const_node.typ {
             if matches!(const_typ, ConstantType::Bool) {
