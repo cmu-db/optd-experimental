@@ -144,7 +144,7 @@ mod tests {
 
     use super::*;
 
-    pub type TestPerColumnStats = AttributeCombValueStats;
+    pub type TestPerAttributeStats = AttributeCombValueStats;
     // TODO: add tests for non-mock storage manager
     pub type TestOptCostModelMock = CostModelImpl<CostModelStorageMockManagerImpl>;
 
@@ -153,14 +153,17 @@ mod tests {
     pub const TABLE3_NAME: &str = "table3";
     pub const TABLE4_NAME: &str = "table4";
 
-    // one column is sufficient for all filter selectivity tests
-    pub fn create_one_column_cost_model_mock_storage(
-        per_column_stats: TestPerColumnStats,
+    // one attribute is sufficient for all filter selectivity tests
+    pub fn create_one_attribute_cost_model_mock_storage(
+        per_attribute_stats: TestPerAttributeStats,
     ) -> TestOptCostModelMock {
         let storage_manager = CostModelStorageMockManagerImpl::new(
             vec![(
                 String::from(TABLE1_NAME),
-                TableStats::new(100, vec![(vec![0], per_column_stats)].into_iter().collect()),
+                TableStats::new(
+                    100,
+                    vec![(vec![0], per_attribute_stats)].into_iter().collect(),
+                ),
             )]
             .into_iter()
             .collect(),
@@ -168,24 +171,24 @@ mod tests {
         CostModelImpl::new(storage_manager, CatalogSource::Mock)
     }
 
-    /// Create a cost model with two columns, one for each table. Each column has 100 values.
+    /// Create a cost model with two attributes, one for each table. Each attribute has 100 values.
     pub fn create_two_table_cost_model_mock_storage(
-        tbl1_per_column_stats: TestPerColumnStats,
-        tbl2_per_column_stats: TestPerColumnStats,
+        tbl1_per_attribute_stats: TestPerAttributeStats,
+        tbl2_per_attribute_stats: TestPerAttributeStats,
     ) -> TestOptCostModelMock {
         create_two_table_cost_model_custom_row_cnts_mock_storage(
-            tbl1_per_column_stats,
-            tbl2_per_column_stats,
+            tbl1_per_attribute_stats,
+            tbl2_per_attribute_stats,
             100,
             100,
         )
     }
 
-    /// Create a cost model with three columns, one for each table. Each column has 100 values.
+    /// Create a cost model with three attributes, one for each table. Each attribute has 100 values.
     pub fn create_three_table_cost_model(
-        tbl1_per_column_stats: TestPerColumnStats,
-        tbl2_per_column_stats: TestPerColumnStats,
-        tbl3_per_column_stats: TestPerColumnStats,
+        tbl1_per_attribute_stats: TestPerAttributeStats,
+        tbl2_per_attribute_stats: TestPerAttributeStats,
+        tbl3_per_attribute_stats: TestPerAttributeStats,
     ) -> TestOptCostModelMock {
         let storage_manager = CostModelStorageMockManagerImpl::new(
             vec![
@@ -193,21 +196,27 @@ mod tests {
                     String::from(TABLE1_NAME),
                     TableStats::new(
                         100,
-                        vec![(vec![0], tbl1_per_column_stats)].into_iter().collect(),
+                        vec![(vec![0], tbl1_per_attribute_stats)]
+                            .into_iter()
+                            .collect(),
                     ),
                 ),
                 (
                     String::from(TABLE2_NAME),
                     TableStats::new(
                         100,
-                        vec![(vec![0], tbl2_per_column_stats)].into_iter().collect(),
+                        vec![(vec![0], tbl2_per_attribute_stats)]
+                            .into_iter()
+                            .collect(),
                     ),
                 ),
                 (
                     String::from(TABLE3_NAME),
                     TableStats::new(
                         100,
-                        vec![(vec![0], tbl3_per_column_stats)].into_iter().collect(),
+                        vec![(vec![0], tbl3_per_attribute_stats)]
+                            .into_iter()
+                            .collect(),
                     ),
                 ),
             ]
@@ -217,12 +226,12 @@ mod tests {
         CostModelImpl::new(storage_manager, CatalogSource::Mock)
     }
 
-    /// Create a cost model with three columns, one for each table. Each column has 100 values.
+    /// Create a cost model with three attributes, one for each table. Each attribute has 100 values.
     pub fn create_four_table_cost_model_mock_storage(
-        tbl1_per_column_stats: TestPerColumnStats,
-        tbl2_per_column_stats: TestPerColumnStats,
-        tbl3_per_column_stats: TestPerColumnStats,
-        tbl4_per_column_stats: TestPerColumnStats,
+        tbl1_per_attribute_stats: TestPerAttributeStats,
+        tbl2_per_attribute_stats: TestPerAttributeStats,
+        tbl3_per_attribute_stats: TestPerAttributeStats,
+        tbl4_per_attribute_stats: TestPerAttributeStats,
     ) -> TestOptCostModelMock {
         let storage_manager = CostModelStorageMockManagerImpl::new(
             vec![
@@ -230,28 +239,36 @@ mod tests {
                     String::from(TABLE1_NAME),
                     TableStats::new(
                         100,
-                        vec![(vec![0], tbl1_per_column_stats)].into_iter().collect(),
+                        vec![(vec![0], tbl1_per_attribute_stats)]
+                            .into_iter()
+                            .collect(),
                     ),
                 ),
                 (
                     String::from(TABLE2_NAME),
                     TableStats::new(
                         100,
-                        vec![(vec![0], tbl2_per_column_stats)].into_iter().collect(),
+                        vec![(vec![0], tbl2_per_attribute_stats)]
+                            .into_iter()
+                            .collect(),
                     ),
                 ),
                 (
                     String::from(TABLE3_NAME),
                     TableStats::new(
                         100,
-                        vec![(vec![0], tbl3_per_column_stats)].into_iter().collect(),
+                        vec![(vec![0], tbl3_per_attribute_stats)]
+                            .into_iter()
+                            .collect(),
                     ),
                 ),
                 (
                     String::from(TABLE4_NAME),
                     TableStats::new(
                         100,
-                        vec![(vec![0], tbl4_per_column_stats)].into_iter().collect(),
+                        vec![(vec![0], tbl4_per_attribute_stats)]
+                            .into_iter()
+                            .collect(),
                     ),
                 ),
             ]
@@ -263,8 +280,8 @@ mod tests {
 
     /// We need custom row counts because some join algorithms rely on the row cnt
     pub fn create_two_table_cost_model_custom_row_cnts_mock_storage(
-        tbl1_per_column_stats: TestPerColumnStats,
-        tbl2_per_column_stats: TestPerColumnStats,
+        tbl1_per_attribute_stats: TestPerAttributeStats,
+        tbl2_per_attribute_stats: TestPerAttributeStats,
         tbl1_row_cnt: usize,
         tbl2_row_cnt: usize,
     ) -> TestOptCostModelMock {
@@ -274,14 +291,18 @@ mod tests {
                     String::from(TABLE1_NAME),
                     TableStats::new(
                         tbl1_row_cnt,
-                        vec![(vec![0], tbl1_per_column_stats)].into_iter().collect(),
+                        vec![(vec![0], tbl1_per_attribute_stats)]
+                            .into_iter()
+                            .collect(),
                     ),
                 ),
                 (
                     String::from(TABLE2_NAME),
                     TableStats::new(
                         tbl2_row_cnt,
-                        vec![(vec![0], tbl2_per_column_stats)].into_iter().collect(),
+                        vec![(vec![0], tbl2_per_attribute_stats)]
+                            .into_iter()
+                            .collect(),
                     ),
                 ),
             ]
@@ -339,5 +360,12 @@ mod tests {
             attr_ref(table_id, attr_ref_idx),
             cnst(Value::String(pattern.into())),
         )
+    }
+
+    /// The reason this isn't an associated function of PerAttributeStats is because that would require
+    ///   adding an empty type to the enum definitions of MostCommonValues and Distribution,
+    ///   which I wanted to avoid
+    pub(crate) fn get_empty_per_col_stats() -> TestPerAttributeStats {
+        TestPerAttributeStats::new(MostCommonValues::Counter(Counter::default()), 0, 0.0, None)
     }
 }
