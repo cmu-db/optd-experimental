@@ -1,0 +1,3 @@
+[workspace]
+members = ["optd-cost-model", "optd-persistent"]
+resolver = "2"
