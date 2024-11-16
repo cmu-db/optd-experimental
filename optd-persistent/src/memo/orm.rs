@@ -1,10 +1,10 @@
 use crate::{
     entities::{prelude::*, *},
-    BackendManager, {Memo, MemoError, StorageResult},
+    BackendManager, {MemoError, MemoStorage, StorageResult},
 };
 use sea_orm::*;
 
-impl Memo for BackendManager {
+impl MemoStorage for BackendManager {
     type Group = cascades_group::Model;
     type GroupId = i32;
     type LogicalExpression = logical_expression::Model;
