@@ -2,7 +2,6 @@
 use std::sync::Arc;
 
 use optd_persistent::{cost_model::interface::StatType, CostModelStorageLayer};
-use serde::{Deserialize, Serialize};
 
 use crate::{
     common::{predicates::constant_pred::ConstantType, types::TableId},
@@ -10,14 +9,7 @@ use crate::{
     CostModelResult,
 };
 
-use super::CostModelStorageManager;
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Attribute {
-    pub name: String,
-    pub typ: ConstantType,
-    pub nullable: bool,
-}
+use super::{Attribute, CostModelStorageManager};
 
 /// TODO: documentation
 pub struct CostModelStorageManagerImpl<S: CostModelStorageLayer + Send + Sync> {

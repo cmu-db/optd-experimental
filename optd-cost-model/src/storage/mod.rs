@@ -1,9 +1,20 @@
-use persistent::Attribute;
+use serde::{Deserialize, Serialize};
 
-use crate::{common::types::TableId, stats::AttributeCombValueStats, CostModelResult};
+use crate::{
+    common::{predicates::constant_pred::ConstantType, types::TableId},
+    stats::AttributeCombValueStats,
+    CostModelResult,
+};
 
 pub mod mock;
 pub mod persistent;
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Attribute {
+    pub name: String,
+    pub typ: ConstantType,
+    pub nullable: bool,
+}
 
 #[trait_variant::make(Send)]
 pub trait CostModelStorageManager {
