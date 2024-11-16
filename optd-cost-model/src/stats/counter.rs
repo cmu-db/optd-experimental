@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 /// The Counter structure to track exact frequencies of fixed elements.
 #[serde_with::serde_as]
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Default, Serialize, Deserialize, Debug)]
 pub struct Counter<T: PartialEq + Eq + Hash + Clone + Serialize + DeserializeOwned> {
     #[serde_as(as = "HashMap<serde_with::json::JsonString, _>")]
     counts: HashMap<T, i32>, // The exact counts of an element T.
@@ -33,7 +33,7 @@ where
     }
 
     // Inserts an element in the Counter if it is being tracked.
-    pub fn insert_element(&mut self, elem: T, occ: i32) {
+    fn insert_element(&mut self, elem: T, occ: i32) {
         if let Some(frequency) = self.counts.get_mut(&elem) {
             *frequency += occ;
         }

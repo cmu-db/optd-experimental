@@ -49,3 +49,33 @@ impl Display for EpochId {
         write!(f, "Epoch#{}", self.0)
     }
 }
+
+impl From<GroupId> for i32 {
+    fn from(id: GroupId) -> i32 {
+        id.0 as i32
+    }
+}
+
+impl From<ExprId> for i32 {
+    fn from(id: ExprId) -> i32 {
+        id.0 as i32
+    }
+}
+
+impl From<TableId> for i32 {
+    fn from(id: TableId) -> i32 {
+        id.0 as i32
+    }
+}
+
+impl From<AttrId> for i32 {
+    fn from(id: AttrId) -> i32 {
+        id.0 as i32
+    }
+}
+
+impl From<EpochId> for i32 {
+    fn from(id: EpochId) -> i32 {
+        id.0 as i32
+    }
+}

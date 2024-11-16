@@ -63,7 +63,7 @@ async fn init_all_tables() -> Result<(), sea_orm::error::DbErr> {
         name: Set("user_id".to_owned()),
         compression_method: Set("N".to_owned()),
         variant_tag: Set(AttrType::Integer as i32),
-        base_attribute_number: Set(1),
+        base_attribute_number: Set(0),
         is_not_null: Set(true),
     };
     let attribute2 = attribute::ActiveModel {
@@ -72,7 +72,7 @@ async fn init_all_tables() -> Result<(), sea_orm::error::DbErr> {
         name: Set("username".to_owned()),
         compression_method: Set("N".to_owned()),
         variant_tag: Set(AttrType::Varchar as i32),
-        base_attribute_number: Set(2),
+        base_attribute_number: Set(1),
         is_not_null: Set(true),
     };
     attribute::Entity::insert(attribute1)
