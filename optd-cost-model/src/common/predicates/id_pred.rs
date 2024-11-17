@@ -11,14 +11,12 @@ use crate::common::{
 pub struct IdPred(pub ArcPredicateNode);
 
 impl IdPred {
-    pub fn new(id: usize) -> IdPred {
-        // This conversion is always safe since usize is at most u64.
-        let u64_id = id as u64;
+    pub fn new(id: u64) -> IdPred {
         IdPred(
             PredicateNode {
                 typ: PredicateType::Id,
                 children: vec![],
-                data: Some(Value::UInt64(u64_id)),
+                data: Some(Value::UInt64(id)),
             }
             .into(),
         )

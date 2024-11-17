@@ -176,7 +176,7 @@ pub mod tests {
         CostModelImpl::new(storage_manager, CatalogSource::Mock)
     }
 
-    pub fn attr_ref(table_id: TableId, attr_base_index: usize) -> ArcPredicateNode {
+    pub fn attr_ref(table_id: TableId, attr_base_index: u64) -> ArcPredicateNode {
         AttributeRefPred::new(table_id, attr_base_index).into_pred_node()
     }
 
@@ -214,7 +214,7 @@ pub mod tests {
 
     pub fn in_list(
         table_id: TableId,
-        attr_ref_idx: usize,
+        attr_ref_idx: u64,
         list: Vec<Value>,
         negated: bool,
     ) -> InListPred {
@@ -225,7 +225,7 @@ pub mod tests {
         )
     }
 
-    pub fn like(table_id: TableId, attr_ref_idx: usize, pattern: &str, negated: bool) -> LikePred {
+    pub fn like(table_id: TableId, attr_ref_idx: u64, pattern: &str, negated: bool) -> LikePred {
         LikePred::new(
             negated,
             false,

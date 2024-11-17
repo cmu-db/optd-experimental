@@ -30,7 +30,7 @@ impl TableStats {
 }
 
 pub type BaseTableStats = HashMap<TableId, TableStats>;
-pub type BaseTableAttrInfo = HashMap<TableId, HashMap<i32, Attribute>>;
+pub type BaseTableAttrInfo = HashMap<TableId, HashMap<u64, Attribute>>; // (table_id, (attr_base_index, attr))
 
 pub struct CostModelStorageMockManagerImpl {
     pub(crate) per_table_stats_map: BaseTableStats,
@@ -58,7 +58,7 @@ impl CostModelStorageManager for CostModelStorageMockManagerImpl {
         let table_attr_infos = self.per_table_attr_infos_map.get(&table_id);
         match table_attr_infos {
             None => Ok(None),
-            Some(table_attr_infos) => match table_attr_infos.get(&attr_base_index) {
+            Some(table_attr_infos) => match table_attr_infos.get(&(attr_base_index as u64)) {
                 None => Ok(None),
                 Some(attr) => Ok(Some(attr.clone())),
             },

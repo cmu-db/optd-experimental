@@ -28,12 +28,12 @@ use super::id_pred::IdPred;
 pub struct AttributeRefPred(pub ArcPredicateNode);
 
 impl AttributeRefPred {
-    pub fn new(table_id: TableId, attribute_idx: usize) -> AttributeRefPred {
+    pub fn new(table_id: TableId, attribute_idx: u64) -> AttributeRefPred {
         AttributeRefPred(
             PredicateNode {
                 typ: PredicateType::AttributeRef,
                 children: vec![
-                    IdPred::new(table_id.0).into_pred_node(),
+                    IdPred::new(table_id.0 as u64).into_pred_node(),
                     IdPred::new(attribute_idx).into_pred_node(),
                 ],
                 data: None,

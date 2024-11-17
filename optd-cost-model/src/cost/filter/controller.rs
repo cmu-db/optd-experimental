@@ -240,7 +240,7 @@ mod tests {
     #[tokio::test]
     async fn test_attr_ref_leq_constint_no_mcvs_in_range() {
         let per_attribute_stats = TestPerAttributeStats::new(
-            MostCommonValues::SimpleFrequency(SimpleMap::new(vec![])),
+            MostCommonValues::SimpleFrequency(SimpleMap::default()),
             Some(Distribution::SimpleDistribution(SimpleMap::new(vec![(
                 Value::Int32(15),
                 0.7,
@@ -364,7 +364,7 @@ mod tests {
     #[tokio::test]
     async fn test_attr_ref_lt_constint_no_mcvs_in_range() {
         let per_attribute_stats = TestPerAttributeStats::new(
-            MostCommonValues::SimpleFrequency(SimpleMap::new(vec![])),
+            MostCommonValues::SimpleFrequency(SimpleMap::default()),
             Some(Distribution::SimpleDistribution(SimpleMap::new(vec![(
                 Value::Int32(15),
                 0.7,
@@ -492,7 +492,7 @@ mod tests {
     #[tokio::test]
     async fn test_attr_ref_gt_constint() {
         let per_attribute_stats = TestPerAttributeStats::new(
-            MostCommonValues::SimpleFrequency(SimpleMap::new(vec![])),
+            MostCommonValues::SimpleFrequency(SimpleMap::default()),
             Some(Distribution::SimpleDistribution(SimpleMap::new(vec![(
                 Value::Int32(15),
                 0.7,
@@ -530,7 +530,7 @@ mod tests {
     #[tokio::test]
     async fn test_attr_ref_geq_constint() {
         let per_attribute_stats = TestPerAttributeStats::new(
-            MostCommonValues::SimpleFrequency(SimpleMap::new(vec![])),
+            MostCommonValues::SimpleFrequency(SimpleMap::default()),
             Some(Distribution::SimpleDistribution(SimpleMap::new(vec![(
                 Value::Int32(15),
                 0.7,
@@ -798,7 +798,7 @@ mod tests {
     #[tokio::test]
     async fn test_cast_attr_ref_eq_attr_ref() {
         let per_attribute_stats = TestPerAttributeStats::new(
-            MostCommonValues::SimpleFrequency(SimpleMap::new(vec![])),
+            MostCommonValues::SimpleFrequency(SimpleMap::default()),
             None,
             0,
             0.0,
