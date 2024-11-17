@@ -99,3 +99,97 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use crate::{
+        common::{types::TableId, values::Value},
+        cost_model::tests::*,
+        stats::{
+            utilities::counter::Counter, MostCommonValues, FIXED_CHAR_SEL_FACTOR,
+            FULL_WILDCARD_SEL_FACTOR,
+        },
+    };
+
+    #[tokio::test]
+    async fn test_like_no_nulls() {
+        let mut mcvs_counts = HashMap::new();
+        mcvs_counts.insert(vec![Some(Value::String("abcd".into()))], 1);
+        mcvs_counts.insert(vec![Some(Value::String("abc".into()))], 1);
+        let mcvs_total_count = 10;
+        let per_attribute_stats = TestPerAttributeStats::new(
+            MostCommonValues::Counter(Counter::new_from_existing(mcvs_counts, mcvs_total_count)),
+            2,
+            0.0,
+            None,
+        );
+        let table_id = TableId(0);
+        let cost_model = create_cost_model_mock_storage(
+            vec![table_id],
+            vec![per_attribute_stats],
+            vec![None],
+            HashMap::new(),
+        );
+
+        assert_approx_eq::assert_approx_eq!(
+            cost_model
+                .get_like_selectivity(&like(table_id, 0, "%abcd%", false))
+                .await
+                .unwrap(),
+            0.1 + FULL_WILDCARD_SEL_FACTOR.powi(2) * FIXED_CHAR_SEL_FACTOR.powi(4)
+        );
+        assert_approx_eq::assert_approx_eq!(
+            cost_model
+                .get_like_selectivity(&like(table_id, 0, "%abc%", false))
+                .await
+                .unwrap(),
+            0.1 + 0.1 + FULL_WILDCARD_SEL_FACTOR.powi(2) * FIXED_CHAR_SEL_FACTOR.powi(3)
+        );
+        assert_approx_eq::assert_approx_eq!(
+            cost_model
+                .get_like_selectivity(&like(table_id, 0, "%abc%", true))
+                .await
+                .unwrap(),
+            1.0 - (0.1 + 0.1 + FULL_WILDCARD_SEL_FACTOR.powi(2) * FIXED_CHAR_SEL_FACTOR.powi(3))
+        );
+    }
+
+    #[tokio::test]
+    async fn test_like_with_nulls() {
+        let null_frac = 0.5;
+        let mut mcvs_counts = HashMap::new();
+        mcvs_counts.insert(vec![Some(Value::String("abcd".into()))], 1);
+        let mcvs_total_count = 10;
+        let per_attribute_stats = TestPerAttributeStats::new(
+            MostCommonValues::Counter(Counter::new_from_existing(mcvs_counts, mcvs_total_count)),
+            2,
+            null_frac,
+            None,
+        );
+        let table_id = TableId(0);
+        let cost_model = create_cost_model_mock_storage(
+            vec![table_id],
+            vec![per_attribute_stats],
+            vec![None],
+            HashMap::new(),
+        );
+
+        assert_approx_eq::assert_approx_eq!(
+            cost_model
+                .get_like_selectivity(&like(table_id, 0, "%abcd%", false))
+                .await
+                .unwrap(),
+            0.1 + FULL_WILDCARD_SEL_FACTOR.powi(2) * FIXED_CHAR_SEL_FACTOR.powi(4)
+        );
+        assert_approx_eq::assert_approx_eq!(
+            cost_model
+                .get_like_selectivity(&like(table_id, 0, "%abcd%", true))
+                .await
+                .unwrap(),
+            1.0 - (0.1 + FULL_WILDCARD_SEL_FACTOR.powi(2) * FIXED_CHAR_SEL_FACTOR.powi(4))
+                - null_frac
+        );
+    }
+}

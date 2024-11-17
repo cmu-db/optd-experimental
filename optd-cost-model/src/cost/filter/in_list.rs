@@ -65,3 +65,88 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use crate::{
+        common::{types::TableId, values::Value},
+        cost_model::tests::*,
+        stats::{utilities::counter::Counter, MostCommonValues},
+    };
+
+    #[tokio::test]
+    async fn test_in_list() {
+        let mut mcvs_counts = HashMap::new();
+        mcvs_counts.insert(vec![Some(Value::Int32(1))], 8);
+        mcvs_counts.insert(vec![Some(Value::Int32(2))], 2);
+        let mcvs_total_count = 10;
+        let per_attribute_stats = TestPerAttributeStats::new(
+            MostCommonValues::Counter(Counter::new_from_existing(mcvs_counts, mcvs_total_count)),
+            2,
+            0.0,
+            None,
+        );
+        let table_id = TableId(0);
+        let cost_model = create_cost_model_mock_storage(
+            vec![table_id],
+            vec![per_attribute_stats],
+            vec![None],
+            HashMap::new(),
+        );
+
+        assert_approx_eq::assert_approx_eq!(
+            cost_model
+                .get_in_list_selectivity(&in_list(table_id, 0, vec![Value::Int32(1)], false))
+                .await
+                .unwrap(),
+            0.8
+        );
+        assert_approx_eq::assert_approx_eq!(
+            cost_model
+                .get_in_list_selectivity(&in_list(
+                    table_id,
+                    0,
+                    vec![Value::Int32(1), Value::Int32(2)],
+                    false
+                ))
+                .await
+                .unwrap(),
+            1.0
+        );
+        assert_approx_eq::assert_approx_eq!(
+            cost_model
+                .get_in_list_selectivity(&in_list(table_id, 0, vec![Value::Int32(3)], false))
+                .await
+                .unwrap(),
+            0.0
+        );
+        assert_approx_eq::assert_approx_eq!(
+            cost_model
+                .get_in_list_selectivity(&in_list(table_id, 0, vec![Value::Int32(1)], true))
+                .await
+                .unwrap(),
+            0.2
+        );
+        assert_approx_eq::assert_approx_eq!(
+            cost_model
+                .get_in_list_selectivity(&in_list(
+                    table_id,
+                    0,
+                    vec![Value::Int32(1), Value::Int32(2)],
+                    true
+                ))
+                .await
+                .unwrap(),
+            0.0
+        );
+        assert_approx_eq::assert_approx_eq!(
+            cost_model
+                .get_in_list_selectivity(&in_list(table_id, 0, vec![Value::Int32(3)], true))
+                .await
+                .unwrap(),
+            1.0
+        );
+    }
+}
