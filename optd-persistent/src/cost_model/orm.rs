@@ -14,8 +14,8 @@ use serde_json::json;
 
 use super::catalog::mock_catalog::{self, MockCatalog};
 use super::interface::{
-    Attr, AttrId, AttrType, CatalogSource, EpochId, EpochOption, ExprId, Stat, StatId, StatType,
-    TableId,
+    Attr, AttrId, AttrIndex, AttrType, CatalogSource, EpochId, EpochOption, ExprId, Stat, StatId,
+    StatType, TableId,
 };
 
 impl BackendManager {
@@ -432,7 +432,7 @@ impl CostModelStorageLayer for BackendManager {
     async fn get_stats_for_attr_indices_based(
         &self,
         table_id: TableId,
-        attr_base_indices: Vec<i32>,
+        attr_base_indices: Vec<AttrIndex>,
         stat_type: StatType,
         epoch_id: Option<EpochId>,
     ) -> StorageResult<Option<Json>> {
@@ -542,7 +542,7 @@ impl CostModelStorageLayer for BackendManager {
     async fn get_attribute(
         &self,
         table_id: TableId,
-        attribute_base_index: i32,
+        attribute_base_index: AttrIndex,
     ) -> StorageResult<Option<Attr>> {
         let attr_res = Attribute::find()
             .filter(attribute::Column::TableId.eq(table_id))

@@ -33,7 +33,7 @@ impl AttributeRefPred {
             PredicateNode {
                 typ: PredicateType::AttributeRef,
                 children: vec![
-                    IdPred::new(table_id.0 as u64).into_pred_node(),
+                    IdPred::new(table_id.0).into_pred_node(),
                     IdPred::new(attribute_idx).into_pred_node(),
                 ],
                 data: None,
@@ -44,7 +44,7 @@ impl AttributeRefPred {
 
     /// Gets the table id.
     pub fn table_id(&self) -> TableId {
-        TableId(self.0.child(0).data.as_ref().unwrap().as_u64() as usize)
+        TableId(self.0.child(0).data.as_ref().unwrap().as_u64())
     }
 
     /// Gets the attribute index.

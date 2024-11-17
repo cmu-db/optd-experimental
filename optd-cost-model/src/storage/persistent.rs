@@ -35,11 +35,11 @@ impl<S: CostModelStorageLayer + Send + Sync> CostModelStorageManager
     async fn get_attribute_info(
         &self,
         table_id: TableId,
-        attr_base_index: i32,
+        attr_base_index: u64,
     ) -> CostModelResult<Option<Attribute>> {
         Ok(self
             .backend_manager
-            .get_attribute(table_id.into(), attr_base_index)
+            .get_attribute(table_id.into(), attr_base_index as i32)
             .await?
             .map(|attr| Attribute {
                 name: attr.name,

@@ -17,6 +17,7 @@ pub type AttrId = i32;
 pub type ExprId = i32;
 pub type EpochId = i32;
 pub type StatId = i32;
+pub type AttrIndex = i32;
 
 /// TODO: documentation
 pub enum CatalogSource {
@@ -152,7 +153,7 @@ pub trait CostModelStorageLayer {
     async fn get_stats_for_attr_indices_based(
         &self,
         table_id: TableId,
-        attr_base_indices: Vec<i32>,
+        attr_base_indices: Vec<AttrIndex>,
         stat_type: StatType,
         epoch_id: Option<EpochId>,
     ) -> StorageResult<Option<Json>>;
@@ -168,6 +169,6 @@ pub trait CostModelStorageLayer {
     async fn get_attribute(
         &self,
         table_id: TableId,
-        attribute_base_index: i32,
+        attribute_base_index: AttrIndex,
     ) -> StorageResult<Option<Attr>>;
 }

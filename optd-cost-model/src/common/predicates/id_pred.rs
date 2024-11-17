@@ -23,8 +23,8 @@ impl IdPred {
     }
 
     /// Gets the id stored in the predicate.
-    pub fn id(&self) -> usize {
-        self.0.data.clone().unwrap().as_u64() as usize
+    pub fn id(&self) -> u64 {
+        self.0.data.clone().unwrap().as_u64()
     }
 }
 

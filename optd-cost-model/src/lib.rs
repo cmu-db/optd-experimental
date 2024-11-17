@@ -41,7 +41,7 @@ pub enum SemanticError {
     // TODO: Add more error types
     UnknownStatisticType,
     VersionedStatisticNotFound,
-    AttributeNotFound(TableId, i32), // (table_id, attribute_base_index)
+    AttributeNotFound(TableId, u64), // (table_id, attribute_base_index)
     // FIXME: not sure if this should be put here
     InvalidPredicate(String),
 }

@@ -12,14 +12,14 @@ pub type AttrIndices = Vec<u64>;
 #[serde_with::serde_as]
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TableStats {
-    pub row_cnt: usize,
+    pub row_cnt: u64,
     #[serde_as(as = "HashMap<serde_with::json::JsonString, _>")]
     pub column_comb_stats: HashMap<AttrIndices, AttributeCombValueStats>,
 }
 
 impl TableStats {
     pub fn new(
-        row_cnt: usize,
+        row_cnt: u64,
         column_comb_stats: HashMap<AttrIndices, AttributeCombValueStats>,
     ) -> Self {
         Self {
@@ -53,12 +53,12 @@ impl CostModelStorageManager for CostModelStorageMockManagerImpl {
     async fn get_attribute_info(
         &self,
         table_id: TableId,
-        attr_base_index: i32,
+        attr_base_index: u64,
     ) -> CostModelResult<Option<Attribute>> {
         let table_attr_infos = self.per_table_attr_infos_map.get(&table_id);
         match table_attr_infos {
             None => Ok(None),
-            Some(table_attr_infos) => match table_attr_infos.get(&(attr_base_index as u64)) {
+            Some(table_attr_infos) => match table_attr_infos.get(&attr_base_index) {
                 None => Ok(None),
                 Some(attr) => Ok(Some(attr.clone())),
             },

@@ -150,7 +150,7 @@ pub mod tests {
     pub fn create_cost_model_mock_storage(
         table_id: Vec<TableId>,
         per_attribute_stats: Vec<HashMap<u64, TestPerAttributeStats>>,
-        row_counts: Vec<Option<usize>>,
+        row_counts: Vec<Option<u64>>,
         per_table_attr_infos: BaseTableAttrInfo,
     ) -> TestOptCostModelMock {
         let storage_manager = CostModelStorageMockManagerImpl::new(

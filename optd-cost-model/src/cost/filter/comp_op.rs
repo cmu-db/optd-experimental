@@ -183,11 +183,9 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
                         // **TODO**: What if this attribute is a derived attribute?
                         let attribute_info = self
                             .storage_manager
-                            .get_attribute_info(table_id, attr_ref_idx as i32)
+                            .get_attribute_info(table_id, attr_ref_idx)
                             .await?
-                            .ok_or({
-                                SemanticError::AttributeNotFound(table_id, attr_ref_idx as i32)
-                            })?;
+                            .ok_or({ SemanticError::AttributeNotFound(table_id, attr_ref_idx) })?;
 
                         let invert_cast_data_type = &attribute_info.typ.into_data_type();
 

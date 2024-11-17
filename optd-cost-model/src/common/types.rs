@@ -5,23 +5,23 @@ use std::fmt::Display;
 
 /// TODO: documentation
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Hash)]
-pub struct GroupId(pub usize);
+pub struct GroupId(pub u64);
 
 /// TODO: documentation
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Hash)]
-pub struct ExprId(pub usize);
+pub struct ExprId(pub u64);
 
 /// TODO: documentation
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Hash)]
-pub struct TableId(pub usize);
+pub struct TableId(pub u64);
 
 /// TODO: documentation
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Hash)]
-pub struct AttrId(pub usize);
+pub struct AttrId(pub u64);
 
 /// TODO: documentation
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Hash)]
-pub struct EpochId(pub usize);
+pub struct EpochId(pub u64);
 
 impl Display for GroupId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
