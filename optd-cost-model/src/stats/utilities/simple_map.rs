@@ -7,7 +7,7 @@ use crate::common::values::Value;
 
 /// TODO: documentation
 /// Now it is mainly for testing purposes.
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug, Default)]
 pub struct SimpleMap<K: Eq + Hash + Clone> {
     pub(crate) m: HashMap<K, f64>,
 }

@@ -27,6 +27,6 @@ pub trait CostModelStorageManager {
     async fn get_attributes_comb_statistics(
         &self,
         table_id: TableId,
-        attr_base_indices: &[usize],
+        attr_base_indices: &[u64],
     ) -> CostModelResult<Option<AttributeCombValueStats>>;
 }

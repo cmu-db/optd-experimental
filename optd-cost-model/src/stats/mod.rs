@@ -130,9 +130,9 @@ pub struct AttributeCombValueStats {
 impl AttributeCombValueStats {
     pub fn new(
         mcvs: MostCommonValues,
+        distr: Option<Distribution>,
         ndistinct: u64,
         null_frac: f64,
-        distr: Option<Distribution>,
     ) -> Self {
         Self {
             mcvs,

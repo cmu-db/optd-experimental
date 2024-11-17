@@ -114,7 +114,7 @@ mod tests {
     async fn test_const() {
         let cost_model = create_cost_model_mock_storage(
             vec![TableId(0)],
-            vec![get_empty_per_attr_stats()],
+            vec![HashMap::from([(0, empty_per_attr_stats())])],
             vec![None],
             HashMap::new(),
         );
@@ -141,14 +141,14 @@ mod tests {
                 vec![Some(Value::Int32(1))],
                 0.3,
             )])),
+            None,
             0,
             0.0,
-            None,
         );
         let table_id = TableId(0);
         let cost_model = create_cost_model_mock_storage(
             vec![table_id],
-            vec![per_attribute_stats],
+            vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
             HashMap::new(),
         );
@@ -175,14 +175,14 @@ mod tests {
                 (vec![Some(Value::Int32(1))], 0.2),
                 (vec![Some(Value::Int32(3))], 0.44),
             ])),
+            None,
             5,
             0.0,
-            None,
         );
         let table_id = TableId(0);
         let cost_model = create_cost_model_mock_storage(
             vec![table_id],
-            vec![per_attribute_stats],
+            vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
             HashMap::new(),
         );
@@ -210,14 +210,14 @@ mod tests {
                 vec![Some(Value::Int32(1))],
                 0.3,
             )])),
+            None,
             0,
             0.0,
-            None,
         );
         let table_id = TableId(0);
         let cost_model = create_cost_model_mock_storage(
             vec![table_id],
-            vec![per_attribute_stats],
+            vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
             HashMap::new(),
         );
@@ -241,17 +241,17 @@ mod tests {
     async fn test_attr_ref_leq_constint_no_mcvs_in_range() {
         let per_attribute_stats = TestPerAttributeStats::new(
             MostCommonValues::SimpleFrequency(SimpleMap::new(vec![])),
-            10,
-            0.0,
             Some(Distribution::SimpleDistribution(SimpleMap::new(vec![(
                 Value::Int32(15),
                 0.7,
             )]))),
+            10,
+            0.0,
         );
         let table_id = TableId(0);
         let cost_model = create_cost_model_mock_storage(
             vec![table_id],
-            vec![per_attribute_stats],
+            vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
             HashMap::new(),
         );
@@ -284,17 +284,17 @@ mod tests {
                 (vec![Some(Value::Int32(17))], 0.08),
                 (vec![Some(Value::Int32(25))], 0.07),
             ])),
-            10,
-            0.0,
             Some(Distribution::SimpleDistribution(SimpleMap::new(vec![(
                 Value::Int32(15),
                 0.7,
             )]))),
+            10,
+            0.0,
         );
         let table_id = TableId(0);
         let cost_model = create_cost_model_mock_storage(
             vec![table_id],
-            vec![per_attribute_stats],
+            vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
             HashMap::new(),
         );
@@ -327,17 +327,17 @@ mod tests {
                 (vec![Some(Value::Int32(15))], 0.08),
                 (vec![Some(Value::Int32(25))], 0.07),
             ])),
-            10,
-            0.0,
             Some(Distribution::SimpleDistribution(SimpleMap::new(vec![(
                 Value::Int32(15),
                 0.7,
             )]))),
+            10,
+            0.0,
         );
         let table_id = TableId(0);
         let cost_model = create_cost_model_mock_storage(
             vec![table_id],
-            vec![per_attribute_stats],
+            vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
             HashMap::new(),
         );
@@ -365,17 +365,17 @@ mod tests {
     async fn test_attr_ref_lt_constint_no_mcvs_in_range() {
         let per_attribute_stats = TestPerAttributeStats::new(
             MostCommonValues::SimpleFrequency(SimpleMap::new(vec![])),
-            10,
-            0.0,
             Some(Distribution::SimpleDistribution(SimpleMap::new(vec![(
                 Value::Int32(15),
                 0.7,
             )]))),
+            10,
+            0.0,
         );
         let table_id = TableId(0);
         let cost_model = create_cost_model_mock_storage(
             vec![table_id],
-            vec![per_attribute_stats],
+            vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
             HashMap::new(),
         );
@@ -408,18 +408,18 @@ mod tests {
                 (vec![Some(Value::Int32(17))], 0.08),
                 (vec![Some(Value::Int32(25))], 0.07),
             ])),
-            11, /* there are 4 MCVs which together add up to 0.3. With 11 total ndistinct, each
-                 * remaining value has freq 0.1 */
-            0.0,
             Some(Distribution::SimpleDistribution(SimpleMap::new(vec![(
                 Value::Int32(15),
                 0.7,
             )]))),
+            11, /* there are 4 MCVs which together add up to 0.3. With 11 total ndistinct, each
+                 * remaining value has freq 0.1 */
+            0.0,
         );
         let table_id = TableId(0);
         let cost_model = create_cost_model_mock_storage(
             vec![table_id],
-            vec![per_attribute_stats],
+            vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
             HashMap::new(),
         );
@@ -452,18 +452,18 @@ mod tests {
                 (vec![Some(Value::Int32(15))], 0.08),
                 (vec![Some(Value::Int32(25))], 0.07),
             ])),
-            11, /* there are 4 MCVs which together add up to 0.3. With 11 total ndistinct, each
-                 * remaining value has freq 0.1 */
-            0.0,
             Some(Distribution::SimpleDistribution(SimpleMap::new(vec![(
                 Value::Int32(15),
                 0.7,
             )]))),
+            11, /* there are 4 MCVs which together add up to 0.3. With 11 total ndistinct, each
+                 * remaining value has freq 0.1 */
+            0.0,
         );
         let table_id = TableId(0);
         let cost_model = create_cost_model_mock_storage(
             vec![table_id],
-            vec![per_attribute_stats],
+            vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
             HashMap::new(),
         );
@@ -493,17 +493,17 @@ mod tests {
     async fn test_attr_ref_gt_constint() {
         let per_attribute_stats = TestPerAttributeStats::new(
             MostCommonValues::SimpleFrequency(SimpleMap::new(vec![])),
-            10,
-            0.0,
             Some(Distribution::SimpleDistribution(SimpleMap::new(vec![(
                 Value::Int32(15),
                 0.7,
             )]))),
+            10,
+            0.0,
         );
         let table_id = TableId(0);
         let cost_model = create_cost_model_mock_storage(
             vec![table_id],
-            vec![per_attribute_stats],
+            vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
             HashMap::new(),
         );
@@ -531,17 +531,17 @@ mod tests {
     async fn test_attr_ref_geq_constint() {
         let per_attribute_stats = TestPerAttributeStats::new(
             MostCommonValues::SimpleFrequency(SimpleMap::new(vec![])),
-            10,
-            0.0,
             Some(Distribution::SimpleDistribution(SimpleMap::new(vec![(
                 Value::Int32(15),
                 0.7,
             )]))),
+            10,
+            0.0,
         );
         let table_id = TableId(0);
         let cost_model = create_cost_model_mock_storage(
             vec![table_id],
-            vec![per_attribute_stats],
+            vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
             HashMap::new(),
         );
@@ -574,14 +574,14 @@ mod tests {
                 (vec![Some(Value::Int32(5))], 0.5),
                 (vec![Some(Value::Int32(8))], 0.2),
             ])),
+            None,
             0,
             0.0,
-            None,
         );
         let table_id = TableId(0);
         let cost_model = create_cost_model_mock_storage(
             vec![table_id],
-            vec![per_attribute_stats],
+            vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
             HashMap::new(),
         );
@@ -621,14 +621,14 @@ mod tests {
                 (vec![Some(Value::Int32(5))], 0.5),
                 (vec![Some(Value::Int32(8))], 0.2),
             ])),
+            None,
             0,
             0.0,
-            None,
         );
         let table_id = TableId(0);
         let cost_model = create_cost_model_mock_storage(
             vec![table_id],
-            vec![per_attribute_stats],
+            vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
             HashMap::new(),
         );
@@ -667,14 +667,14 @@ mod tests {
                 vec![Some(Value::Int32(1))],
                 0.3,
             )])),
+            None,
             0,
             0.0,
-            None,
         );
         let table_id = TableId(0);
         let cost_model = create_cost_model_mock_storage(
             vec![table_id],
-            vec![per_attribute_stats],
+            vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
             HashMap::new(),
         );
@@ -700,14 +700,14 @@ mod tests {
                 vec![Some(Value::Int32(1))],
                 0.3,
             )])),
+            None,
             0,
             0.0,
-            None,
         );
         let table_id = TableId(0);
         let cost_model = create_cost_model_mock_storage(
             vec![table_id],
-            vec![per_attribute_stats],
+            vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
             HashMap::new(),
         );
@@ -743,9 +743,9 @@ mod tests {
                 vec![Some(Value::Int32(1))],
                 0.3,
             )])),
+            None,
             0,
             0.1,
-            None,
         );
         let table_id = TableId(0);
         let attr_infos = HashMap::from([(
@@ -761,7 +761,7 @@ mod tests {
         )]);
         let cost_model = create_cost_model_mock_storage(
             vec![table_id],
-            vec![per_attribute_stats],
+            vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
             attr_infos,
         );
@@ -799,9 +799,9 @@ mod tests {
     async fn test_cast_attr_ref_eq_attr_ref() {
         let per_attribute_stats = TestPerAttributeStats::new(
             MostCommonValues::SimpleFrequency(SimpleMap::new(vec![])),
+            None,
             0,
             0.0,
-            None,
         );
         let table_id = TableId(0);
         let attr_infos = HashMap::from([(
@@ -827,7 +827,7 @@ mod tests {
         )]);
         let cost_model = create_cost_model_mock_storage(
             vec![table_id],
-            vec![per_attribute_stats],
+            vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
             attr_infos,
         );

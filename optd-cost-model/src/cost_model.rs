@@ -99,7 +99,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
     pub(crate) async fn get_attribute_comb_stats(
         &self,
         table_id: TableId,
-        attr_comb: &[usize],
+        attr_comb: &[u64],
     ) -> CostModelResult<Option<AttributeCombValueStats>> {
         self.storage_manager
             .get_attributes_comb_statistics(table_id, attr_comb)
@@ -149,7 +149,7 @@ pub mod tests {
 
     pub fn create_cost_model_mock_storage(
         table_id: Vec<TableId>,
-        per_attribute_stats: Vec<TestPerAttributeStats>,
+        per_attribute_stats: Vec<HashMap<u64, TestPerAttributeStats>>,
         row_counts: Vec<Option<usize>>,
         per_table_attr_infos: BaseTableAttrInfo,
     ) -> TestOptCostModelMock {
@@ -163,7 +163,10 @@ pub mod tests {
                         table_id,
                         TableStats::new(
                             row_count.unwrap_or(100),
-                            vec![(vec![0], per_attr_stats)].into_iter().collect(),
+                            per_attr_stats
+                                .into_iter()
+                                .map(|(attr_idx, stats)| (vec![attr_idx], stats))
+                                .collect(),
                         ),
                     )
                 })
@@ -201,6 +204,14 @@ pub mod tests {
         UnOpPred::new(child, op_type).into_pred_node()
     }
 
+    pub fn empty_list() -> ArcPredicateNode {
+        ListPred::new(vec![]).into_pred_node()
+    }
+
+    pub fn list(children: Vec<ArcPredicateNode>) -> ArcPredicateNode {
+        ListPred::new(children).into_pred_node()
+    }
+
     pub fn in_list(
         table_id: TableId,
         attr_ref_idx: usize,
@@ -223,7 +234,7 @@ pub mod tests {
         )
     }
 
-    pub(crate) fn get_empty_per_attr_stats() -> TestPerAttributeStats {
-        TestPerAttributeStats::new(MostCommonValues::Counter(Counter::default()), 0, 0.0, None)
+    pub(crate) fn empty_per_attr_stats() -> TestPerAttributeStats {
+        TestPerAttributeStats::new(MostCommonValues::Counter(Counter::default()), None, 0, 0.0)
     }
 }

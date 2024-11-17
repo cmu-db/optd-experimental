@@ -49,8 +49,8 @@ impl AttributeRefPred {
 
     /// Gets the attribute index.
     /// Note: The attribute index is the **base** index, which is table specific.
-    pub fn attr_index(&self) -> usize {
-        self.0.child(1).data.as_ref().unwrap().as_u64() as usize
+    pub fn attr_index(&self) -> u64 {
+        self.0.child(1).data.as_ref().unwrap().as_u64()
     }
 
     /// Checks whether the attribute is a derived attribute. Currently, this will always return

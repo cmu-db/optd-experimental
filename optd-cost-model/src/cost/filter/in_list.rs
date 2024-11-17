@@ -86,14 +86,14 @@ mod tests {
                 (vec![Some(Value::Int32(1))], 0.8),
                 (vec![Some(Value::Int32(2))], 0.2),
             ])),
+            None,
             2,
             0.0,
-            None,
         );
         let table_id = TableId(0);
         let cost_model = create_cost_model_mock_storage(
             vec![table_id],
-            vec![per_attribute_stats],
+            vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
             HashMap::new(),
         );

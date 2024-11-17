@@ -37,6 +37,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
                         } else {
                             let table_id = attr_ref.table_id();
                             let attr_idx = attr_ref.attr_index();
+                            // TODO: Only query ndistinct instead of all kinds of stats.
                             let stats_option =
                                 self.get_attribute_comb_stats(table_id, &[attr_idx]).await?;
 

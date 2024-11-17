@@ -7,20 +7,20 @@ use crate::{common::types::TableId, stats::AttributeCombValueStats, CostModelRes
 
 use super::{Attribute, CostModelStorageManager};
 
-pub type AttrsIdx = Vec<usize>;
+pub type AttrIndices = Vec<u64>;
 
 #[serde_with::serde_as]
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TableStats {
     pub row_cnt: usize,
     #[serde_as(as = "HashMap<serde_with::json::JsonString, _>")]
-    pub column_comb_stats: HashMap<AttrsIdx, AttributeCombValueStats>,
+    pub column_comb_stats: HashMap<AttrIndices, AttributeCombValueStats>,
 }
 
 impl TableStats {
     pub fn new(
         row_cnt: usize,
-        column_comb_stats: HashMap<AttrsIdx, AttributeCombValueStats>,
+        column_comb_stats: HashMap<AttrIndices, AttributeCombValueStats>,
     ) -> Self {
         Self {
             row_cnt,
@@ -68,7 +68,7 @@ impl CostModelStorageManager for CostModelStorageMockManagerImpl {
     async fn get_attributes_comb_statistics(
         &self,
         table_id: TableId,
-        attr_base_indices: &[usize],
+        attr_base_indices: &[u64],
     ) -> CostModelResult<Option<AttributeCombValueStats>> {
         let table_stats = self.per_table_stats_map.get(&table_id);
         match table_stats {

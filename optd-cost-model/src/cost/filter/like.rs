@@ -120,14 +120,14 @@ mod tests {
                 (vec![Some(Value::String("abcd".into()))], 0.1),
                 (vec![Some(Value::String("abc".into()))], 0.1),
             ])),
+            None,
             2,
             0.0,
-            None,
         );
         let table_id = TableId(0);
         let cost_model = create_cost_model_mock_storage(
             vec![table_id],
-            vec![per_attribute_stats],
+            vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
             HashMap::new(),
         );
@@ -163,14 +163,14 @@ mod tests {
         let mcvs_total_count = 10;
         let per_attribute_stats = TestPerAttributeStats::new(
             MostCommonValues::Counter(Counter::new_from_existing(mcvs_counts, mcvs_total_count)),
+            None,
             2,
             null_frac,
-            None,
         );
         let table_id = TableId(0);
         let cost_model = create_cost_model_mock_storage(
             vec![table_id],
-            vec![per_attribute_stats],
+            vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
             HashMap::new(),
         );

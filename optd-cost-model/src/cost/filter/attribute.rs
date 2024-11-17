@@ -19,7 +19,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
     pub(crate) async fn get_attribute_equality_selectivity(
         &self,
         table_id: TableId,
-        attr_base_index: usize,
+        attr_base_index: u64,
         value: &Value,
         is_eq: bool,
     ) -> CostModelResult<f64> {
@@ -93,7 +93,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
         &self,
         attribute_stats: &AttributeCombValueStats,
         table_id: TableId,
-        attr_base_index: usize,
+        attr_base_index: u64,
         value: &Value,
     ) -> CostModelResult<f64> {
         // depending on whether value is in mcvs or not, we use different logic to turn total_lt_cdf
@@ -119,7 +119,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
     pub(crate) async fn get_attribute_range_selectivity(
         &self,
         table_id: TableId,
-        attr_base_index: usize,
+        attr_base_index: u64,
         start: Bound<&Value>,
         end: Bound<&Value>,
     ) -> CostModelResult<f64> {

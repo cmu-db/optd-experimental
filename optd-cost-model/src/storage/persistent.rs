@@ -66,7 +66,7 @@ impl<S: CostModelStorageLayer + Send + Sync> CostModelStorageManager
     async fn get_attributes_comb_statistics(
         &self,
         table_id: TableId,
-        attr_base_indices: &[usize],
+        attr_base_indices: &[u64],
     ) -> CostModelResult<Option<AttributeCombValueStats>> {
         let dist: Option<Distribution> = self
             .backend_manager
@@ -136,7 +136,9 @@ impl<S: CostModelStorageLayer + Send + Sync> CostModelStorageManager
         };
 
         Ok(Some(AttributeCombValueStats::new(
-            mcvs, ndistinct, null_frac, dist,
+            mcvs, dist, ndistinct, null_frac,
         )))
     }
+
+    // TODO: Support querying for a specific type of statistics.
 }
