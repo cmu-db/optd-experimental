@@ -73,17 +73,19 @@ mod tests {
     use crate::{
         common::{types::TableId, values::Value},
         cost_model::tests::*,
-        stats::{utilities::counter::Counter, MostCommonValues},
+        stats::{
+            utilities::{counter::Counter, simple_map::SimpleMap},
+            MostCommonValues,
+        },
     };
 
     #[tokio::test]
     async fn test_in_list() {
-        let mut mcvs_counts = HashMap::new();
-        mcvs_counts.insert(vec![Some(Value::Int32(1))], 8);
-        mcvs_counts.insert(vec![Some(Value::Int32(2))], 2);
-        let mcvs_total_count = 10;
         let per_attribute_stats = TestPerAttributeStats::new(
-            MostCommonValues::Counter(Counter::new_from_existing(mcvs_counts, mcvs_total_count)),
+            MostCommonValues::SimpleFrequency(SimpleMap::new(vec![
+                (vec![Some(Value::Int32(1))], 0.8),
+                (vec![Some(Value::Int32(2))], 0.2),
+            ])),
             2,
             0.0,
             None,

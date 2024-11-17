@@ -35,6 +35,7 @@ pub type AttributeCombValue = Vec<Option<Value>>;
 #[serde(tag = "type")]
 pub enum MostCommonValues {
     Counter(Counter<AttributeCombValue>),
+    SimpleFrequency(SimpleMap<AttributeCombValue>),
     // Add more types here...
 }
 
@@ -47,12 +48,14 @@ impl MostCommonValues {
     pub fn freq(&self, value: &AttributeCombValue) -> Option<f64> {
         match self {
             MostCommonValues::Counter(counter) => counter.frequencies().get(value).copied(),
+            MostCommonValues::SimpleFrequency(simple_map) => simple_map.m.get(value).copied(),
         }
     }
 
     pub fn total_freq(&self) -> f64 {
         match self {
             MostCommonValues::Counter(counter) => counter.frequencies().values().sum(),
+            MostCommonValues::SimpleFrequency(simple_map) => simple_map.m.values().sum(),
         }
     }
 
@@ -64,6 +67,12 @@ impl MostCommonValues {
                 .filter(|(val, _)| pred(val))
                 .map(|(_, freq)| freq)
                 .sum(),
+            MostCommonValues::SimpleFrequency(simple_map) => simple_map
+                .m
+                .iter()
+                .filter(|(val, _)| pred(val))
+                .map(|(_, freq)| freq)
+                .sum(),
         }
     }
 
@@ -71,6 +80,7 @@ impl MostCommonValues {
     pub fn cnt(&self) -> usize {
         match self {
             MostCommonValues::Counter(counter) => counter.frequencies().len(),
+            MostCommonValues::SimpleFrequency(simple_map) => simple_map.m.len(),
         }
     }
 }
@@ -80,7 +90,7 @@ impl MostCommonValues {
 #[serde(tag = "type")]
 pub enum Distribution {
     TDigest(TDigest<Value>),
-    SimpleDistribution(SimpleMap),
+    SimpleDistribution(SimpleMap<Value>),
     // Add more types here...
 }
 

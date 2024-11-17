@@ -108,19 +108,18 @@ mod tests {
         common::{types::TableId, values::Value},
         cost_model::tests::*,
         stats::{
-            utilities::counter::Counter, MostCommonValues, FIXED_CHAR_SEL_FACTOR,
-            FULL_WILDCARD_SEL_FACTOR,
+            utilities::{counter::Counter, simple_map::SimpleMap},
+            MostCommonValues, FIXED_CHAR_SEL_FACTOR, FULL_WILDCARD_SEL_FACTOR,
         },
     };
 
     #[tokio::test]
     async fn test_like_no_nulls() {
-        let mut mcvs_counts = HashMap::new();
-        mcvs_counts.insert(vec![Some(Value::String("abcd".into()))], 1);
-        mcvs_counts.insert(vec![Some(Value::String("abc".into()))], 1);
-        let mcvs_total_count = 10;
         let per_attribute_stats = TestPerAttributeStats::new(
-            MostCommonValues::Counter(Counter::new_from_existing(mcvs_counts, mcvs_total_count)),
+            MostCommonValues::SimpleFrequency(SimpleMap::new(vec![
+                (vec![Some(Value::String("abcd".into()))], 0.1),
+                (vec![Some(Value::String("abc".into()))], 0.1),
+            ])),
             2,
             0.0,
             None,

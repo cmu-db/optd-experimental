@@ -136,11 +136,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_attr_ref_eq_constint_in_mcv() {
-        let mut mcvs_counts = HashMap::new();
-        mcvs_counts.insert(vec![Some(Value::Int32(1))], 3);
-        let mcvs_total_count = 10;
         let per_attribute_stats = TestPerAttributeStats::new(
-            MostCommonValues::Counter(Counter::new_from_existing(mcvs_counts, mcvs_total_count)),
+            MostCommonValues::SimpleFrequency(SimpleMap::new(vec![(
+                vec![Some(Value::Int32(1))],
+                0.3,
+            )])),
             0,
             0.0,
             None,
@@ -170,12 +170,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_attr_ref_eq_constint_not_in_mcv() {
-        let mut mcvs_counts = HashMap::new();
-        mcvs_counts.insert(vec![Some(Value::Int32(1))], 20);
-        mcvs_counts.insert(vec![Some(Value::Int32(3))], 44);
-        let mcvs_total_count = 100;
         let per_attribute_stats = TestPerAttributeStats::new(
-            MostCommonValues::Counter(Counter::new_from_existing(mcvs_counts, mcvs_total_count)),
+            MostCommonValues::SimpleFrequency(SimpleMap::new(vec![
+                (vec![Some(Value::Int32(1))], 0.2),
+                (vec![Some(Value::Int32(3))], 0.44),
+            ])),
             5,
             0.0,
             None,
@@ -206,11 +205,11 @@ mod tests {
     /// I only have one test for NEQ since I'll assume that it uses the same underlying logic as EQ
     #[tokio::test]
     async fn test_attr_ref_neq_constint_in_mcv() {
-        let mut mcvs_counts = HashMap::new();
-        mcvs_counts.insert(vec![Some(Value::Int32(1))], 3);
-        let mcvs_total_count = 10;
         let per_attribute_stats = TestPerAttributeStats::new(
-            MostCommonValues::Counter(Counter::new_from_existing(mcvs_counts, mcvs_total_count)),
+            MostCommonValues::SimpleFrequency(SimpleMap::new(vec![(
+                vec![Some(Value::Int32(1))],
+                0.3,
+            )])),
             0,
             0.0,
             None,
@@ -240,10 +239,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_attr_ref_leq_constint_no_mcvs_in_range() {
-        let mut mcvs_counts = HashMap::new();
-        let mcvs_total_count = 10;
         let per_attribute_stats = TestPerAttributeStats::new(
-            MostCommonValues::Counter(Counter::new_from_existing(mcvs_counts, mcvs_total_count)),
+            MostCommonValues::SimpleFrequency(SimpleMap::new(vec![])),
             10,
             0.0,
             Some(Distribution::SimpleDistribution(SimpleMap::new(vec![(
@@ -280,14 +277,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_attr_ref_leq_constint_with_mcvs_in_range_not_at_border() {
-        let mut mcvs_counts = HashMap::new();
-        mcvs_counts.insert(vec![Some(Value::Int32(6))], 5);
-        mcvs_counts.insert(vec![Some(Value::Int32(10))], 10);
-        mcvs_counts.insert(vec![Some(Value::Int32(17))], 8);
-        mcvs_counts.insert(vec![Some(Value::Int32(25))], 7);
-        let mcvs_total_count = 100;
         let per_attribute_stats = TestPerAttributeStats::new(
-            MostCommonValues::Counter(Counter::new_from_existing(mcvs_counts, mcvs_total_count)),
+            MostCommonValues::SimpleFrequency(SimpleMap::new(vec![
+                (vec![Some(Value::Int32(6))], 0.05),
+                (vec![Some(Value::Int32(10))], 0.1),
+                (vec![Some(Value::Int32(17))], 0.08),
+                (vec![Some(Value::Int32(25))], 0.07),
+            ])),
             10,
             0.0,
             Some(Distribution::SimpleDistribution(SimpleMap::new(vec![(
@@ -324,14 +320,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_attr_ref_leq_constint_with_mcv_at_border() {
-        let mut mcvs_counts = HashMap::new();
-        mcvs_counts.insert(vec![Some(Value::Int32(6))], 5);
-        mcvs_counts.insert(vec![Some(Value::Int32(10))], 10);
-        mcvs_counts.insert(vec![Some(Value::Int32(15))], 8);
-        mcvs_counts.insert(vec![Some(Value::Int32(25))], 7);
-        let mcvs_total_count = 100;
         let per_attribute_stats = TestPerAttributeStats::new(
-            MostCommonValues::Counter(Counter::new_from_existing(mcvs_counts, mcvs_total_count)),
+            MostCommonValues::SimpleFrequency(SimpleMap::new(vec![
+                (vec![Some(Value::Int32(6))], 0.05),
+                (vec![Some(Value::Int32(10))], 0.1),
+                (vec![Some(Value::Int32(15))], 0.08),
+                (vec![Some(Value::Int32(25))], 0.07),
+            ])),
             10,
             0.0,
             Some(Distribution::SimpleDistribution(SimpleMap::new(vec![(
@@ -368,10 +363,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_attr_ref_lt_constint_no_mcvs_in_range() {
-        let mut mcvs_counts = HashMap::new();
-        let mcvs_total_count = 10;
         let per_attribute_stats = TestPerAttributeStats::new(
-            MostCommonValues::Counter(Counter::new_from_existing(mcvs_counts, mcvs_total_count)),
+            MostCommonValues::SimpleFrequency(SimpleMap::new(vec![])),
             10,
             0.0,
             Some(Distribution::SimpleDistribution(SimpleMap::new(vec![(
@@ -408,14 +401,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_attr_ef_lt_constint_with_mcvs_in_range_not_at_border() {
-        let mut mcvs_counts = HashMap::new();
-        mcvs_counts.insert(vec![Some(Value::Int32(6))], 5);
-        mcvs_counts.insert(vec![Some(Value::Int32(10))], 10);
-        mcvs_counts.insert(vec![Some(Value::Int32(17))], 8);
-        mcvs_counts.insert(vec![Some(Value::Int32(25))], 7);
-        let mcvs_total_count = 100;
         let per_attribute_stats = TestPerAttributeStats::new(
-            MostCommonValues::Counter(Counter::new_from_existing(mcvs_counts, mcvs_total_count)),
+            MostCommonValues::SimpleFrequency(SimpleMap::new(vec![
+                (vec![Some(Value::Int32(6))], 0.05),
+                (vec![Some(Value::Int32(10))], 0.1),
+                (vec![Some(Value::Int32(17))], 0.08),
+                (vec![Some(Value::Int32(25))], 0.07),
+            ])),
             11, /* there are 4 MCVs which together add up to 0.3. With 11 total ndistinct, each
                  * remaining value has freq 0.1 */
             0.0,
@@ -453,14 +445,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_attr_ref_lt_constint_with_mcv_at_border() {
-        let mut mcvs_counts = HashMap::new();
-        mcvs_counts.insert(vec![Some(Value::Int32(6))], 5);
-        mcvs_counts.insert(vec![Some(Value::Int32(10))], 10);
-        mcvs_counts.insert(vec![Some(Value::Int32(15))], 8);
-        mcvs_counts.insert(vec![Some(Value::Int32(25))], 7);
-        let mcvs_total_count = 100;
         let per_attribute_stats = TestPerAttributeStats::new(
-            MostCommonValues::Counter(Counter::new_from_existing(mcvs_counts, mcvs_total_count)),
+            MostCommonValues::SimpleFrequency(SimpleMap::new(vec![
+                (vec![Some(Value::Int32(6))], 0.05),
+                (vec![Some(Value::Int32(10))], 0.1),
+                (vec![Some(Value::Int32(15))], 0.08),
+                (vec![Some(Value::Int32(25))], 0.07),
+            ])),
             11, /* there are 4 MCVs which together add up to 0.3. With 11 total ndistinct, each
                  * remaining value has freq 0.1 */
             0.0,
@@ -500,10 +491,8 @@ mod tests {
     /// The only interesting thing to test is that if there are nulls, those aren't included in GT
     #[tokio::test]
     async fn test_attr_ref_gt_constint() {
-        let mut mcvs_counts = HashMap::new();
-        let mcvs_total_count = 100;
         let per_attribute_stats = TestPerAttributeStats::new(
-            MostCommonValues::Counter(Counter::new_from_existing(mcvs_counts, mcvs_total_count)),
+            MostCommonValues::SimpleFrequency(SimpleMap::new(vec![])),
             10,
             0.0,
             Some(Distribution::SimpleDistribution(SimpleMap::new(vec![(
@@ -540,10 +529,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_attr_ref_geq_constint() {
-        let mut mcvs_counts = HashMap::new();
-        let mcvs_total_count = 100;
         let per_attribute_stats = TestPerAttributeStats::new(
-            MostCommonValues::Counter(Counter::new_from_existing(mcvs_counts, mcvs_total_count)),
+            MostCommonValues::SimpleFrequency(SimpleMap::new(vec![])),
             10,
             0.0,
             Some(Distribution::SimpleDistribution(SimpleMap::new(vec![(
@@ -581,13 +568,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_and() {
-        let mut mcvs_counts = HashMap::new();
-        mcvs_counts.insert(vec![Some(Value::Int32(1))], 3);
-        mcvs_counts.insert(vec![Some(Value::Int32(5))], 5);
-        mcvs_counts.insert(vec![Some(Value::Int32(8))], 2);
-        let mcvs_total_count = 10;
         let per_attribute_stats = TestPerAttributeStats::new(
-            MostCommonValues::Counter(Counter::new_from_existing(mcvs_counts, mcvs_total_count)),
+            MostCommonValues::SimpleFrequency(SimpleMap::new(vec![
+                (vec![Some(Value::Int32(1))], 0.3),
+                (vec![Some(Value::Int32(5))], 0.5),
+                (vec![Some(Value::Int32(8))], 0.2),
+            ])),
             0,
             0.0,
             None,
@@ -629,13 +615,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_or() {
-        let mut mcvs_counts = HashMap::new();
-        mcvs_counts.insert(vec![Some(Value::Int32(1))], 3);
-        mcvs_counts.insert(vec![Some(Value::Int32(5))], 5);
-        mcvs_counts.insert(vec![Some(Value::Int32(8))], 2);
-        let mcvs_total_count = 10;
         let per_attribute_stats = TestPerAttributeStats::new(
-            MostCommonValues::Counter(Counter::new_from_existing(mcvs_counts, mcvs_total_count)),
+            MostCommonValues::SimpleFrequency(SimpleMap::new(vec![
+                (vec![Some(Value::Int32(1))], 0.3),
+                (vec![Some(Value::Int32(5))], 0.5),
+                (vec![Some(Value::Int32(8))], 0.2),
+            ])),
             0,
             0.0,
             None,
@@ -677,11 +662,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_not() {
-        let mut mcvs_counts = HashMap::new();
-        mcvs_counts.insert(vec![Some(Value::Int32(1))], 3);
-        let mcvs_total_count = 10;
         let per_attribute_stats = TestPerAttributeStats::new(
-            MostCommonValues::Counter(Counter::new_from_existing(mcvs_counts, mcvs_total_count)),
+            MostCommonValues::SimpleFrequency(SimpleMap::new(vec![(
+                vec![Some(Value::Int32(1))],
+                0.3,
+            )])),
             0,
             0.0,
             None,
@@ -710,11 +695,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_attr_ref_eq_cast_value() {
-        let mut mcvs_counts = HashMap::new();
-        mcvs_counts.insert(vec![Some(Value::Int32(1))], 3);
-        let mcvs_total_count = 10;
         let per_attribute_stats = TestPerAttributeStats::new(
-            MostCommonValues::Counter(Counter::new_from_existing(mcvs_counts, mcvs_total_count)),
+            MostCommonValues::SimpleFrequency(SimpleMap::new(vec![(
+                vec![Some(Value::Int32(1))],
+                0.3,
+            )])),
             0,
             0.0,
             None,
@@ -753,11 +738,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_cast_attr_ref_eq_value() {
-        let mut mcvs_counts = HashMap::new();
-        mcvs_counts.insert(vec![Some(Value::Int32(1))], 3);
-        let mcvs_total_count = 10;
         let per_attribute_stats = TestPerAttributeStats::new(
-            MostCommonValues::Counter(Counter::new_from_existing(mcvs_counts, mcvs_total_count)),
+            MostCommonValues::SimpleFrequency(SimpleMap::new(vec![(
+                vec![Some(Value::Int32(1))],
+                0.3,
+            )])),
             0,
             0.1,
             None,
@@ -812,10 +797,8 @@ mod tests {
     /// pretty good signal that the Cast was left as is.
     #[tokio::test]
     async fn test_cast_attr_ref_eq_attr_ref() {
-        let mut mcvs_counts = HashMap::new();
-        let mcvs_total_count = 10;
         let per_attribute_stats = TestPerAttributeStats::new(
-            MostCommonValues::Counter(Counter::new_from_existing(mcvs_counts, mcvs_total_count)),
+            MostCommonValues::SimpleFrequency(SimpleMap::new(vec![])),
             0,
             0.0,
             None,
