@@ -5,8 +5,9 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
 /// The Counter structure to track exact frequencies of fixed elements.
+/// TODO: remove the clone, see the comment in the [`AttributeCombValueStats`]
 #[serde_with::serde_as]
-#[derive(Default, Serialize, Deserialize, Debug)]
+#[derive(Default, Serialize, Deserialize, Debug, Clone)]
 pub struct Counter<T: PartialEq + Eq + Hash + Clone + Serialize + DeserializeOwned> {
     #[serde_as(as = "HashMap<serde_with::json::JsonString, _>")]
     counts: HashMap<T, i32>, // The exact counts of an element T.

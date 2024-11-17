@@ -5,7 +5,7 @@ use optd_persistent::{cost_model::interface::StatType, CostModelStorageLayer};
 
 use crate::{
     common::{predicates::constant_pred::ConstantType, types::TableId},
-    stats::{counter::Counter, AttributeCombValueStats, Distribution, MostCommonValues},
+    stats::{utilities::counter::Counter, AttributeCombValueStats, Distribution, MostCommonValues},
     CostModelResult,
 };
 

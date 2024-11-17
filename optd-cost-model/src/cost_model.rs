@@ -136,10 +136,9 @@ pub mod tests {
             values::Value,
         },
         stats::{
-            counter::Counter, tdigest::TDigest, AttributeCombValueStats, Distribution,
-            MostCommonValues,
+            utilities::counter::Counter, AttributeCombValueStats, Distribution, MostCommonValues,
         },
-        storage::mock::{CostModelStorageMockManagerImpl, TableStats},
+        storage::mock::{BaseTableAttrInfo, CostModelStorageMockManagerImpl, TableStats},
     };
 
     use super::*;
@@ -152,6 +151,7 @@ pub mod tests {
         table_id: Vec<TableId>,
         per_attribute_stats: Vec<TestPerAttributeStats>,
         row_counts: Vec<Option<usize>>,
+        per_table_attr_infos: BaseTableAttrInfo,
     ) -> TestOptCostModelMock {
         let storage_manager = CostModelStorageMockManagerImpl::new(
             table_id
@@ -168,6 +168,7 @@ pub mod tests {
                     )
                 })
                 .collect(),
+            per_table_attr_infos,
         );
         CostModelImpl::new(storage_manager, CatalogSource::Mock)
     }
@@ -222,9 +223,6 @@ pub mod tests {
         )
     }
 
-    /// The reason this isn't an associated function of PerAttributeStats is because that would require
-    ///   adding an empty type to the enum definitions of MostCommonValues and Distribution,
-    ///   which I wanted to avoid
     pub(crate) fn get_empty_per_attr_stats() -> TestPerAttributeStats {
         TestPerAttributeStats::new(MostCommonValues::Counter(Counter::default()), 0, 0.0, None)
     }
