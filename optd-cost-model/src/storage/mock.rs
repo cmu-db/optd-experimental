@@ -29,7 +29,7 @@ impl TableStats {
     }
 }
 
-pub type BaseTableStats = HashMap<String, TableStats>;
+pub type BaseTableStats = HashMap<TableId, TableStats>;
 
 pub struct CostModelStorageMockManagerImpl {
     pub(crate) per_table_stats_map: BaseTableStats,

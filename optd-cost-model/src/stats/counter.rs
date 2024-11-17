@@ -32,6 +32,13 @@ where
         }
     }
 
+    pub fn new_from_existing(counts: HashMap<T, i32>, total_count: i32) -> Self {
+        Counter::<T> {
+            counts,
+            total_count,
+        }
+    }
+
     // Inserts an element in the Counter if it is being tracked.
     fn insert_element(&mut self, elem: T, occ: i32) {
         if let Some(frequency) = self.counts.get_mut(&elem) {

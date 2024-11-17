@@ -17,6 +17,7 @@ chrono = "0.4"
 itertools = "0.13"
 assert_approx_eq = "1.1.0"
 trait-variant = "0.1.2"
+tokio = { version = "1.0.1", features = ["macros", "rt-multi-thread"] }
 
 [dev-dependencies]
 crossbeam = "0.8"
