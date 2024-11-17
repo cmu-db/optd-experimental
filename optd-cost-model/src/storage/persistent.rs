@@ -30,6 +30,8 @@ impl<S: CostModelStorageLayer + Send + Sync> CostModelStorageManager
     ///
     /// TODO: if we have memory cache,
     /// we should add the reference. (&Attr)
+    /// TODO(IMPORTANT): what if table is a derived (temporary) table? And what if
+    /// the attribute is a derived attribute?
     async fn get_attribute_info(
         &self,
         table_id: TableId,
@@ -58,6 +60,9 @@ impl<S: CostModelStorageLayer + Send + Sync> CostModelStorageManager
     ///
     /// TODO: Shall we pass in an epoch here to make sure that the statistics are from the same
     /// epoch?
+    ///
+    /// TODO(IMPORTANT): what if table is a derived (temporary) table? And what if
+    /// the attribute is a derived attribute?
     async fn get_attributes_comb_statistics(
         &self,
         table_id: TableId,

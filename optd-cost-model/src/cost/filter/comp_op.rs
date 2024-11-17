@@ -179,8 +179,8 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
                         cast_node = attr_ref_expr.into_pred_node();
                         // The "invert" cast is to invert the cast so that we're casting the
                         // non_cast_node to the attribute's original type.
-                        // TODO(migration): double check
                         // TODO: Consider attribute info is None.
+                        // **TODO**: What if this attribute is a derived attribute?
                         let attribute_info = self
                             .storage_manager
                             .get_attribute_info(table_id, attr_ref_idx as i32)
