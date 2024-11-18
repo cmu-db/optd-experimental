@@ -33,18 +33,18 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
         left_row_cnt: f64,
         right_row_cnt: f64,
         output_schema: Schema,
-        output_column_refs: GroupAttrRefs,
+        output_attr_refs: GroupAttrRefs,
         join_cond: ArcPredicateNode,
-        left_column_refs: GroupAttrRefs,
-        right_column_refs: GroupAttrRefs,
+        left_attr_refs: GroupAttrRefs,
+        right_attr_refs: GroupAttrRefs,
     ) -> CostModelResult<f64> {
         let selectivity = {
-            let input_correlation = self.get_input_correlation(left_column_refs, right_column_refs);
+            let input_correlation = self.get_input_correlation(left_attr_refs, right_attr_refs);
             self.get_join_selectivity_from_expr_tree(
                 join_typ,
                 join_cond,
                 &output_schema,
-                output_column_refs.base_table_attr_refs(),
+                output_attr_refs.base_table_attr_refs(),
                 input_correlation,
                 left_row_cnt,
                 right_row_cnt,
@@ -63,28 +63,28 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
         left_keys: ListPred,
         right_keys: ListPred,
         output_schema: Schema,
-        output_column_refs: GroupAttrRefs,
-        left_column_refs: GroupAttrRefs,
-        right_column_refs: GroupAttrRefs,
+        output_attr_refs: GroupAttrRefs,
+        left_attr_refs: GroupAttrRefs,
+        right_attr_refs: GroupAttrRefs,
     ) -> CostModelResult<f64> {
         let selectivity = {
             let schema = output_schema;
-            let column_refs = output_column_refs;
-            let column_refs = column_refs.base_table_attr_refs();
-            let left_col_cnt = left_column_refs.base_table_attr_refs().len();
+            let attr_refs = output_attr_refs;
+            let attr_refs = attr_refs.base_table_attr_refs();
+            let left_attr_cnt = left_attr_refs.base_table_attr_refs().len();
             // there may be more than one expression tree in a group.
             // see comment in PredicateType::PhysicalFilter(_) for more information
-            let input_correlation = self.get_input_correlation(left_column_refs, right_column_refs);
+            let input_correlation = self.get_input_correlation(left_attr_refs, right_attr_refs);
             self.get_join_selectivity_from_keys(
                 join_typ,
                 left_keys,
                 right_keys,
                 &schema,
-                column_refs,
+                attr_refs,
                 input_correlation,
                 left_row_cnt,
                 right_row_cnt,
-                left_col_cnt,
+                left_attr_cnt,
             )
             .await?
         };
@@ -110,16 +110,16 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
         left_keys: ListPred,
         right_keys: ListPred,
         schema: &Schema,
-        column_refs: &AttrRefs,
+        attr_refs: &AttrRefs,
         input_correlation: Option<SemanticCorrelation>,
         left_row_cnt: f64,
         right_row_cnt: f64,
-        left_col_cnt: usize,
+        left_attr_cnt: usize,
     ) -> CostModelResult<f64> {
         assert!(left_keys.len() == right_keys.len());
         // I assume that the keys are already in the right order
         // s.t. the ith key of left_keys corresponds with the ith key of right_keys
-        let on_col_ref_pairs = left_keys
+        let on_attr_ref_pairs = left_keys
             .to_vec()
             .into_iter()
             .zip(right_keys.to_vec())
@@ -132,14 +132,14 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
             .collect_vec();
         self.get_join_selectivity_core(
             join_typ,
-            on_col_ref_pairs,
+            on_attr_ref_pairs,
             None,
             schema,
-            column_refs,
+            attr_refs,
             input_correlation,
             left_row_cnt,
             right_row_cnt,
-            left_col_cnt,
+            left_attr_cnt,
         )
         .await
     }
@@ -147,34 +147,34 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
     /// The core logic of join selectivity which assumes we've already separated the expression
     /// into the on conditions and the filters.
     ///
-    /// Hash join and NLJ reference right table columns differently, hence the
-    /// `right_col_ref_offset` parameter.
+    /// Hash join and NLJ reference right table attributes differently, hence the
+    /// `right_attr_ref_offset` parameter.
     ///
-    /// For hash join, the right table columns indices are with respect to the right table,
-    /// which means #0 is the first column of the right table.
+    /// For hash join, the right table attributes indices are with respect to the right table,
+    /// which means #0 is the first attribute of the right table.
     ///
-    /// For NLJ, the right table columns indices are with respect to the output of the join.
-    /// For example, if the left table has 3 columns, the first column of the right table
+    /// For NLJ, the right table attributes indices are with respect to the output of the join.
+    /// For example, if the left table has 3 attributes, the first attribute of the right table
     /// is #3 instead of #0.
     #[allow(clippy::too_many_arguments)]
     async fn get_join_selectivity_core(
         &self,
         join_typ: JoinType,
-        on_col_ref_pairs: Vec<(AttrRefPred, AttrRefPred)>,
+        on_attr_ref_pairs: Vec<(AttrRefPred, AttrRefPred)>,
         filter_expr_tree: Option<ArcPredicateNode>,
         schema: &Schema,
-        column_refs: &AttrRefs,
+        attr_refs: &AttrRefs,
         input_correlation: Option<SemanticCorrelation>,
         left_row_cnt: f64,
         right_row_cnt: f64,
-        right_col_ref_offset: usize,
+        right_attr_ref_offset: usize,
     ) -> CostModelResult<f64> {
         let join_on_selectivity = self
             .get_join_on_selectivity(
-                &on_col_ref_pairs,
-                column_refs,
+                &on_attr_ref_pairs,
+                attr_refs,
                 input_correlation,
-                right_col_ref_offset,
+                right_attr_ref_offset,
             )
             .await?;
         // Currently, there is no difference in how we handle a join filter and a select filter,
@@ -198,8 +198,8 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
             JoinType::RightOuter => f64::max(inner_join_selectivity, 1.0 / left_row_cnt),
             JoinType::Cross => {
                 assert!(
-                    on_col_ref_pairs.is_empty(),
-                    "Cross joins should not have on columns"
+                    on_attr_ref_pairs.is_empty(),
+                    "Cross joins should not have on attributes"
                 );
                 join_filter_selectivity
             }
@@ -218,25 +218,25 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
         join_typ: JoinType,
         expr_tree: ArcPredicateNode,
         schema: &Schema,
-        column_refs: &AttrRefs,
+        attr_refs: &AttrRefs,
         input_correlation: Option<SemanticCorrelation>,
         left_row_cnt: f64,
         right_row_cnt: f64,
     ) -> CostModelResult<f64> {
         if expr_tree.typ == PredicateType::LogOp(LogOpType::And) {
-            let mut on_col_ref_pairs = vec![];
+            let mut on_attr_ref_pairs = vec![];
             let mut filter_expr_trees = vec![];
             for child_expr_tree in &expr_tree.children {
-                if let Some(on_col_ref_pair) =
-                    Self::get_on_col_ref_pair(child_expr_tree.clone(), column_refs)
+                if let Some(on_attr_ref_pair) =
+                    Self::get_on_attr_ref_pair(child_expr_tree.clone(), attr_refs)
                 {
-                    on_col_ref_pairs.push(on_col_ref_pair)
+                    on_attr_ref_pairs.push(on_attr_ref_pair)
                 } else {
                     let child_expr = child_expr_tree.clone();
                     filter_expr_trees.push(child_expr);
                 }
             }
-            assert!(on_col_ref_pairs.len() + filter_expr_trees.len() == expr_tree.children.len());
+            assert!(on_attr_ref_pairs.len() + filter_expr_trees.len() == expr_tree.children.len());
             let filter_expr_tree = if filter_expr_trees.is_empty() {
                 None
             } else {
@@ -244,10 +244,10 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
             };
             self.get_join_selectivity_core(
                 join_typ,
-                on_col_ref_pairs,
+                on_attr_ref_pairs,
                 filter_expr_tree,
                 schema,
-                column_refs,
+                attr_refs,
                 input_correlation,
                 left_row_cnt,
                 right_row_cnt,
@@ -256,14 +256,14 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
             .await
         } else {
             #[allow(clippy::collapsible_else_if)]
-            if let Some(on_col_ref_pair) = Self::get_on_col_ref_pair(expr_tree.clone(), column_refs)
+            if let Some(on_attr_ref_pair) = Self::get_on_attr_ref_pair(expr_tree.clone(), attr_refs)
             {
                 self.get_join_selectivity_core(
                     join_typ,
-                    vec![on_col_ref_pair],
+                    vec![on_attr_ref_pair],
                     None,
                     schema,
-                    column_refs,
+                    attr_refs,
                     input_correlation,
                     left_row_cnt,
                     right_row_cnt,
@@ -276,7 +276,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
                     vec![],
                     Some(expr_tree),
                     schema,
-                    column_refs,
+                    attr_refs,
                     input_correlation,
                     left_row_cnt,
                     right_row_cnt,
@@ -287,29 +287,29 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
         }
     }
 
-    /// Check if an expr_tree is a join condition, returning the join on col ref pair if it is.
+    /// Check if an expr_tree is a join condition, returning the join on attr ref pair if it is.
     /// The reason the check and the info are in the same function is because their code is almost
-    /// identical. It only picks out equality conditions between two column refs on different
+    /// identical. It only picks out equality conditions between two attribute refs on different
     /// tables
-    fn get_on_col_ref_pair(
+    fn get_on_attr_ref_pair(
         expr_tree: ArcPredicateNode,
-        column_refs: &AttrRefs,
+        attr_refs: &AttrRefs,
     ) -> Option<(AttrRefPred, AttrRefPred)> {
         // 1. Check that it's equality
         if expr_tree.typ == PredicateType::BinOp(BinOpType::Eq) {
             let left_child = expr_tree.child(0);
             let right_child = expr_tree.child(1);
-            // 2. Check that both sides are column refs
+            // 2. Check that both sides are attribute refs
             if left_child.typ == PredicateType::AttrRef && right_child.typ == PredicateType::AttrRef
             {
                 // 3. Check that both sides don't belong to the same table (if we don't know, that
                 //    means they don't belong)
-                let left_col_ref_expr = AttrRefPred::from_pred_node(left_child)
+                let left_attr_ref_expr = AttrRefPred::from_pred_node(left_child)
                     .expect("we already checked that the type is AttrRef");
-                let right_col_ref_expr = AttrRefPred::from_pred_node(right_child)
+                let right_attr_ref_expr = AttrRefPred::from_pred_node(right_child)
                     .expect("we already checked that the type is AttrRef");
-                let left_col_ref = &column_refs[left_col_ref_expr.attr_index() as usize];
-                let right_col_ref = &column_refs[right_col_ref_expr.attr_index() as usize];
+                let left_attr_ref = &attr_refs[left_attr_ref_expr.attr_index() as usize];
+                let right_attr_ref = &attr_refs[right_attr_ref_expr.attr_index() as usize];
                 let is_same_table = if let (
                     AttrRef::BaseTableAttrRef(BaseTableAttrRef {
                         table_id: left_table_id,
@@ -319,14 +319,14 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
                         table_id: right_table_id,
                         ..
                     }),
-                ) = (left_col_ref, right_col_ref)
+                ) = (left_attr_ref, right_attr_ref)
                 {
                     left_table_id == right_table_id
                 } else {
                     false
                 };
                 if !is_same_table {
-                    Some((left_col_ref_expr, right_col_ref_expr))
+                    Some((left_attr_ref_expr, right_attr_ref_expr))
                 } else {
                     None
                 }
@@ -338,8 +338,8 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
         }
     }
 
-    /// Get the selectivity of one column eq predicate, e.g. colA = colB.
-    async fn get_join_selectivity_from_on_col_ref_pair(
+    /// Get the selectivity of one attribute eq predicate, e.g. attrA = attrB.
+    async fn get_join_selectivity_from_on_attr_ref_pair(
         &self,
         left: &AttrRef,
         right: &AttrRef,
@@ -354,7 +354,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
                         .get_attribute_comb_stats(base_attr_ref.table_id, &[base_attr_ref.attr_idx])
                         .await?
                     {
-                        Some(per_col_stats) => per_col_stats.ndistinct,
+                        Some(per_attr_stats) => per_attr_stats.ndistinct,
                         None => DEFAULT_NUM_DISTINCT,
                     }
                 }
@@ -365,7 +365,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
 
         // using reduce(f64::min) is the idiomatic workaround to min() because
         // f64 does not implement Ord due to NaN
-        let selectivity = ndistincts.into_iter().map(|ndistinct| 1.0 / ndistinct as f64).reduce(f64::min).expect("reduce() only returns None if the iterator is empty, which is impossible since col_ref_exprs.len() == 2");
+        let selectivity = ndistincts.into_iter().map(|ndistinct| 1.0 / ndistinct as f64).reduce(f64::min).expect("reduce() only returns None if the iterator is empty, which is impossible since attr_ref_exprs.len() == 2");
         assert!(
             !selectivity.is_nan(),
             "it should be impossible for selectivity to be NaN since n-distinct is never 0"
@@ -373,11 +373,11 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
         Ok(selectivity)
     }
 
-    /// Given a set of N columns involved in a multi-equality, find the total selectivity
+    /// Given a set of N attributes involved in a multi-equality, find the total selectivity
     /// of the multi-equality.
     ///
-    /// This is a generalization of get_join_selectivity_from_on_col_ref_pair().
-    async fn get_join_selectivity_from_most_selective_columns(
+    /// This is a generalization of get_join_selectivity_from_on_attr_ref_pair().
+    async fn get_join_selectivity_from_most_selective_attrs(
         &self,
         base_attr_refs: HashSet<BaseTableAttrRef>,
     ) -> CostModelResult<f64> {
@@ -390,7 +390,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
                 .get_attribute_comb_stats(base_attr_ref.table_id, &[base_attr_ref.attr_idx])
                 .await?
             {
-                Some(per_col_stats) => per_col_stats.ndistinct,
+                Some(per_attr_stats) => per_attr_stats.ndistinct,
                 None => DEFAULT_NUM_DISTINCT,
             };
             ndistincts.push(ndistinct);
@@ -408,15 +408,15 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
     }
 
     /// A predicate set defines a "multi-equality graph", which is an unweighted undirected graph.
-    /// The nodes are columns while edges are predicates. The old graph is defined by
-    /// `past_eq_columns` while the `predicate` is the new addition to this graph. This
+    /// The nodes are attributes while edges are predicates. The old graph is defined by
+    /// `past_eq_attrs` while the `predicate` is the new addition to this graph. This
     /// unweighted undirected graph consists of a number of connected components, where each
-    /// connected component represents columns that are set to be equal to each other. Single
+    /// connected component represents attributes that are set to be equal to each other. Single
     /// nodes not connected to anything are considered standalone connected components.
     ///
     /// The selectivity of each connected component of N nodes is equal to the product of
     /// 1/ndistinct of the N-1 nodes with the highest ndistinct values. You can see this if you
-    /// imagine that all columns being joined are unique columns and that they follow the
+    /// imagine that all attributes being joined are unique attributes and that they follow the
     /// inclusion principle (every element of the smaller tables is present in the larger
     /// tables). When these assumptions are not true, the selectivity may not be completely
     /// accurate. However, it is still fairly accurate.
@@ -428,11 +428,11 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
     /// function) and then the selectivity of the connected component after this join. The
     /// quotient is the "adjustment" factor.
     ///
-    /// NOTE: This function modifies `past_eq_columns` by adding `predicate` to it.
+    /// NOTE: This function modifies `past_eq_attrs` by adding `predicate` to it.
     async fn get_join_selectivity_adjustment_when_adding_to_multi_equality_graph(
         &self,
         predicate: &EqPredicate,
-        past_eq_columns: &mut SemanticCorrelation,
+        past_eq_attrs: &mut SemanticCorrelation,
     ) -> CostModelResult<f64> {
         if predicate.left == predicate.right {
             // self-join, TODO: is this correct?
@@ -443,26 +443,26 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
         //
         // There are two cases: (1) adding `predicate` does not change the # of connected
         // components, and (2) adding `predicate` reduces the # of connected by 1. Note that
-        // columns not involved in any predicates are considered a part of the graph and are
+        // attributes not involved in any predicates are considered a part of the graph and are
         // a connected component on their own.
         let children_pred_sel = {
-            if past_eq_columns.is_eq(&predicate.left, &predicate.right) {
-                self.get_join_selectivity_from_most_selective_columns(
-                    past_eq_columns.find_attrs_for_eq_attribute_set(&predicate.left),
+            if past_eq_attrs.is_eq(&predicate.left, &predicate.right) {
+                self.get_join_selectivity_from_most_selective_attrs(
+                    past_eq_attrs.find_attrs_for_eq_attribute_set(&predicate.left),
                 )
                 .await?
             } else {
-                let left_sel = if past_eq_columns.contains(&predicate.left) {
-                    self.get_join_selectivity_from_most_selective_columns(
-                        past_eq_columns.find_attrs_for_eq_attribute_set(&predicate.left),
+                let left_sel = if past_eq_attrs.contains(&predicate.left) {
+                    self.get_join_selectivity_from_most_selective_attrs(
+                        past_eq_attrs.find_attrs_for_eq_attribute_set(&predicate.left),
                     )
                     .await?
                 } else {
                     1.0
                 };
-                let right_sel = if past_eq_columns.contains(&predicate.right) {
-                    self.get_join_selectivity_from_most_selective_columns(
-                        past_eq_columns.find_attrs_for_eq_attribute_set(&predicate.right),
+                let right_sel = if past_eq_attrs.contains(&predicate.right) {
+                    self.get_join_selectivity_from_most_selective_attrs(
+                        past_eq_attrs.find_attrs_for_eq_attribute_set(&predicate.right),
                     )
                     .await?
                 } else {
@@ -472,12 +472,12 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
             }
         };
 
-        // Add predicate to past_eq_columns and compute the selectivity of the connected component
+        // Add predicate to past_eq_attrs and compute the selectivity of the connected component
         // it creates.
-        past_eq_columns.add_predicate(predicate.clone());
+        past_eq_attrs.add_predicate(predicate.clone());
         let new_pred_sel = {
-            let cols = past_eq_columns.find_attrs_for_eq_attribute_set(&predicate.left);
-            self.get_join_selectivity_from_most_selective_columns(cols)
+            let attrs = past_eq_attrs.find_attrs_for_eq_attribute_set(&predicate.left);
+            self.get_join_selectivity_from_most_selective_attrs(attrs)
         }
         .await?;
 
@@ -500,34 +500,34 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
     /// `get_join_selectivity_from_redundant_predicates`.
     async fn get_join_on_selectivity(
         &self,
-        on_col_ref_pairs: &[(AttrRefPred, AttrRefPred)],
-        column_refs: &AttrRefs,
+        on_attr_ref_pairs: &[(AttrRefPred, AttrRefPred)],
+        attr_refs: &AttrRefs,
         input_correlation: Option<SemanticCorrelation>,
-        right_col_ref_offset: usize,
+        right_attr_ref_offset: usize,
     ) -> CostModelResult<f64> {
-        let mut past_eq_columns = input_correlation.unwrap_or_default();
+        let mut past_eq_attrs = input_correlation.unwrap_or_default();
 
         // Multiply the selectivities of all individual conditions together
         let mut selectivity = 1.0;
-        for on_col_ref_pair in on_col_ref_pairs {
-            let left_col_ref = &column_refs[on_col_ref_pair.0.attr_index() as usize];
-            let right_col_ref =
-                &column_refs[on_col_ref_pair.1.attr_index() as usize + right_col_ref_offset];
+        for on_attr_ref_pair in on_attr_ref_pairs {
+            let left_attr_ref = &attr_refs[on_attr_ref_pair.0.attr_index() as usize];
+            let right_attr_ref =
+                &attr_refs[on_attr_ref_pair.1.attr_index() as usize + right_attr_ref_offset];
 
             if let (AttrRef::BaseTableAttrRef(left), AttrRef::BaseTableAttrRef(right)) =
-                (left_col_ref, right_col_ref)
+                (left_attr_ref, right_attr_ref)
             {
                 let predicate = EqPredicate::new(left.clone(), right.clone());
                 return self
                     .get_join_selectivity_adjustment_when_adding_to_multi_equality_graph(
                         &predicate,
-                        &mut past_eq_columns,
+                        &mut past_eq_attrs,
                     )
                     .await;
             }
 
             selectivity *= self
-                .get_join_selectivity_from_on_col_ref_pair(left_col_ref, right_col_ref)
+                .get_join_selectivity_from_on_attr_ref_pair(left_attr_ref, right_attr_ref)
                 .await?;
         }
         Ok(selectivity)
