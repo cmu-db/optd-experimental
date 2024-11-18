@@ -10,8 +10,10 @@ use optd_persistent::{
 pub mod common;
 pub mod cost;
 pub mod cost_model;
+pub mod memo_ext;
 pub mod stats;
 pub mod storage;
+pub mod utils;
 
 pub enum StatValue {
     Int(i64),
@@ -63,7 +65,7 @@ pub trait CostModel: 'static + Send + Sync {
         node: &PhysicalNodeType,
         predicates: &[ArcPredicateNode],
         children_stats: &[Option<&EstimatedStatistic>],
-        context: Option<ComputeCostContext>,
+        context: ComputeCostContext,
     ) -> CostModelResult<Cost>;
 
     /// TODO: documentation
@@ -76,7 +78,7 @@ pub trait CostModel: 'static + Send + Sync {
         node: PhysicalNodeType,
         predicates: &[ArcPredicateNode],
         children_statistics: &[Option<&EstimatedStatistic>],
-        context: Option<ComputeCostContext>,
+        context: ComputeCostContext,
     ) -> CostModelResult<EstimatedStatistic>;
 
     /// TODO: documentation
