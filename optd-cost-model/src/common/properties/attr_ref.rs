@@ -1,25 +1,30 @@
 use std::collections::HashSet;
 
-use crate::utils::DisjointSets;
+use crate::{common::types::TableId, utils::DisjointSets};
 
-pub type BaseTableAttrRefs = Vec<AttrRef>;
+pub type AttrRefs = Vec<AttrRef>;
 
+/// [`BaseTableAttrRef`] represents a reference to an attribute in a base table,
+/// i.e. a table existing in the catalog.
 #[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
 pub struct BaseTableAttrRef {
-    pub table: String,
-    pub attr_idx: usize,
+    pub table_id: TableId,
+    pub attr_idx: u64,
 }
 
+/// [`AttrRef`] represents a reference to an attribute in a query.
 #[derive(Clone, Debug)]
 pub enum AttrRef {
+    /// Reference to a base table attribute.
     BaseTableAttrRef(BaseTableAttrRef),
-    /// TODO: Better representation of derived attributes (e.g. t.v1 + t.v2).
+    /// Reference to a derived attribute (e.g. t.v1 + t.v2).
+    /// TODO: Better representation of derived attributes.
     Derived,
 }
 
 impl AttrRef {
-    pub fn base_table_attr_ref(table: String, attr_idx: usize) -> Self {
-        AttrRef::BaseTableAttrRef(BaseTableAttrRef { table, attr_idx })
+    pub fn base_table_attr_ref(table_id: TableId, attr_idx: u64) -> Self {
+        AttrRef::BaseTableAttrRef(BaseTableAttrRef { table_id, attr_idx })
     }
 }
 
@@ -29,6 +34,7 @@ impl From<BaseTableAttrRef> for AttrRef {
     }
 }
 
+/// [`EqPredicate`] represents an equality predicate between two attributes.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct EqPredicate {
     pub left: BaseTableAttrRef,
@@ -41,13 +47,12 @@ impl EqPredicate {
     }
 }
 
-/// `SemanticCorrelation` represents the semantic correlation between attributes in a
+/// [`SemanticCorrelation`] represents the semantic correlation between attributes in a
 /// query. "Semantic" means that the attributes are correlated based on the
 /// semantics of the query, not the statistics.
 ///
-/// `SemanticCorrelation` contains equal attributes denoted by disjoint sets of base
+/// [`SemanticCorrelation`] contains equal attributes denoted by disjoint sets of base
 /// table attributes, e.g. {{ t1.c1 = t2.c1 = t3.c1 }, { t1.c2 = t2.c2 }}.
-
 #[derive(Clone, Debug, Default)]
 pub struct SemanticCorrelation {
     /// A disjoint set of base table attributes with equal values in the same row.
@@ -155,25 +160,23 @@ impl SemanticCorrelation {
     }
 }
 
+/// [`GroupAttrRefs`] represents the attributes of a group in a query.
 #[derive(Clone, Debug)]
 pub struct GroupAttrRefs {
-    attribute_refs: BaseTableAttrRefs,
+    attribute_refs: AttrRefs,
     /// Correlation of the output attributes of the group.
     output_correlation: Option<SemanticCorrelation>,
 }
 
 impl GroupAttrRefs {
-    pub fn new(
-        attribute_refs: BaseTableAttrRefs,
-        output_correlation: Option<SemanticCorrelation>,
-    ) -> Self {
+    pub fn new(attribute_refs: AttrRefs, output_correlation: Option<SemanticCorrelation>) -> Self {
         Self {
             attribute_refs,
             output_correlation,
         }
     }
 
-    pub fn base_table_attribute_refs(&self) -> &BaseTableAttrRefs {
+    pub fn base_table_attribute_refs(&self) -> &AttrRefs {
         &self.attribute_refs
     }
 
@@ -189,19 +192,19 @@ mod tests {
     #[test]
     fn test_eq_base_table_attribute_sets() {
         let attr1 = BaseTableAttrRef {
-            table: "t1".to_string(),
+            table_id: TableId(1),
             attr_idx: 1,
         };
         let attr2 = BaseTableAttrRef {
-            table: "t2".to_string(),
+            table_id: TableId(2),
             attr_idx: 2,
         };
         let attr3 = BaseTableAttrRef {
-            table: "t3".to_string(),
+            table_id: TableId(3),
             attr_idx: 3,
         };
         let attr4 = BaseTableAttrRef {
-            table: "t4".to_string(),
+            table_id: TableId(4),
             attr_idx: 4,
         };
         let pred1 = EqPredicate::new(attr1.clone(), attr2.clone());

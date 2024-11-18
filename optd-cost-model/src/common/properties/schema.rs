@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use super::Attribute;
 
+/// [`Schema`] represents the schema of a group in the memo. It contains a list of attributes.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Schema {
     pub attributes: Vec<Attribute>,
