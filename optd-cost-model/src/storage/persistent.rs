@@ -4,7 +4,7 @@ use std::sync::Arc;
 use optd_persistent::{cost_model::interface::StatType, CostModelStorageLayer};
 
 use crate::{
-    common::{predicates::constant_pred::ConstantType, properties::Attribute, types::TableId},
+    common::{properties::Attribute, types::TableId},
     stats::{utilities::counter::Counter, AttributeCombValueStats, Distribution, MostCommonValues},
     CostModelResult,
 };
@@ -26,26 +26,12 @@ impl<S: CostModelStorageLayer + Send + Sync> CostModelStorageManagerImpl<S> {
 impl<S: CostModelStorageLayer + Send + Sync> CostModelStorageManager
     for CostModelStorageManagerImpl<S>
 {
-    /// Gets the attribute information for a given table and attribute base index.
-    ///
-    /// TODO: if we have memory cache,
-    /// we should add the reference. (&Attr)
-    /// TODO(IMPORTANT): what if table is a derived (temporary) table? And what if
-    /// the attribute is a derived attribute?
     async fn get_attribute_info(
         &self,
         table_id: TableId,
         attr_base_index: u64,
     ) -> CostModelResult<Option<Attribute>> {
-        Ok(self
-            .backend_manager
-            .get_attribute(table_id.into(), attr_base_index as i32)
-            .await?
-            .map(|attr| Attribute {
-                name: attr.name,
-                typ: ConstantType::from_persistent_attr_type(attr.attr_type),
-                nullable: attr.nullable,
-            }))
+        unimplemented!()
     }
 
     /// Gets the latest statistics for a given table.
