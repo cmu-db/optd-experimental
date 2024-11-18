@@ -41,7 +41,7 @@ impl<S: CostModelStorageLayer + std::marker::Sync + 'static> CostModel for CostM
         node: &PhysicalNodeType,
         predicates: &[ArcPredicateNode],
         children_stats: &[Option<&EstimatedStatistic>],
-        context: Option<ComputeCostContext>,
+        context: ComputeCostContext,
     ) -> CostModelResult<Cost> {
         todo!()
     }
@@ -51,7 +51,7 @@ impl<S: CostModelStorageLayer + std::marker::Sync + 'static> CostModel for CostM
         node: PhysicalNodeType,
         predicates: &[ArcPredicateNode],
         children_statistics: &[Option<&EstimatedStatistic>],
-        context: Option<ComputeCostContext>,
+        context: ComputeCostContext,
     ) -> CostModelResult<EstimatedStatistic> {
         todo!()
     }

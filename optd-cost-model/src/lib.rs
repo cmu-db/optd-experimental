@@ -65,7 +65,7 @@ pub trait CostModel: 'static + Send + Sync {
         node: &PhysicalNodeType,
         predicates: &[ArcPredicateNode],
         children_stats: &[Option<&EstimatedStatistic>],
-        context: Option<ComputeCostContext>,
+        context: ComputeCostContext,
     ) -> CostModelResult<Cost>;
 
     /// TODO: documentation
@@ -78,7 +78,7 @@ pub trait CostModel: 'static + Send + Sync {
         node: PhysicalNodeType,
         predicates: &[ArcPredicateNode],
         children_statistics: &[Option<&EstimatedStatistic>],
-        context: Option<ComputeCostContext>,
+        context: ComputeCostContext,
     ) -> CostModelResult<EstimatedStatistic>;
 
     /// TODO: documentation
