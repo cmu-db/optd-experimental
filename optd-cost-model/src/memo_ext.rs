@@ -17,4 +17,6 @@ pub trait MemoExt: Send + Sync + 'static {
     fn get_column_ref(&self, group_id: GroupId) -> GroupAttrRefs;
     /// Get the attribute information of a given attribute in a group in the memo.
     fn get_attribute_info(&self, group_id: GroupId, attr_ref_idx: u64) -> Attribute;
+
+    // TODO: Figure out what other information is needed to compute the cost...
 }
