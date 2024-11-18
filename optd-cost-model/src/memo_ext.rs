@@ -21,25 +21,42 @@ pub trait MemoExt: Send + Sync + 'static {
     // TODO: Figure out what other information is needed to compute the cost...
 }
 
+#[cfg(test)]
 pub mod tests {
+    use std::collections::HashMap;
+
     use crate::common::{
         properties::{attr_ref::GroupAttrRefs, schema::Schema, Attribute},
         types::GroupId,
     };
 
-    pub struct MockMemoExt;
+    pub struct MemoGroupInfo {
+        pub schema: Schema,
+        pub attr_ref: GroupAttrRefs,
+    }
 
-    impl super::MemoExt for MockMemoExt {
-        fn get_schema(&self, _group_id: GroupId) -> Schema {
-            unimplemented!()
+    #[derive(Default)]
+    pub struct MockMemoExtImpl {
+        memo: HashMap<GroupId, MemoGroupInfo>,
+    }
+
+    impl super::MemoExt for MockMemoExtImpl {
+        fn get_schema(&self, group_id: GroupId) -> Schema {
+            self.memo.get(&group_id).unwrap().schema.clone()
         }
 
-        fn get_attribute_ref(&self, _group_id: GroupId) -> GroupAttrRefs {
-            unimplemented!()
+        fn get_attribute_ref(&self, group_id: GroupId) -> GroupAttrRefs {
+            self.memo.get(&group_id).unwrap().attr_ref.clone()
         }
 
-        fn get_attribute_info(&self, _group_id: GroupId, _attr_ref_idx: u64) -> Attribute {
-            unimplemented!()
+        fn get_attribute_info(&self, group_id: GroupId, attr_ref_idx: u64) -> Attribute {
+            self.memo.get(&group_id).unwrap().schema.attributes[attr_ref_idx as usize].clone()
+        }
+    }
+
+    impl From<HashMap<GroupId, MemoGroupInfo>> for MockMemoExtImpl {
+        fn from(memo: HashMap<GroupId, MemoGroupInfo>) -> Self {
+            Self { memo }
         }
     }
 }

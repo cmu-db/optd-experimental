@@ -109,7 +109,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_const() {
-        let cost_model = create_cost_model_mock_storage(
+        let cost_model = create_mock_cost_model(
             vec![TableId(0)],
             vec![HashMap::from([(0, empty_per_attr_stats())])],
             vec![None],
@@ -143,7 +143,7 @@ mod tests {
             0.0,
         );
         let table_id = TableId(0);
-        let cost_model = create_cost_model_mock_storage(
+        let cost_model = create_mock_cost_model(
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
@@ -177,7 +177,7 @@ mod tests {
             0.0,
         );
         let table_id = TableId(0);
-        let cost_model = create_cost_model_mock_storage(
+        let cost_model = create_mock_cost_model(
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
@@ -212,7 +212,7 @@ mod tests {
             0.0,
         );
         let table_id = TableId(0);
-        let cost_model = create_cost_model_mock_storage(
+        let cost_model = create_mock_cost_model(
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
@@ -246,7 +246,7 @@ mod tests {
             0.0,
         );
         let table_id = TableId(0);
-        let cost_model = create_cost_model_mock_storage(
+        let cost_model = create_mock_cost_model(
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
@@ -289,7 +289,7 @@ mod tests {
             0.0,
         );
         let table_id = TableId(0);
-        let cost_model = create_cost_model_mock_storage(
+        let cost_model = create_mock_cost_model(
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
@@ -332,7 +332,7 @@ mod tests {
             0.0,
         );
         let table_id = TableId(0);
-        let cost_model = create_cost_model_mock_storage(
+        let cost_model = create_mock_cost_model(
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
@@ -370,7 +370,7 @@ mod tests {
             0.0,
         );
         let table_id = TableId(0);
-        let cost_model = create_cost_model_mock_storage(
+        let cost_model = create_mock_cost_model(
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
@@ -414,7 +414,7 @@ mod tests {
             0.0,
         );
         let table_id = TableId(0);
-        let cost_model = create_cost_model_mock_storage(
+        let cost_model = create_mock_cost_model(
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
@@ -458,7 +458,7 @@ mod tests {
             0.0,
         );
         let table_id = TableId(0);
-        let cost_model = create_cost_model_mock_storage(
+        let cost_model = create_mock_cost_model(
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
@@ -498,7 +498,7 @@ mod tests {
             0.0,
         );
         let table_id = TableId(0);
-        let cost_model = create_cost_model_mock_storage(
+        let cost_model = create_mock_cost_model(
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
@@ -536,7 +536,7 @@ mod tests {
             0.0,
         );
         let table_id = TableId(0);
-        let cost_model = create_cost_model_mock_storage(
+        let cost_model = create_mock_cost_model(
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
@@ -576,7 +576,7 @@ mod tests {
             0.0,
         );
         let table_id = TableId(0);
-        let cost_model = create_cost_model_mock_storage(
+        let cost_model = create_mock_cost_model(
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
@@ -623,7 +623,7 @@ mod tests {
             0.0,
         );
         let table_id = TableId(0);
-        let cost_model = create_cost_model_mock_storage(
+        let cost_model = create_mock_cost_model(
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
@@ -669,7 +669,7 @@ mod tests {
             0.0,
         );
         let table_id = TableId(0);
-        let cost_model = create_cost_model_mock_storage(
+        let cost_model = create_mock_cost_model(
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
@@ -702,7 +702,7 @@ mod tests {
             0.0,
         );
         let table_id = TableId(0);
-        let cost_model = create_cost_model_mock_storage(
+        let cost_model = create_mock_cost_model(
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
@@ -747,16 +747,13 @@ mod tests {
         let table_id = TableId(0);
         let attr_infos = HashMap::from([(
             table_id,
-            HashMap::from([(
-                0,
-                Attribute {
-                    name: String::from("attr1"),
-                    typ: ConstantType::Int32,
-                    nullable: false,
-                },
-            )]),
+            vec![Attribute {
+                name: String::from("attr1"),
+                typ: ConstantType::Int32,
+                nullable: false,
+            }],
         )]);
-        let cost_model = create_cost_model_mock_storage(
+        let cost_model = create_mock_cost_model(
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
@@ -803,26 +800,20 @@ mod tests {
         let table_id = TableId(0);
         let attr_infos = HashMap::from([(
             table_id,
-            HashMap::from([
-                (
-                    0,
-                    Attribute {
-                        name: String::from("attr1"),
-                        typ: ConstantType::Int32,
-                        nullable: false,
-                    },
-                ),
-                (
-                    1,
-                    Attribute {
-                        name: String::from("attr2"),
-                        typ: ConstantType::Int64,
-                        nullable: false,
-                    },
-                ),
-            ]),
+            vec![
+                Attribute {
+                    name: String::from("attr1"),
+                    typ: ConstantType::Int32,
+                    nullable: false,
+                },
+                Attribute {
+                    name: String::from("attr2"),
+                    typ: ConstantType::Int64,
+                    nullable: false,
+                },
+            ],
         )]);
-        let cost_model = create_cost_model_mock_storage(
+        let cost_model = create_mock_cost_model(
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],

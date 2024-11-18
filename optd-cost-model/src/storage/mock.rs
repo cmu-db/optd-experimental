@@ -30,7 +30,7 @@ impl TableStats {
 }
 
 pub type BaseTableStats = HashMap<TableId, TableStats>;
-pub type BaseTableAttrInfo = HashMap<TableId, HashMap<u64, Attribute>>; // (table_id, (attr_base_index, attr))
+pub type BaseTableAttrInfo = HashMap<TableId, Vec<Attribute>>;
 
 pub struct CostModelStorageMockManagerImpl {
     pub(crate) per_table_stats_map: BaseTableStats,
@@ -55,14 +55,10 @@ impl CostModelStorageManager for CostModelStorageMockManagerImpl {
         table_id: TableId,
         attr_base_index: u64,
     ) -> CostModelResult<Option<Attribute>> {
-        let table_attr_infos = self.per_table_attr_infos_map.get(&table_id);
-        match table_attr_infos {
-            None => Ok(None),
-            Some(table_attr_infos) => match table_attr_infos.get(&attr_base_index) {
-                None => Ok(None),
-                Some(attr) => Ok(Some(attr.clone())),
-            },
-        }
+        Ok(self
+            .per_table_attr_infos_map
+            .get(&table_id)
+            .map(|table_attr_infos| table_attr_infos[attr_base_index as usize].clone()))
     }
 
     async fn get_attributes_comb_statistics(

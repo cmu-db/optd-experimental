@@ -125,7 +125,7 @@ mod tests {
             0.0,
         );
         let table_id = TableId(0);
-        let cost_model = create_cost_model_mock_storage(
+        let cost_model = create_mock_cost_model(
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
@@ -168,7 +168,7 @@ mod tests {
             null_frac,
         );
         let table_id = TableId(0);
-        let cost_model = create_cost_model_mock_storage(
+        let cost_model = create_mock_cost_model(
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],

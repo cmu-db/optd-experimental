@@ -138,9 +138,10 @@ pub mod tests {
                 log_op_pred::{LogOpPred, LogOpType},
                 un_op_pred::{UnOpPred, UnOpType},
             },
+            types::GroupId,
             values::Value,
         },
-        memo_ext::tests::MockMemoExt,
+        memo_ext::tests::{MemoGroupInfo, MockMemoExtImpl},
         stats::{
             utilities::counter::Counter, AttributeCombValueStats, Distribution, MostCommonValues,
         },
@@ -153,7 +154,7 @@ pub mod tests {
     // TODO: add tests for non-mock storage manager
     pub type TestOptCostModelMock = CostModelImpl<CostModelStorageMockManagerImpl>;
 
-    pub fn create_cost_model_mock_storage(
+    pub fn create_mock_cost_model(
         table_id: Vec<TableId>,
         per_attribute_stats: Vec<HashMap<u64, TestPerAttributeStats>>,
         row_counts: Vec<Option<u64>>,
@@ -179,7 +180,45 @@ pub mod tests {
                 .collect(),
             per_table_attr_infos,
         );
-        CostModelImpl::new(storage_manager, CatalogSource::Mock, Arc::new(MockMemoExt))
+        CostModelImpl::new(
+            storage_manager,
+            CatalogSource::Mock,
+            Arc::new(MockMemoExtImpl::default()),
+        )
+    }
+
+    pub fn create_mock_cost_model_with_memo(
+        table_id: Vec<TableId>,
+        per_attribute_stats: Vec<HashMap<u64, TestPerAttributeStats>>,
+        row_counts: Vec<Option<u64>>,
+        per_table_attr_infos: BaseTableAttrInfo,
+        group_info: HashMap<GroupId, MemoGroupInfo>,
+    ) -> TestOptCostModelMock {
+        let storage_manager = CostModelStorageMockManagerImpl::new(
+            table_id
+                .into_iter()
+                .zip(per_attribute_stats)
+                .zip(row_counts)
+                .map(|((table_id, per_attr_stats), row_count)| {
+                    (
+                        table_id,
+                        TableStats::new(
+                            row_count.unwrap_or(100),
+                            per_attr_stats
+                                .into_iter()
+                                .map(|(attr_idx, stats)| (vec![attr_idx], stats))
+                                .collect(),
+                        ),
+                    )
+                })
+                .collect(),
+            per_table_attr_infos,
+        );
+        CostModelImpl::new(
+            storage_manager,
+            CatalogSource::Mock,
+            Arc::new(MockMemoExtImpl::from(group_info)),
+        )
     }
 
     pub fn attr_ref(table_id: TableId, attr_base_index: u64) -> ArcPredicateNode {

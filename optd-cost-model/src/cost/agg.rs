@@ -72,7 +72,7 @@ mod tests {
             values::Value,
         },
         cost_model::tests::{
-            attr_ref, cnst, create_cost_model_mock_storage, empty_list, empty_per_attr_stats, list,
+            attr_ref, cnst, create_mock_cost_model, empty_list, empty_per_attr_stats, list,
             TestPerAttributeStats,
         },
         stats::{utilities::simple_map::SimpleMap, MostCommonValues, DEFAULT_NUM_DISTINCT},
@@ -84,27 +84,20 @@ mod tests {
         let table_id = TableId(0);
         let attr_infos = HashMap::from([(
             table_id,
-            HashMap::from([
-                (
-                    0,
-                    Attribute {
-                        name: String::from("attr1"),
-                        typ: ConstantType::Int32,
-                        nullable: false,
-                    },
-                ),
-                (
-                    1,
-                    Attribute {
-                        name: String::from("attr2"),
-                        typ: ConstantType::Int64,
-                        nullable: false,
-                    },
-                ),
-            ]),
+            vec![
+                Attribute {
+                    name: String::from("attr1"),
+                    typ: ConstantType::Int32,
+                    nullable: false,
+                },
+                Attribute {
+                    name: String::from("attr2"),
+                    typ: ConstantType::Int64,
+                    nullable: false,
+                },
+            ],
         )]);
-        let cost_model =
-            create_cost_model_mock_storage(vec![table_id], vec![], vec![None], attr_infos);
+        let cost_model = create_mock_cost_model(vec![table_id], vec![], vec![None], attr_infos);
 
         // Group by empty list should return 1.
         let group_bys = empty_list();
@@ -136,32 +129,23 @@ mod tests {
         let attr3_base_idx = 2;
         let attr_infos = HashMap::from([(
             table_id,
-            HashMap::from([
-                (
-                    attr1_base_idx,
-                    Attribute {
-                        name: String::from("attr1"),
-                        typ: ConstantType::Int32,
-                        nullable: false,
-                    },
-                ),
-                (
-                    attr2_base_idx,
-                    Attribute {
-                        name: String::from("attr2"),
-                        typ: ConstantType::Int64,
-                        nullable: false,
-                    },
-                ),
-                (
-                    attr3_base_idx,
-                    Attribute {
-                        name: String::from("attr3"),
-                        typ: ConstantType::Int64,
-                        nullable: false,
-                    },
-                ),
-            ]),
+            vec![
+                Attribute {
+                    name: String::from("attr1"),
+                    typ: ConstantType::Int32,
+                    nullable: false,
+                },
+                Attribute {
+                    name: String::from("attr2"),
+                    typ: ConstantType::Int64,
+                    nullable: false,
+                },
+                Attribute {
+                    name: String::from("attr3"),
+                    typ: ConstantType::Int64,
+                    nullable: false,
+                },
+            ],
         )]);
 
         let attr1_ndistinct = 12;
@@ -179,7 +163,7 @@ mod tests {
             0.0,
         );
 
-        let cost_model = create_cost_model_mock_storage(
+        let cost_model = create_mock_cost_model(
             vec![table_id],
             vec![HashMap::from([
                 (attr1_base_idx, attr1_stats),
