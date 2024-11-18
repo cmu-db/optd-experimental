@@ -12,6 +12,7 @@ pub mod cost;
 pub mod cost_model;
 pub mod stats;
 pub mod storage;
+pub mod utils;
 
 pub enum StatValue {
     Int(i64),
