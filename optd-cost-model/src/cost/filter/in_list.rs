@@ -95,7 +95,6 @@ mod tests {
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
-            HashMap::new(),
         );
 
         assert_approx_eq::assert_approx_eq!(

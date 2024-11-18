@@ -100,6 +100,7 @@ mod tests {
             values::Value,
         },
         cost_model::tests::*,
+        memo_ext::tests::MemoGroupInfo,
         stats::{
             utilities::{counter::Counter, simple_map::SimpleMap},
             Distribution, MostCommonValues, DEFAULT_EQ_SEL,
@@ -113,7 +114,6 @@ mod tests {
             vec![TableId(0)],
             vec![HashMap::from([(0, empty_per_attr_stats())])],
             vec![None],
-            HashMap::new(),
         );
         assert_approx_eq::assert_approx_eq!(
             cost_model
@@ -147,7 +147,6 @@ mod tests {
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
-            HashMap::new(),
         );
 
         let expr_tree = bin_op(BinOpType::Eq, attr_ref(table_id, 0), cnst(Value::Int32(1)));
@@ -181,7 +180,6 @@ mod tests {
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
-            HashMap::new(),
         );
 
         let expr_tree = bin_op(BinOpType::Eq, attr_ref(table_id, 0), cnst(Value::Int32(2)));
@@ -216,7 +214,6 @@ mod tests {
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
-            HashMap::new(),
         );
 
         let expr_tree = bin_op(BinOpType::Neq, attr_ref(table_id, 0), cnst(Value::Int32(1)));
@@ -250,7 +247,6 @@ mod tests {
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
-            HashMap::new(),
         );
 
         let expr_tree = bin_op(
@@ -293,7 +289,6 @@ mod tests {
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
-            HashMap::new(),
         );
 
         let expr_tree = bin_op(
@@ -336,7 +331,6 @@ mod tests {
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
-            HashMap::new(),
         );
 
         let expr_tree = bin_op(
@@ -374,7 +368,6 @@ mod tests {
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
-            HashMap::new(),
         );
 
         let expr_tree = bin_op(BinOpType::Lt, attr_ref(table_id, 0), cnst(Value::Int32(15)));
@@ -418,7 +411,6 @@ mod tests {
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
-            HashMap::new(),
         );
 
         let expr_tree = bin_op(BinOpType::Lt, attr_ref(table_id, 0), cnst(Value::Int32(15)));
@@ -462,7 +454,6 @@ mod tests {
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
-            HashMap::new(),
         );
 
         let expr_tree = bin_op(BinOpType::Lt, attr_ref(table_id, 0), cnst(Value::Int32(15)));
@@ -502,7 +493,6 @@ mod tests {
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
-            HashMap::new(),
         );
 
         let expr_tree = bin_op(BinOpType::Gt, attr_ref(table_id, 0), cnst(Value::Int32(15)));
@@ -540,7 +530,6 @@ mod tests {
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
-            HashMap::new(),
         );
 
         let expr_tree = bin_op(
@@ -580,7 +569,6 @@ mod tests {
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
-            HashMap::new(),
         );
 
         let eq1 = bin_op(BinOpType::Eq, attr_ref(table_id, 0), cnst(Value::Int32(1)));
@@ -627,7 +615,6 @@ mod tests {
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
-            HashMap::new(),
         );
 
         let eq1 = bin_op(BinOpType::Eq, attr_ref(table_id, 0), cnst(Value::Int32(1)));
@@ -673,7 +660,6 @@ mod tests {
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
-            HashMap::new(),
         );
 
         let expr_tree = un_op(
@@ -706,7 +692,6 @@ mod tests {
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
-            HashMap::new(),
         );
 
         let expr_tree = bin_op(
@@ -745,19 +730,18 @@ mod tests {
             0.1,
         );
         let table_id = TableId(0);
-        let attr_infos = HashMap::from([(
-            table_id,
-            vec![Attribute {
-                name: String::from("attr1"),
-                typ: ConstantType::Int32,
-                nullable: false,
-            }],
-        )]);
+        // let attr_infos = HashMap::from([(
+        //     table_id,
+        //     vec![Attribute {
+        //         name: String::from("attr1"),
+        //         typ: ConstantType::Int32,
+        //         nullable: false,
+        //     }],
+        // )]);
         let cost_model = create_mock_cost_model(
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
-            attr_infos,
         );
 
         let expr_tree = bin_op(
@@ -798,26 +782,25 @@ mod tests {
             0.0,
         );
         let table_id = TableId(0);
-        let attr_infos = HashMap::from([(
-            table_id,
-            vec![
-                Attribute {
-                    name: String::from("attr1"),
-                    typ: ConstantType::Int32,
-                    nullable: false,
-                },
-                Attribute {
-                    name: String::from("attr2"),
-                    typ: ConstantType::Int64,
-                    nullable: false,
-                },
-            ],
-        )]);
+        // let attr_infos = HashMap::from([(
+        //     table_id,
+        //     vec![
+        //         Attribute {
+        //             name: String::from("attr1"),
+        //             typ: ConstantType::Int32,
+        //             nullable: false,
+        //         },
+        //         Attribute {
+        //             name: String::from("attr2"),
+        //             typ: ConstantType::Int64,
+        //             nullable: false,
+        //         },
+        //     ],
+        // )]);
         let cost_model = create_mock_cost_model(
             vec![table_id],
             vec![HashMap::from([(0, per_attribute_stats)])],
             vec![None],
-            attr_infos,
         );
 
         let expr_tree = bin_op(

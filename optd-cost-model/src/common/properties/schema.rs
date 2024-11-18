@@ -33,3 +33,9 @@ impl Schema {
         self.len() == 0
     }
 }
+
+impl From<Vec<Attribute>> for Schema {
+    fn from(attributes: Vec<Attribute>) -> Self {
+        Self::new(attributes)
+    }
+}

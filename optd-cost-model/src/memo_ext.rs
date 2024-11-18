@@ -35,9 +35,27 @@ pub mod tests {
         pub attr_ref: GroupAttrRefs,
     }
 
+    impl MemoGroupInfo {
+        pub fn new(schema: Schema, attr_ref: GroupAttrRefs) -> Self {
+            Self { schema, attr_ref }
+        }
+    }
+
     #[derive(Default)]
     pub struct MockMemoExtImpl {
         memo: HashMap<GroupId, MemoGroupInfo>,
+    }
+
+    impl MockMemoExtImpl {
+        pub fn add_group_info(
+            &mut self,
+            group_id: GroupId,
+            schema: Schema,
+            attr_ref: GroupAttrRefs,
+        ) {
+            self.memo
+                .insert(group_id, MemoGroupInfo::new(schema, attr_ref));
+        }
     }
 
     impl super::MemoExt for MockMemoExtImpl {

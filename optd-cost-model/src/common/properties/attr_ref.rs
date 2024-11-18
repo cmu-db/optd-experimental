@@ -23,6 +23,10 @@ pub enum AttrRef {
 }
 
 impl AttrRef {
+    pub fn new_base_table_attr_ref(table_id: TableId, attr_idx: u64) -> Self {
+        AttrRef::BaseTableAttrRef(BaseTableAttrRef { table_id, attr_idx })
+    }
+
     pub fn base_table_attr_ref(table_id: TableId, attr_idx: u64) -> Self {
         AttrRef::BaseTableAttrRef(BaseTableAttrRef { table_id, attr_idx })
     }
@@ -161,7 +165,7 @@ impl SemanticCorrelation {
 }
 
 /// [`GroupAttrRefs`] represents the attributes of a group in a query.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct GroupAttrRefs {
     attr_refs: AttrRefs,
     /// Correlation of the output attributes of the group.

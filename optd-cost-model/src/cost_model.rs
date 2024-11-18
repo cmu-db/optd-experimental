@@ -131,12 +131,17 @@ pub mod tests {
                 attr_ref_pred::AttrRefPred,
                 bin_op_pred::{BinOpPred, BinOpType},
                 cast_pred::CastPred,
-                constant_pred::ConstantPred,
+                constant_pred::{ConstantPred, ConstantType},
                 in_list_pred::InListPred,
                 like_pred::LikePred,
                 list_pred::ListPred,
                 log_op_pred::{LogOpPred, LogOpType},
                 un_op_pred::{UnOpPred, UnOpType},
+            },
+            properties::{
+                attr_ref::{AttrRef, GroupAttrRefs},
+                schema::Schema,
+                Attribute,
             },
             types::GroupId,
             values::Value,
@@ -145,10 +150,20 @@ pub mod tests {
         stats::{
             utilities::counter::Counter, AttributeCombValueStats, Distribution, MostCommonValues,
         },
-        storage::mock::{BaseTableAttrInfo, CostModelStorageMockManagerImpl, TableStats},
+        storage::mock::{CostModelStorageMockManagerImpl, TableStats},
     };
 
     use super::*;
+
+    const TEST_TABLE1_ID: TableId = TableId(0);
+    const TEST_TABLE2_ID: TableId = TableId(1);
+    const TEST_TABLE3_ID: TableId = TableId(2);
+    const TEST_TABLE4_ID: TableId = TableId(3);
+
+    const TEST_GROUP1_ID: GroupId = GroupId(0);
+    const TEST_GROUP2_ID: GroupId = GroupId(1);
+    const TEST_GROUP3_ID: GroupId = GroupId(2);
+    const TEST_GROUP4_ID: GroupId = GroupId(3);
 
     pub type TestPerAttributeStats = AttributeCombValueStats;
     // TODO: add tests for non-mock storage manager
@@ -158,7 +173,6 @@ pub mod tests {
         table_id: Vec<TableId>,
         per_attribute_stats: Vec<HashMap<u64, TestPerAttributeStats>>,
         row_counts: Vec<Option<u64>>,
-        per_table_attr_infos: BaseTableAttrInfo,
     ) -> TestOptCostModelMock {
         let storage_manager = CostModelStorageMockManagerImpl::new(
             table_id
@@ -178,7 +192,6 @@ pub mod tests {
                     )
                 })
                 .collect(),
-            per_table_attr_infos,
         );
         CostModelImpl::new(
             storage_manager,
@@ -187,38 +200,294 @@ pub mod tests {
         )
     }
 
-    pub fn create_mock_cost_model_with_memo(
-        table_id: Vec<TableId>,
-        per_attribute_stats: Vec<HashMap<u64, TestPerAttributeStats>>,
-        row_counts: Vec<Option<u64>>,
-        per_table_attr_infos: BaseTableAttrInfo,
-        group_info: HashMap<GroupId, MemoGroupInfo>,
+    /// Create a cost model two tables, each with one attribute. Each attribute has 100 values.
+    pub fn create_two_table_mock_cost_model(
+        tbl1_per_attr_stats: TestPerAttributeStats,
+        tbl2_per_attr_stats: TestPerAttributeStats,
+    ) -> TestOptCostModelMock {
+        create_two_table_cost_model_custom_row_cnts(
+            tbl1_per_attr_stats,
+            tbl2_per_attr_stats,
+            100,
+            100,
+        )
+    }
+
+    /// Create a cost model with three columns, one for each table. Each column has 100 values.
+    pub fn create_three_table_cost_model(
+        tbl1_per_column_stats: TestPerAttributeStats,
+        tbl2_per_column_stats: TestPerAttributeStats,
+        tbl3_per_column_stats: TestPerAttributeStats,
     ) -> TestOptCostModelMock {
         let storage_manager = CostModelStorageMockManagerImpl::new(
-            table_id
-                .into_iter()
-                .zip(per_attribute_stats)
-                .zip(row_counts)
-                .map(|((table_id, per_attr_stats), row_count)| {
-                    (
-                        table_id,
-                        TableStats::new(
-                            row_count.unwrap_or(100),
-                            per_attr_stats
-                                .into_iter()
-                                .map(|(attr_idx, stats)| (vec![attr_idx], stats))
-                                .collect(),
-                        ),
-                    )
-                })
-                .collect(),
-            per_table_attr_infos,
+            vec![
+                (
+                    TEST_TABLE1_ID,
+                    TableStats::new(
+                        100,
+                        vec![(vec![0], tbl1_per_column_stats)].into_iter().collect(),
+                    ),
+                ),
+                (
+                    TEST_TABLE2_ID,
+                    TableStats::new(
+                        100,
+                        vec![(vec![0], tbl2_per_column_stats)].into_iter().collect(),
+                    ),
+                ),
+                (
+                    TEST_TABLE3_ID,
+                    TableStats::new(
+                        100,
+                        vec![(vec![0], tbl3_per_column_stats)].into_iter().collect(),
+                    ),
+                ),
+            ]
+            .into_iter()
+            .collect(),
         );
+        let memo = HashMap::from([
+            (
+                TEST_GROUP1_ID,
+                MemoGroupInfo::new(
+                    vec![Attribute {
+                        name: "attr1".to_string(),
+                        typ: ConstantType::Int64,
+                        nullable: false,
+                    }]
+                    .into(),
+                    GroupAttrRefs::new(
+                        vec![AttrRef::new_base_table_attr_ref(TEST_TABLE1_ID, 0)],
+                        None,
+                    ),
+                ),
+            ),
+            (
+                TEST_GROUP2_ID,
+                MemoGroupInfo::new(
+                    vec![Attribute {
+                        name: "attr2".to_string(),
+                        typ: ConstantType::Int64,
+                        nullable: false,
+                    }]
+                    .into(),
+                    GroupAttrRefs::new(
+                        vec![AttrRef::new_base_table_attr_ref(TEST_TABLE2_ID, 0)],
+                        None,
+                    ),
+                ),
+            ),
+            (
+                TEST_GROUP3_ID,
+                MemoGroupInfo::new(
+                    vec![Attribute {
+                        name: "attr3".to_string(),
+                        typ: ConstantType::Int64,
+                        nullable: false,
+                    }]
+                    .into(),
+                    GroupAttrRefs::new(
+                        vec![AttrRef::new_base_table_attr_ref(TEST_TABLE3_ID, 0)],
+                        None,
+                    ),
+                ),
+            ),
+        ]);
         CostModelImpl::new(
             storage_manager,
             CatalogSource::Mock,
-            Arc::new(MockMemoExtImpl::from(group_info)),
+            Arc::new(MockMemoExtImpl::from(memo)),
         )
+    }
+
+    /// Create a cost model with three columns, one for each table. Each column has 100 values.
+    pub fn create_four_table_cost_model(
+        tbl1_per_column_stats: TestPerAttributeStats,
+        tbl2_per_column_stats: TestPerAttributeStats,
+        tbl3_per_column_stats: TestPerAttributeStats,
+        tbl4_per_column_stats: TestPerAttributeStats,
+    ) -> TestOptCostModelMock {
+        let storage_manager = CostModelStorageMockManagerImpl::new(
+            vec![
+                (
+                    TEST_TABLE1_ID,
+                    TableStats::new(
+                        100,
+                        vec![(vec![0], tbl1_per_column_stats)].into_iter().collect(),
+                    ),
+                ),
+                (
+                    TEST_TABLE2_ID,
+                    TableStats::new(
+                        100,
+                        vec![(vec![0], tbl2_per_column_stats)].into_iter().collect(),
+                    ),
+                ),
+                (
+                    TEST_TABLE3_ID,
+                    TableStats::new(
+                        100,
+                        vec![(vec![0], tbl3_per_column_stats)].into_iter().collect(),
+                    ),
+                ),
+                (
+                    TEST_TABLE4_ID,
+                    TableStats::new(
+                        100,
+                        vec![(vec![0], tbl4_per_column_stats)].into_iter().collect(),
+                    ),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        let memo = HashMap::from([
+            (
+                TEST_GROUP1_ID,
+                MemoGroupInfo::new(
+                    vec![Attribute {
+                        name: "attr1".to_string(),
+                        typ: ConstantType::Int64,
+                        nullable: false,
+                    }]
+                    .into(),
+                    GroupAttrRefs::new(
+                        vec![AttrRef::new_base_table_attr_ref(TEST_TABLE1_ID, 0)],
+                        None,
+                    ),
+                ),
+            ),
+            (
+                TEST_GROUP2_ID,
+                MemoGroupInfo::new(
+                    vec![Attribute {
+                        name: "attr2".to_string(),
+                        typ: ConstantType::Int64,
+                        nullable: false,
+                    }]
+                    .into(),
+                    GroupAttrRefs::new(
+                        vec![AttrRef::new_base_table_attr_ref(TEST_TABLE2_ID, 0)],
+                        None,
+                    ),
+                ),
+            ),
+            (
+                TEST_GROUP3_ID,
+                MemoGroupInfo::new(
+                    vec![Attribute {
+                        name: "attr3".to_string(),
+                        typ: ConstantType::Int64,
+                        nullable: false,
+                    }]
+                    .into(),
+                    GroupAttrRefs::new(
+                        vec![AttrRef::new_base_table_attr_ref(TEST_TABLE3_ID, 0)],
+                        None,
+                    ),
+                ),
+            ),
+            (
+                TEST_GROUP4_ID,
+                MemoGroupInfo::new(
+                    vec![Attribute {
+                        name: "attr4".to_string(),
+                        typ: ConstantType::Int64,
+                        nullable: false,
+                    }]
+                    .into(),
+                    GroupAttrRefs::new(
+                        vec![AttrRef::new_base_table_attr_ref(TEST_TABLE4_ID, 0)],
+                        None,
+                    ),
+                ),
+            ),
+        ]);
+        CostModelImpl::new(
+            storage_manager,
+            CatalogSource::Mock,
+            Arc::new(MockMemoExtImpl::from(memo)),
+        )
+    }
+
+    /// We need custom row counts because some join algorithms rely on the row cnt
+    pub fn create_two_table_cost_model_custom_row_cnts(
+        tbl1_per_column_stats: TestPerAttributeStats,
+        tbl2_per_column_stats: TestPerAttributeStats,
+        tbl1_row_cnt: u64,
+        tbl2_row_cnt: u64,
+    ) -> TestOptCostModelMock {
+        let storage_manager = CostModelStorageMockManagerImpl::new(
+            vec![
+                (
+                    TEST_TABLE1_ID,
+                    TableStats::new(
+                        tbl1_row_cnt,
+                        vec![(vec![0], tbl1_per_column_stats)].into_iter().collect(),
+                    ),
+                ),
+                (
+                    TEST_TABLE2_ID,
+                    TableStats::new(
+                        tbl2_row_cnt,
+                        vec![(vec![0], tbl2_per_column_stats)].into_iter().collect(),
+                    ),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        let memo = HashMap::from([
+            (
+                TEST_GROUP1_ID,
+                MemoGroupInfo::new(
+                    vec![Attribute {
+                        name: "attr1".to_string(),
+                        typ: ConstantType::Int64,
+                        nullable: false,
+                    }]
+                    .into(),
+                    GroupAttrRefs::new(
+                        vec![AttrRef::new_base_table_attr_ref(TEST_TABLE1_ID, 0)],
+                        None,
+                    ),
+                ),
+            ),
+            (
+                TEST_GROUP2_ID,
+                MemoGroupInfo::new(
+                    vec![Attribute {
+                        name: "attr2".to_string(),
+                        typ: ConstantType::Int64,
+                        nullable: false,
+                    }]
+                    .into(),
+                    GroupAttrRefs::new(
+                        vec![AttrRef::new_base_table_attr_ref(TEST_TABLE2_ID, 0)],
+                        None,
+                    ),
+                ),
+            ),
+        ]);
+        CostModelImpl::new(
+            storage_manager,
+            CatalogSource::Mock,
+            Arc::new(MockMemoExtImpl::from(memo)),
+        )
+    }
+
+    impl TestOptCostModelMock {
+        pub fn get_row_count(&self, table_id: TableId) -> u64 {
+            self.storage_manager
+                .per_table_stats_map
+                .get(&table_id)
+                .map(|stats| stats.row_cnt)
+                .unwrap_or(0)
+        }
+
+        pub fn get_attr_refs(&self, group_id: GroupId) -> GroupAttrRefs {
+            self.memo.get_attribute_ref(group_id)
+        }
     }
 
     pub fn attr_ref(table_id: TableId, attr_base_index: u64) -> ArcPredicateNode {
