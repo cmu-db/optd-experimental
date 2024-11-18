@@ -176,7 +176,7 @@ impl GroupAttrRefs {
         }
     }
 
-    pub fn base_table_attribute_refs(&self) -> &AttrRefs {
+    pub fn base_table_attr_refs(&self) -> &AttrRefs {
         &self.attribute_refs
     }
 

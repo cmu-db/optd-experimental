@@ -1,4 +1,5 @@
-use std::sync::Arc;
+use core::fmt;
+use std::{fmt::Display, sync::Arc};
 
 use arrow_schema::DataType;
 
@@ -22,6 +23,12 @@ pub enum JoinType {
     RightSemi,
     LeftAnti,
     RightAnti,
+}
+
+impl Display for JoinType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 /// TODO: documentation
@@ -49,7 +56,7 @@ impl std::fmt::Display for PhysicalNodeType {
 pub enum PredicateType {
     List,
     Constant(ConstantType),
-    AttributeRef,
+    AttrRef,
     ExternAttributeRef,
     // TODO(lanlou): Id -> Id(IdType)
     Id,

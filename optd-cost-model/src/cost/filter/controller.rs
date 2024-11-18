@@ -31,7 +31,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
         Box::pin(async move {
             match &expr_tree.typ {
                 PredicateType::Constant(_) => Ok(Self::get_constant_selectivity(expr_tree)),
-                PredicateType::AttributeRef => unimplemented!("check bool type or else panic"),
+                PredicateType::AttrRef => unimplemented!("check bool type or else panic"),
                 PredicateType::UnOp(un_op_typ) => {
                     assert!(expr_tree.children.len() == 1);
                     let child = expr_tree.child(0);

@@ -25,13 +25,13 @@ use super::id_pred::IdPred;
 /// TODO: Support derived column in `AttributeRefPred`.
 /// Proposal: Data field can store the column type (base or derived).
 #[derive(Clone, Debug)]
-pub struct AttributeRefPred(pub ArcPredicateNode);
+pub struct AttrRefPred(pub ArcPredicateNode);
 
-impl AttributeRefPred {
-    pub fn new(table_id: TableId, attribute_idx: u64) -> AttributeRefPred {
-        AttributeRefPred(
+impl AttrRefPred {
+    pub fn new(table_id: TableId, attribute_idx: u64) -> AttrRefPred {
+        AttrRefPred(
             PredicateNode {
-                typ: PredicateType::AttributeRef,
+                typ: PredicateType::AttrRef,
                 children: vec![
                     IdPred::new(table_id.0).into_pred_node(),
                     IdPred::new(attribute_idx).into_pred_node(),
@@ -60,13 +60,13 @@ impl AttributeRefPred {
     }
 }
 
-impl ReprPredicateNode for AttributeRefPred {
+impl ReprPredicateNode for AttrRefPred {
     fn into_pred_node(self) -> ArcPredicateNode {
         self.0
     }
 
     fn from_pred_node(pred_node: ArcPredicateNode) -> Option<Self> {
-        if pred_node.typ != PredicateType::AttributeRef {
+        if pred_node.typ != PredicateType::AttrRef {
             return None;
         }
         Some(Self(pred_node))

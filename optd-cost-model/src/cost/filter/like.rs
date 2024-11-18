@@ -4,7 +4,7 @@ use crate::{
     common::{
         nodes::{PredicateType, ReprPredicateNode},
         predicates::{
-            attr_ref_pred::AttributeRefPred, constant_pred::ConstantPred, like_pred::LikePred,
+            attr_ref_pred::AttrRefPred, constant_pred::ConstantPred, like_pred::LikePred,
         },
     },
     cost_model::CostModelImpl,
@@ -32,7 +32,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
         let child = like_expr.child();
 
         // Check child is a attribute ref.
-        if !matches!(child.typ, PredicateType::AttributeRef) {
+        if !matches!(child.typ, PredicateType::AttrRef) {
             return Ok(UNIMPLEMENTED_SEL);
         }
 
@@ -42,7 +42,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
             return Ok(UNIMPLEMENTED_SEL);
         }
 
-        let attr_ref_pred = AttributeRefPred::from_pred_node(child).unwrap();
+        let attr_ref_pred = AttrRefPred::from_pred_node(child).unwrap();
         let attr_ref_idx = attr_ref_pred.attr_index();
         let table_id = attr_ref_pred.table_id();
 

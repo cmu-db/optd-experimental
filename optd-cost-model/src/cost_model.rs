@@ -128,7 +128,7 @@ pub mod tests {
         common::{
             nodes::ReprPredicateNode,
             predicates::{
-                attr_ref_pred::AttributeRefPred,
+                attr_ref_pred::AttrRefPred,
                 bin_op_pred::{BinOpPred, BinOpType},
                 cast_pred::CastPred,
                 constant_pred::ConstantPred,
@@ -183,7 +183,7 @@ pub mod tests {
     }
 
     pub fn attr_ref(table_id: TableId, attr_base_index: u64) -> ArcPredicateNode {
-        AttributeRefPred::new(table_id, attr_base_index).into_pred_node()
+        AttrRefPred::new(table_id, attr_base_index).into_pred_node()
     }
 
     pub fn cnst(value: Value) -> ArcPredicateNode {

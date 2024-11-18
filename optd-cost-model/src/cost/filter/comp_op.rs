@@ -4,7 +4,7 @@ use crate::{
     common::{
         nodes::{ArcPredicateNode, PredicateType, ReprPredicateNode},
         predicates::{
-            attr_ref_pred::AttributeRefPred, bin_op_pred::BinOpType, cast_pred::CastPred,
+            attr_ref_pred::AttrRefPred, bin_op_pred::BinOpType, cast_pred::CastPred,
             constant_pred::ConstantPred,
         },
         values::Value,
@@ -118,12 +118,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
         &self,
         left: ArcPredicateNode,
         right: ArcPredicateNode,
-    ) -> CostModelResult<(
-        Vec<AttributeRefPred>,
-        Vec<Value>,
-        Vec<ArcPredicateNode>,
-        bool,
-    )> {
+    ) -> CostModelResult<(Vec<AttrRefPred>, Vec<Value>, Vec<ArcPredicateNode>, bool)> {
         let mut attr_ref_exprs = vec![];
         let mut values = vec![];
         let mut non_attr_ref_exprs = vec![];
@@ -171,8 +166,8 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
                         .into_pred_node();
                         false
                     }
-                    PredicateType::AttributeRef => {
-                        let attr_ref_expr = AttributeRefPred::from_pred_node(cast_expr_child)
+                    PredicateType::AttrRef => {
+                        let attr_ref_expr = AttrRefPred::from_pred_node(cast_expr_child)
                             .expect("we already checked that the type is AttributeRef");
                         let attr_ref_idx = attr_ref_expr.attr_index();
                         let table_id = attr_ref_expr.table_id();
@@ -190,7 +185,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
                         let invert_cast_data_type = &attribute_info.typ.into_data_type();
 
                         match non_cast_node.typ {
-                            PredicateType::AttributeRef => {
+                            PredicateType::AttrRef => {
                                 // In general, there's no way to remove the Cast here. We can't move
                                 // the Cast to the other AttributeRef
                                 // because that would lead to an infinite loop. Thus, we just leave
@@ -224,10 +219,10 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
 
         // Sort nodes into attr_ref_exprs, values, and non_attr_ref_exprs
         match uncasted_left.as_ref().typ {
-            PredicateType::AttributeRef => {
+            PredicateType::AttrRef => {
                 is_left_attr_ref = true;
                 attr_ref_exprs.push(
-                    AttributeRefPred::from_pred_node(uncasted_left)
+                    AttrRefPred::from_pred_node(uncasted_left)
                         .expect("we already checked that the type is AttributeRef"),
                 );
             }
@@ -245,9 +240,9 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
             }
         }
         match uncasted_right.as_ref().typ {
-            PredicateType::AttributeRef => {
+            PredicateType::AttrRef => {
                 attr_ref_exprs.push(
-                    AttributeRefPred::from_pred_node(uncasted_right)
+                    AttrRefPred::from_pred_node(uncasted_right)
                         .expect("we already checked that the type is AttributeRef"),
                 );
             }

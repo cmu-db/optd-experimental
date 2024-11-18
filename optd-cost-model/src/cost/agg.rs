@@ -1,7 +1,7 @@
 use crate::{
     common::{
         nodes::{ArcPredicateNode, PredicateType, ReprPredicateNode},
-        predicates::{attr_ref_pred::AttributeRefPred, list_pred::ListPred},
+        predicates::{attr_ref_pred::AttrRefPred, list_pred::ListPred},
         types::TableId,
     },
     cost_model::CostModelImpl,
@@ -25,9 +25,9 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
 
             for node in &group_by.0.children {
                 match node.typ {
-                    PredicateType::AttributeRef => {
+                    PredicateType::AttrRef => {
                         let attr_ref =
-                            AttributeRefPred::from_pred_node(node.clone()).ok_or_else(|| {
+                            AttrRefPred::from_pred_node(node.clone()).ok_or_else(|| {
                                 SemanticError::InvalidPredicate(
                                     "Expected AttributeRef predicate".to_string(),
                                 )
