@@ -46,7 +46,6 @@ pub enum PhysicalExpression {
     GroupId,
     Fingerprint,
     VariantTag,
-    Data,
 }
 
 #[derive(DeriveMigrationName)]
@@ -71,7 +70,6 @@ impl MigrationTrait for Migration {
                     )
                     .col(big_unsigned(PhysicalExpression::Fingerprint))
                     .col(small_integer(PhysicalExpression::VariantTag))
-                    .col(json(PhysicalExpression::Data))
                     .to_owned(),
             )
             .await

@@ -12,6 +12,7 @@ use crate::{
         nodes::{ArcPredicateNode, PhysicalNodeType},
         types::{AttrId, EpochId, ExprId, TableId},
     },
+    memo_ext::MemoExt,
     stats::AttributeCombValueStats,
     storage::CostModelStorageManager,
     ComputeCostContext, Cost, CostModel, CostModelResult, EstimatedStatistic, StatValue,
@@ -21,27 +22,31 @@ use crate::{
 pub struct CostModelImpl<S: CostModelStorageManager> {
     pub storage_manager: S,
     pub default_catalog_source: CatalogSource,
+    _memo: Arc<dyn MemoExt>,
 }
 
 impl<S: CostModelStorageManager> CostModelImpl<S> {
     /// TODO: documentation
-    pub fn new(storage_manager: S, default_catalog_source: CatalogSource) -> Self {
+    pub fn new(
+        storage_manager: S,
+        default_catalog_source: CatalogSource,
+        memo: Arc<dyn MemoExt>,
+    ) -> Self {
         Self {
             storage_manager,
             default_catalog_source,
+            _memo: memo,
         }
     }
 }
 
-impl<S: CostModelStorageManager + std::marker::Sync + std::marker::Send + 'static> CostModel
-    for CostModelImpl<S>
-{
+impl<S: CostModelStorageManager + Send + Sync + 'static> CostModel for CostModelImpl<S> {
     fn compute_operation_cost(
         &self,
         node: &PhysicalNodeType,
         predicates: &[ArcPredicateNode],
         children_stats: &[Option<&EstimatedStatistic>],
-        context: Option<ComputeCostContext>,
+        context: ComputeCostContext,
     ) -> CostModelResult<Cost> {
         todo!()
     }
@@ -51,7 +56,7 @@ impl<S: CostModelStorageManager + std::marker::Sync + std::marker::Send + 'stati
         node: PhysicalNodeType,
         predicates: &[ArcPredicateNode],
         children_statistics: &[Option<&EstimatedStatistic>],
-        context: Option<ComputeCostContext>,
+        context: ComputeCostContext,
     ) -> CostModelResult<EstimatedStatistic> {
         todo!()
     }
@@ -135,6 +140,7 @@ pub mod tests {
             },
             values::Value,
         },
+        memo_ext::tests::MockMemoExt,
         stats::{
             utilities::counter::Counter, AttributeCombValueStats, Distribution, MostCommonValues,
         },
@@ -173,7 +179,7 @@ pub mod tests {
                 .collect(),
             per_table_attr_infos,
         );
-        CostModelImpl::new(storage_manager, CatalogSource::Mock)
+        CostModelImpl::new(storage_manager, CatalogSource::Mock, Arc::new(MockMemoExt))
     }
 
     pub fn attr_ref(table_id: TableId, attr_base_index: u64) -> ArcPredicateNode {

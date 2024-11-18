@@ -67,13 +67,15 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::{
-        common::{predicates::constant_pred::ConstantType, types::TableId, values::Value},
+        common::{
+            predicates::constant_pred::ConstantType, properties::Attribute, types::TableId,
+            values::Value,
+        },
         cost_model::tests::{
             attr_ref, cnst, create_cost_model_mock_storage, empty_list, empty_per_attr_stats, list,
             TestPerAttributeStats,
         },
         stats::{utilities::simple_map::SimpleMap, MostCommonValues, DEFAULT_NUM_DISTINCT},
-        storage::Attribute,
         EstimatedStatistic,
     };
 

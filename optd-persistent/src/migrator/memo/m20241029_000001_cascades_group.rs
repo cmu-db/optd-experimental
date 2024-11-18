@@ -75,6 +75,7 @@ pub enum CascadesGroup {
     LatestWinner,
     InProgress,
     IsOptimized,
+    ParentId,
 }
 
 #[derive(DeriveMigrationName)]
@@ -99,6 +100,14 @@ impl MigrationTrait for Migration {
                     )
                     .col(boolean(CascadesGroup::InProgress))
                     .col(boolean(CascadesGroup::IsOptimized))
+                    .col(integer_null(CascadesGroup::ParentId))
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(CascadesGroup::Table, CascadesGroup::ParentId)
+                            .to(CascadesGroup::Table, CascadesGroup::Id)
+                            .on_delete(ForeignKeyAction::SetNull)
+                            .on_update(ForeignKeyAction::Cascade),
+                    )
                     .to_owned(),
             )
             .await

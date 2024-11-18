@@ -137,7 +137,7 @@ Table logical_expression {
   group_id integer [ref: > cascades_group.id]
   fingerprint integer
   variant_tag integer
-  data json
+  predicate integer [ref: > predicate.id]
 }
 
 Table cascades_group {
@@ -145,6 +145,7 @@ Table cascades_group {
   latest_winner integer [ref: > physical_expression.id, null]
   in_progress boolean
   is_optimized boolean
+  parent integer [ref: > cascades_group.id]
 }
 
 // Physical expressions and properties
@@ -153,7 +154,7 @@ Table physical_expression {
   group_id integer [ref: > cascades_group.id]
   fingerprint integer
   variant_tag integer
-  data json
+  predicate integer [ref: > predicate.id]
 }
 
 Table physical_property {
@@ -187,13 +188,29 @@ Table group_winner {
   id integer [pk]
   group_id integer [ref: > cascades_group.id]
   physical_expression_id integer [ref: > physical_expression.id]
-  cost_id integer [ref: > plan_cost.id]
+  cost integer
   epoch_id integer [ref: > event.epoch_id]
 }
 
+Table predicate {
+  id integer [pk]
+  data json
+  variant integer
+}
 
-// Notes:
-// - All columns are NOT NULL unless specified otherwise
-// - fingerprint represents a hash of the actual data in the logical and physical expression tuple
-// - Each new event inserted into events table has its own epoch_id
-// - `cascades_group.latest_winner` is an optimization to avoid querying entire group_winner table
+Table predicate_children {
+  parent_id integer [ref: > predicate.id]
+  child_id integer [ref: > predicate.id]
+}
+
+Table predicate_logical_expression_junction {
+  logical_expr_id integer [ref: > logical_expression.id]
+  predicate_id integer [ref: > predicate.id]
+}
+
+Table predicate_physical_expression_junction {
+  physical_expr_id integer [ref: > physical_expression.id]
+  predicate_id integer [ref: > predicate.id]
+}
+
+

@@ -4,12 +4,12 @@ use std::sync::Arc;
 use optd_persistent::{cost_model::interface::StatType, CostModelStorageLayer};
 
 use crate::{
-    common::{predicates::constant_pred::ConstantType, types::TableId},
+    common::{predicates::constant_pred::ConstantType, properties::Attribute, types::TableId},
     stats::{utilities::counter::Counter, AttributeCombValueStats, Distribution, MostCommonValues},
     CostModelResult,
 };
 
-use super::{Attribute, CostModelStorageManager};
+use super::CostModelStorageManager;
 
 /// TODO: documentation
 pub struct CostModelStorageManagerImpl<S: CostModelStorageLayer + Send + Sync> {

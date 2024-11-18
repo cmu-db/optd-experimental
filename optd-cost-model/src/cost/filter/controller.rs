@@ -98,6 +98,7 @@ mod tests {
                 bin_op_pred::BinOpType, constant_pred::ConstantType, log_op_pred::LogOpType,
                 un_op_pred::UnOpType,
             },
+            properties::Attribute,
             types::TableId,
             values::Value,
         },
@@ -106,7 +107,6 @@ mod tests {
             utilities::{counter::Counter, simple_map::SimpleMap},
             Distribution, MostCommonValues, DEFAULT_EQ_SEL,
         },
-        storage::Attribute,
     };
     use arrow_schema::DataType;
 

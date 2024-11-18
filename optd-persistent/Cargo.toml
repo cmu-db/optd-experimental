@@ -13,7 +13,7 @@ sea-orm = { version = "1.1.1", features = [
     "with-json",
 ] }
 sea-orm-migration = "1.0.0"
-serde_json = "1.0"
+serde_json = "1.0.118" # Hash implementation on serde_json::Value
 tokio = { version = "1.0.1", features = ["macros", "rt-multi-thread"] }
 trait-variant = "0.1.2"
 
