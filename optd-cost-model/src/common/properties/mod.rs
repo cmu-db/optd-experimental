@@ -5,8 +5,6 @@ use super::predicates::constant_pred::ConstantType;
 pub mod attr_ref;
 pub mod schema;
 
-const DEFAULT_NAME: &str = "unnamed";
-
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Attribute {
     pub name: String,
@@ -20,17 +18,6 @@ impl std::fmt::Display for Attribute {
             write!(f, "{}:{:?}", self.name, self.typ)
         } else {
             write!(f, "{}:{:?}(non-null)", self.name, self.typ)
-        }
-    }
-}
-
-impl Attribute {
-    /// Generate a field that is only a place holder whose members are never used.
-    fn placeholder() -> Self {
-        Self {
-            name: DEFAULT_NAME.to_string(),
-            typ: ConstantType::Binary,
-            nullable: true,
         }
     }
 }
