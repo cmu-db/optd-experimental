@@ -28,9 +28,9 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
         right_keys: ListPred,
     ) -> CostModelResult<EstimatedStatistic> {
         let selectivity = {
-            let output_attr_refs = self.memo.get_attribute_ref(group_id);
-            let left_attr_refs = self.memo.get_attribute_ref(left_group_id);
-            let right_attr_refs = self.memo.get_attribute_ref(right_group_id);
+            let output_attr_refs = self.memo.get_attribute_refs(group_id);
+            let left_attr_refs = self.memo.get_attribute_refs(left_group_id);
+            let right_attr_refs = self.memo.get_attribute_refs(right_group_id);
             let left_attr_cnt = left_attr_refs.attr_refs().len();
             // there may be more than one expression tree in a group.
             // see comment in PredicateType::PhysicalFilter(_) for more information

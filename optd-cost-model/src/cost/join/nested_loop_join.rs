@@ -25,9 +25,9 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
         join_cond: ArcPredicateNode,
     ) -> CostModelResult<EstimatedStatistic> {
         let selectivity = {
-            let output_attr_refs = self.memo.get_attribute_ref(group_id);
-            let left_attr_refs = self.memo.get_attribute_ref(left_group_id);
-            let right_attr_refs = self.memo.get_attribute_ref(right_group_id);
+            let output_attr_refs = self.memo.get_attribute_refs(group_id);
+            let left_attr_refs = self.memo.get_attribute_refs(left_group_id);
+            let right_attr_refs = self.memo.get_attribute_refs(right_group_id);
             let input_correlation = get_input_correlation(left_attr_refs, right_attr_refs);
 
             self.get_join_selectivity_from_expr_tree(

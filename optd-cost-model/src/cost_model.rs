@@ -155,15 +155,15 @@ pub mod tests {
 
     use super::*;
 
-    const TEST_TABLE1_ID: TableId = TableId(0);
-    const TEST_TABLE2_ID: TableId = TableId(1);
-    const TEST_TABLE3_ID: TableId = TableId(2);
-    const TEST_TABLE4_ID: TableId = TableId(3);
+    pub const TEST_TABLE1_ID: TableId = TableId(0);
+    pub const TEST_TABLE2_ID: TableId = TableId(1);
+    pub const TEST_TABLE3_ID: TableId = TableId(2);
+    pub const TEST_TABLE4_ID: TableId = TableId(3);
 
-    const TEST_GROUP1_ID: GroupId = GroupId(0);
-    const TEST_GROUP2_ID: GroupId = GroupId(1);
-    const TEST_GROUP3_ID: GroupId = GroupId(2);
-    const TEST_GROUP4_ID: GroupId = GroupId(3);
+    pub const TEST_GROUP1_ID: GroupId = GroupId(0);
+    pub const TEST_GROUP2_ID: GroupId = GroupId(1);
+    pub const TEST_GROUP3_ID: GroupId = GroupId(2);
+    pub const TEST_GROUP4_ID: GroupId = GroupId(3);
 
     pub type TestPerAttributeStats = AttributeCombValueStats;
     // TODO: add tests for non-mock storage manager
@@ -495,7 +495,7 @@ pub mod tests {
         }
 
         pub fn get_attr_refs(&self, group_id: GroupId) -> GroupAttrRefs {
-            self.memo.get_attribute_ref(group_id)
+            self.memo.get_attribute_refs(group_id)
         }
     }
 

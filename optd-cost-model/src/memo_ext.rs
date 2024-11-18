@@ -1,5 +1,9 @@
 use crate::common::{
-    properties::{attr_ref::GroupAttrRefs, schema::Schema, Attribute},
+    properties::{
+        attr_ref::{AttrRef, GroupAttrRefs},
+        schema::Schema,
+        Attribute,
+    },
     types::GroupId,
 };
 
@@ -13,10 +17,12 @@ use crate::common::{
 pub trait MemoExt: Send + Sync + 'static {
     /// Get the schema of a group in the memo.
     fn get_schema(&self, group_id: GroupId) -> Schema;
-    /// Get the attribute reference of a group in the memo.
-    fn get_attribute_ref(&self, group_id: GroupId) -> GroupAttrRefs;
-    /// Get the attribute information of a given attribute in a group in the memo.
+    /// Get the attribute info of a given attribute in a group in the memo.
     fn get_attribute_info(&self, group_id: GroupId, attr_ref_idx: u64) -> Attribute;
+    /// Get the attribute reference of a group in the memo.
+    fn get_attribute_refs(&self, group_id: GroupId) -> GroupAttrRefs;
+    /// Get the attribute reference of a given attribute in a group in the memo.
+    fn get_attribute_ref(&self, group_id: GroupId, attr_ref_idx: u64) -> AttrRef;
 
     // TODO: Figure out what other information is needed to compute the cost...
 }
@@ -26,18 +32,22 @@ pub mod tests {
     use std::collections::HashMap;
 
     use crate::common::{
-        properties::{attr_ref::GroupAttrRefs, schema::Schema, Attribute},
+        properties::{
+            attr_ref::{AttrRef, GroupAttrRefs},
+            schema::Schema,
+            Attribute,
+        },
         types::GroupId,
     };
 
     pub struct MemoGroupInfo {
         pub schema: Schema,
-        pub attr_ref: GroupAttrRefs,
+        pub attr_refs: GroupAttrRefs,
     }
 
     impl MemoGroupInfo {
-        pub fn new(schema: Schema, attr_ref: GroupAttrRefs) -> Self {
-            Self { schema, attr_ref }
+        pub fn new(schema: Schema, attr_refs: GroupAttrRefs) -> Self {
+            Self { schema, attr_refs }
         }
     }
 
@@ -63,12 +73,16 @@ pub mod tests {
             self.memo.get(&group_id).unwrap().schema.clone()
         }
 
-        fn get_attribute_ref(&self, group_id: GroupId) -> GroupAttrRefs {
-            self.memo.get(&group_id).unwrap().attr_ref.clone()
-        }
-
         fn get_attribute_info(&self, group_id: GroupId, attr_ref_idx: u64) -> Attribute {
             self.memo.get(&group_id).unwrap().schema.attributes[attr_ref_idx as usize].clone()
+        }
+
+        fn get_attribute_refs(&self, group_id: GroupId) -> GroupAttrRefs {
+            self.memo.get(&group_id).unwrap().attr_refs.clone()
+        }
+
+        fn get_attribute_ref(&self, group_id: GroupId, attr_ref_idx: u64) -> AttrRef {
+            self.memo.get(&group_id).unwrap().attr_refs.attr_refs()[attr_ref_idx as usize].clone()
         }
     }
 
