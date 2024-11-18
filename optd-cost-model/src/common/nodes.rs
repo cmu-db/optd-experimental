@@ -56,10 +56,7 @@ impl std::fmt::Display for PhysicalNodeType {
 pub enum PredicateType {
     List,
     Constant(ConstantType),
-    AttrRef,
-    ExternAttributeRef,
-    // TODO(lanlou): Id -> Id(IdType)
-    Id,
+    AttrIndex,
     UnOp(UnOpType),
     BinOp(BinOpType),
     LogOp(LogOpType),

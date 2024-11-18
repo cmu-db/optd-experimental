@@ -28,7 +28,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
         Box::pin(async move {
             match &expr_tree.typ {
                 PredicateType::Constant(_) => Ok(Self::get_constant_selectivity(expr_tree)),
-                PredicateType::AttrRef => unimplemented!("check bool type or else panic"),
+                PredicateType::AttrIndex => unimplemented!("check bool type or else panic"),
                 PredicateType::UnOp(un_op_typ) => {
                     assert!(expr_tree.children.len() == 1);
                     let child = expr_tree.child(0);
@@ -149,8 +149,16 @@ mod tests {
             vec![None],
         );
 
-        let expr_tree = bin_op(BinOpType::Eq, attr_ref(table_id, 0), cnst(Value::Int32(1)));
-        let expr_tree_rev = bin_op(BinOpType::Eq, cnst(Value::Int32(1)), attr_ref(table_id, 0));
+        let expr_tree = bin_op(
+            BinOpType::Eq,
+            attr_index(0), // TODO: Fix this
+            cnst(Value::Int32(1)),
+        );
+        let expr_tree_rev = bin_op(
+            BinOpType::Eq,
+            cnst(Value::Int32(1)),
+            attr_index(0), // TODO: Fix this
+        );
         assert_approx_eq::assert_approx_eq!(
             cost_model.get_filter_selectivity(expr_tree).await.unwrap(),
             0.3
@@ -182,8 +190,16 @@ mod tests {
             vec![None],
         );
 
-        let expr_tree = bin_op(BinOpType::Eq, attr_ref(table_id, 0), cnst(Value::Int32(2)));
-        let expr_tree_rev = bin_op(BinOpType::Eq, cnst(Value::Int32(2)), attr_ref(table_id, 0));
+        let expr_tree = bin_op(
+            BinOpType::Eq,
+            attr_index(0), // TODO: Fix this
+            cnst(Value::Int32(2)),
+        );
+        let expr_tree_rev = bin_op(
+            BinOpType::Eq,
+            cnst(Value::Int32(2)),
+            attr_index(0), // TODO: Fix this
+        );
         assert_approx_eq::assert_approx_eq!(
             cost_model.get_filter_selectivity(expr_tree).await.unwrap(),
             0.12
@@ -216,8 +232,16 @@ mod tests {
             vec![None],
         );
 
-        let expr_tree = bin_op(BinOpType::Neq, attr_ref(table_id, 0), cnst(Value::Int32(1)));
-        let expr_tree_rev = bin_op(BinOpType::Neq, cnst(Value::Int32(1)), attr_ref(table_id, 0));
+        let expr_tree = bin_op(
+            BinOpType::Neq,
+            attr_index(0), // TODO: Fix this
+            cnst(Value::Int32(1)),
+        );
+        let expr_tree_rev = bin_op(
+            BinOpType::Neq,
+            cnst(Value::Int32(1)),
+            attr_index(0), // TODO: Fix this
+        );
         assert_approx_eq::assert_approx_eq!(
             cost_model.get_filter_selectivity(expr_tree).await.unwrap(),
             1.0 - 0.3
@@ -251,10 +275,14 @@ mod tests {
 
         let expr_tree = bin_op(
             BinOpType::Leq,
-            attr_ref(table_id, 0),
+            attr_index(0), // TODO: Fix this
             cnst(Value::Int32(15)),
         );
-        let expr_tree_rev = bin_op(BinOpType::Gt, cnst(Value::Int32(15)), attr_ref(table_id, 0));
+        let expr_tree_rev = bin_op(
+            BinOpType::Gt,
+            cnst(Value::Int32(15)),
+            attr_index(0), // TODO: Fix this
+        );
         assert_approx_eq::assert_approx_eq!(
             cost_model.get_filter_selectivity(expr_tree).await.unwrap(),
             0.7
@@ -293,10 +321,14 @@ mod tests {
 
         let expr_tree = bin_op(
             BinOpType::Leq,
-            attr_ref(table_id, 0),
+            attr_index(0), // TODO: Fix this
             cnst(Value::Int32(15)),
         );
-        let expr_tree_rev = bin_op(BinOpType::Gt, cnst(Value::Int32(15)), attr_ref(table_id, 0));
+        let expr_tree_rev = bin_op(
+            BinOpType::Gt,
+            cnst(Value::Int32(15)),
+            attr_index(0), // TODO: Fix this
+        );
         assert_approx_eq::assert_approx_eq!(
             cost_model.get_filter_selectivity(expr_tree).await.unwrap(),
             0.85
@@ -335,10 +367,14 @@ mod tests {
 
         let expr_tree = bin_op(
             BinOpType::Leq,
-            attr_ref(table_id, 0),
+            attr_index(0), // TODO: Fix this
             cnst(Value::Int32(15)),
         );
-        let expr_tree_rev = bin_op(BinOpType::Gt, cnst(Value::Int32(15)), attr_ref(table_id, 0));
+        let expr_tree_rev = bin_op(
+            BinOpType::Gt,
+            cnst(Value::Int32(15)),
+            attr_index(0), // TODO: Fix this
+        );
         assert_approx_eq::assert_approx_eq!(
             cost_model.get_filter_selectivity(expr_tree).await.unwrap(),
             0.93
@@ -370,11 +406,15 @@ mod tests {
             vec![None],
         );
 
-        let expr_tree = bin_op(BinOpType::Lt, attr_ref(table_id, 0), cnst(Value::Int32(15)));
+        let expr_tree = bin_op(
+            BinOpType::Lt,
+            attr_index(0), // TODO: Fix this
+            cnst(Value::Int32(15)),
+        );
         let expr_tree_rev = bin_op(
             BinOpType::Geq,
             cnst(Value::Int32(15)),
-            attr_ref(table_id, 0),
+            attr_index(0), // TODO: Fix this
         );
         assert_approx_eq::assert_approx_eq!(
             cost_model.get_filter_selectivity(expr_tree).await.unwrap(),
@@ -413,11 +453,15 @@ mod tests {
             vec![None],
         );
 
-        let expr_tree = bin_op(BinOpType::Lt, attr_ref(table_id, 0), cnst(Value::Int32(15)));
+        let expr_tree = bin_op(
+            BinOpType::Lt,
+            attr_index(0), // TODO: Fix this
+            cnst(Value::Int32(15)),
+        );
         let expr_tree_rev = bin_op(
             BinOpType::Geq,
             cnst(Value::Int32(15)),
-            attr_ref(table_id, 0),
+            attr_index(0), // TODO: Fix this
         );
         assert_approx_eq::assert_approx_eq!(
             cost_model.get_filter_selectivity(expr_tree).await.unwrap(),
@@ -456,11 +500,15 @@ mod tests {
             vec![None],
         );
 
-        let expr_tree = bin_op(BinOpType::Lt, attr_ref(table_id, 0), cnst(Value::Int32(15)));
+        let expr_tree = bin_op(
+            BinOpType::Lt,
+            attr_index(0), // TODO: Fix this
+            cnst(Value::Int32(15)),
+        );
         let expr_tree_rev = bin_op(
             BinOpType::Geq,
             cnst(Value::Int32(15)),
-            attr_ref(table_id, 0),
+            attr_index(0), // TODO: Fix this
         );
         assert_approx_eq::assert_approx_eq!(
             cost_model.get_filter_selectivity(expr_tree).await.unwrap(),
@@ -495,11 +543,15 @@ mod tests {
             vec![None],
         );
 
-        let expr_tree = bin_op(BinOpType::Gt, attr_ref(table_id, 0), cnst(Value::Int32(15)));
+        let expr_tree = bin_op(
+            BinOpType::Gt,
+            attr_index(0), // TODO: Fix this
+            cnst(Value::Int32(15)),
+        );
         let expr_tree_rev = bin_op(
             BinOpType::Leq,
             cnst(Value::Int32(15)),
-            attr_ref(table_id, 0),
+            attr_index(0), // TODO: Fix this
         );
         assert_approx_eq::assert_approx_eq!(
             cost_model.get_filter_selectivity(expr_tree).await.unwrap(),
@@ -534,10 +586,14 @@ mod tests {
 
         let expr_tree = bin_op(
             BinOpType::Geq,
-            attr_ref(table_id, 0),
+            attr_index(0), // TODO: Fix this
             cnst(Value::Int32(15)),
         );
-        let expr_tree_rev = bin_op(BinOpType::Lt, cnst(Value::Int32(15)), attr_ref(table_id, 0));
+        let expr_tree_rev = bin_op(
+            BinOpType::Lt,
+            cnst(Value::Int32(15)),
+            attr_index(0), // TODO: Fix this
+        );
 
         assert_approx_eq::assert_approx_eq!(
             cost_model.get_filter_selectivity(expr_tree).await.unwrap(),
@@ -571,9 +627,21 @@ mod tests {
             vec![None],
         );
 
-        let eq1 = bin_op(BinOpType::Eq, attr_ref(table_id, 0), cnst(Value::Int32(1)));
-        let eq5 = bin_op(BinOpType::Eq, attr_ref(table_id, 0), cnst(Value::Int32(5)));
-        let eq8 = bin_op(BinOpType::Eq, attr_ref(table_id, 0), cnst(Value::Int32(8)));
+        let eq1 = bin_op(
+            BinOpType::Eq,
+            attr_index(0), // TODO: Fix this
+            cnst(Value::Int32(1)),
+        );
+        let eq5 = bin_op(
+            BinOpType::Eq,
+            attr_index(0), // TODO: Fix this
+            cnst(Value::Int32(5)),
+        );
+        let eq8 = bin_op(
+            BinOpType::Eq,
+            attr_index(0), // TODO: Fix this
+            cnst(Value::Int32(8)),
+        );
         let expr_tree = log_op(LogOpType::And, vec![eq1.clone(), eq5.clone(), eq8.clone()]);
         let expr_tree_shift1 = log_op(LogOpType::And, vec![eq5.clone(), eq8.clone(), eq1.clone()]);
         let expr_tree_shift2 = log_op(LogOpType::And, vec![eq8.clone(), eq1.clone(), eq5.clone()]);
@@ -617,9 +685,21 @@ mod tests {
             vec![None],
         );
 
-        let eq1 = bin_op(BinOpType::Eq, attr_ref(table_id, 0), cnst(Value::Int32(1)));
-        let eq5 = bin_op(BinOpType::Eq, attr_ref(table_id, 0), cnst(Value::Int32(5)));
-        let eq8 = bin_op(BinOpType::Eq, attr_ref(table_id, 0), cnst(Value::Int32(8)));
+        let eq1 = bin_op(
+            BinOpType::Eq,
+            attr_index(0), // TODO: Fix this
+            cnst(Value::Int32(1)),
+        );
+        let eq5 = bin_op(
+            BinOpType::Eq,
+            attr_index(0), // TODO: Fix this
+            cnst(Value::Int32(5)),
+        );
+        let eq8 = bin_op(
+            BinOpType::Eq,
+            attr_index(0), // TODO: Fix this
+            cnst(Value::Int32(8)),
+        );
         let expr_tree = log_op(LogOpType::Or, vec![eq1.clone(), eq5.clone(), eq8.clone()]);
         let expr_tree_shift1 = log_op(LogOpType::Or, vec![eq5.clone(), eq8.clone(), eq1.clone()]);
         let expr_tree_shift2 = log_op(LogOpType::Or, vec![eq8.clone(), eq1.clone(), eq5.clone()]);
@@ -664,7 +744,11 @@ mod tests {
 
         let expr_tree = un_op(
             UnOpType::Not,
-            bin_op(BinOpType::Eq, attr_ref(table_id, 0), cnst(Value::Int32(1))),
+            bin_op(
+                BinOpType::Eq,
+                attr_index(0), // TODO: Fix this
+                cnst(Value::Int32(1)),
+            ),
         );
 
         assert_approx_eq::assert_approx_eq!(
@@ -696,13 +780,13 @@ mod tests {
 
         let expr_tree = bin_op(
             BinOpType::Eq,
-            attr_ref(table_id, 0),
+            attr_index(0), // TODO: Fix this
             cast(cnst(Value::Int64(1)), DataType::Int32),
         );
         let expr_tree_rev = bin_op(
             BinOpType::Eq,
             cast(cnst(Value::Int64(1)), DataType::Int32),
-            attr_ref(table_id, 0),
+            attr_index(0), // TODO: Fix this
         );
 
         assert_approx_eq::assert_approx_eq!(
@@ -746,13 +830,13 @@ mod tests {
 
         let expr_tree = bin_op(
             BinOpType::Eq,
-            cast(attr_ref(table_id, 0), DataType::Int64),
+            cast(attr_index(0), DataType::Int64), // TODO: Fix this
             cnst(Value::Int64(1)),
         );
         let expr_tree_rev = bin_op(
             BinOpType::Eq,
             cnst(Value::Int64(1)),
-            cast(attr_ref(table_id, 0), DataType::Int64),
+            cast(attr_index(0), DataType::Int64), // TODO: Fix this
         );
 
         assert_approx_eq::assert_approx_eq!(
@@ -805,13 +889,13 @@ mod tests {
 
         let expr_tree = bin_op(
             BinOpType::Eq,
-            cast(attr_ref(table_id, 0), DataType::Int64),
-            attr_ref(table_id, 1),
+            cast(attr_index(0), DataType::Int64), // TODO: Fix this
+            attr_index(1),                        // TODO: Fix this
         );
         let expr_tree_rev = bin_op(
             BinOpType::Eq,
-            attr_ref(table_id, 1),
-            cast(attr_ref(table_id, 0), DataType::Int64),
+            attr_index(1),                        // TODO: Fix this
+            cast(attr_index(0), DataType::Int64), // TODO: Fix this
         );
 
         assert_approx_eq::assert_approx_eq!(

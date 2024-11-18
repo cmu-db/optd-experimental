@@ -4,7 +4,7 @@ use crate::{
     common::{
         nodes::{PredicateType, ReprPredicateNode},
         predicates::{
-            attr_ref_pred::AttrRefPred, constant_pred::ConstantPred, like_pred::LikePred,
+            attr_index_pred::AttrIndexPred, constant_pred::ConstantPred, like_pred::LikePred,
         },
     },
     cost_model::CostModelImpl,
@@ -32,7 +32,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
         let child = like_expr.child();
 
         // Check child is a attribute ref.
-        if !matches!(child.typ, PredicateType::AttrRef) {
+        if !matches!(child.typ, PredicateType::AttrIndex) {
             return Ok(UNIMPLEMENTED_SEL);
         }
 
@@ -42,9 +42,9 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
             return Ok(UNIMPLEMENTED_SEL);
         }
 
-        let attr_ref_pred = AttrRefPred::from_pred_node(child).unwrap();
+        let attr_ref_pred = AttrIndexPred::from_pred_node(child).unwrap();
         let attr_ref_idx = attr_ref_pred.attr_index();
-        let table_id = attr_ref_pred.table_id();
+        let table_id = todo!(); // TODO: Fix this
 
         // TODO: Consider attribute is a derived attribute
         let pattern = ConstantPred::from_pred_node(pattern)
@@ -133,21 +133,21 @@ mod tests {
 
         assert_approx_eq::assert_approx_eq!(
             cost_model
-                .get_like_selectivity(&like(table_id, 0, "%abcd%", false))
+                .get_like_selectivity(&like(0, "%abcd%", false)) // TODO: Fix this
                 .await
                 .unwrap(),
             0.1 + FULL_WILDCARD_SEL_FACTOR.powi(2) * FIXED_CHAR_SEL_FACTOR.powi(4)
         );
         assert_approx_eq::assert_approx_eq!(
             cost_model
-                .get_like_selectivity(&like(table_id, 0, "%abc%", false))
+                .get_like_selectivity(&like(0, "%abc%", false)) // TODO: Fix this
                 .await
                 .unwrap(),
             0.1 + 0.1 + FULL_WILDCARD_SEL_FACTOR.powi(2) * FIXED_CHAR_SEL_FACTOR.powi(3)
         );
         assert_approx_eq::assert_approx_eq!(
             cost_model
-                .get_like_selectivity(&like(table_id, 0, "%abc%", true))
+                .get_like_selectivity(&like(0, "%abc%", true)) // TODO: Fix this
                 .await
                 .unwrap(),
             1.0 - (0.1 + 0.1 + FULL_WILDCARD_SEL_FACTOR.powi(2) * FIXED_CHAR_SEL_FACTOR.powi(3))
@@ -175,14 +175,14 @@ mod tests {
 
         assert_approx_eq::assert_approx_eq!(
             cost_model
-                .get_like_selectivity(&like(table_id, 0, "%abcd%", false))
+                .get_like_selectivity(&like(0, "%abcd%", false)) // TODO: Fix this
                 .await
                 .unwrap(),
             0.1 + FULL_WILDCARD_SEL_FACTOR.powi(2) * FIXED_CHAR_SEL_FACTOR.powi(4)
         );
         assert_approx_eq::assert_approx_eq!(
             cost_model
-                .get_like_selectivity(&like(table_id, 0, "%abcd%", true))
+                .get_like_selectivity(&like(0, "%abcd%", true)) // TODO: Fix this
                 .await
                 .unwrap(),
             1.0 - (0.1 + FULL_WILDCARD_SEL_FACTOR.powi(2) * FIXED_CHAR_SEL_FACTOR.powi(4))

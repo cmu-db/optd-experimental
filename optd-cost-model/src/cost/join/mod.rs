@@ -1,6 +1,6 @@
 use crate::common::{
     nodes::{ArcPredicateNode, PredicateType, ReprPredicateNode},
-    predicates::{attr_ref_pred::AttrRefPred, bin_op_pred::BinOpType},
+    predicates::{attr_index_pred::AttrIndexPred, bin_op_pred::BinOpType},
     properties::attr_ref::{
         AttrRef, AttrRefs, BaseTableAttrRef, GroupAttrRefs, SemanticCorrelation,
     },
@@ -27,18 +27,19 @@ pub(crate) fn get_input_correlation(
 pub(crate) fn get_on_attr_ref_pair(
     expr_tree: ArcPredicateNode,
     attr_refs: &AttrRefs,
-) -> Option<(AttrRefPred, AttrRefPred)> {
+) -> Option<(AttrIndexPred, AttrIndexPred)> {
     // 1. Check that it's equality
     if expr_tree.typ == PredicateType::BinOp(BinOpType::Eq) {
         let left_child = expr_tree.child(0);
         let right_child = expr_tree.child(1);
         // 2. Check that both sides are attribute refs
-        if left_child.typ == PredicateType::AttrRef && right_child.typ == PredicateType::AttrRef {
+        if left_child.typ == PredicateType::AttrIndex && right_child.typ == PredicateType::AttrIndex
+        {
             // 3. Check that both sides don't belong to the same table (if we don't know, that
             //    means they don't belong)
-            let left_attr_ref_expr = AttrRefPred::from_pred_node(left_child)
+            let left_attr_ref_expr = AttrIndexPred::from_pred_node(left_child)
                 .expect("we already checked that the type is AttrRef");
-            let right_attr_ref_expr = AttrRefPred::from_pred_node(right_child)
+            let right_attr_ref_expr = AttrIndexPred::from_pred_node(right_child)
                 .expect("we already checked that the type is AttrRef");
             let left_attr_ref = &attr_refs[left_attr_ref_expr.attr_index() as usize];
             let right_attr_ref = &attr_refs[right_attr_ref_expr.attr_index() as usize];

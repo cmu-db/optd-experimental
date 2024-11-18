@@ -3,7 +3,7 @@ use itertools::Itertools;
 use crate::{
     common::{
         nodes::{JoinType, ReprPredicateNode},
-        predicates::{attr_ref_pred::AttrRefPred, list_pred::ListPred},
+        predicates::{attr_index_pred::AttrIndexPred, list_pred::ListPred},
         properties::attr_ref::{AttrRefs, SemanticCorrelation},
         types::GroupId,
     },

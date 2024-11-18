@@ -1,7 +1,7 @@
 use crate::{
     common::{
         nodes::{ArcPredicateNode, PredicateType, ReprPredicateNode},
-        predicates::{attr_ref_pred::AttrRefPred, list_pred::ListPred},
+        predicates::{attr_index_pred::AttrIndexPred, list_pred::ListPred},
         types::TableId,
     },
     cost_model::CostModelImpl,
@@ -25,17 +25,18 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
 
             for node in &group_by.0.children {
                 match node.typ {
-                    PredicateType::AttrRef => {
+                    PredicateType::AttrIndex => {
                         let attr_ref =
-                            AttrRefPred::from_pred_node(node.clone()).ok_or_else(|| {
+                            AttrIndexPred::from_pred_node(node.clone()).ok_or_else(|| {
                                 SemanticError::InvalidPredicate(
                                     "Expected AttributeRef predicate".to_string(),
                                 )
                             })?;
-                        if attr_ref.is_derived() {
+                        let is_derived = todo!();
+                        if is_derived {
                             row_cnt *= DEFAULT_NUM_DISTINCT;
                         } else {
-                            let table_id = attr_ref.table_id();
+                            let table_id = todo!();
                             let attr_idx = attr_ref.attr_index();
                             // TODO: Only query ndistinct instead of all kinds of stats.
                             let stats_option =
@@ -74,7 +75,7 @@ mod tests {
             values::Value,
         },
         cost_model::tests::{
-            attr_ref, cnst, create_mock_cost_model, empty_list, empty_per_attr_stats, list,
+            attr_index, cnst, create_mock_cost_model, empty_list, empty_per_attr_stats, list,
             TestPerAttributeStats,
         },
         stats::{utilities::simple_map::SimpleMap, MostCommonValues, DEFAULT_NUM_DISTINCT},
@@ -94,14 +95,14 @@ mod tests {
         );
 
         // Group by single column should return the default value since there are no stats.
-        let group_bys = list(vec![attr_ref(table_id, 0)]);
+        let group_bys = list(vec![attr_index(0)]);
         assert_eq!(
             cost_model.get_agg_row_cnt(group_bys).await.unwrap(),
             EstimatedStatistic(DEFAULT_NUM_DISTINCT as f64)
         );
 
         // Group by two columns should return the default value squared since there are no stats.
-        let group_bys = list(vec![attr_ref(table_id, 0), attr_ref(table_id, 1)]);
+        let group_bys = list(vec![attr_index(0), attr_index(1)]);
         assert_eq!(
             cost_model.get_agg_row_cnt(group_bys).await.unwrap(),
             EstimatedStatistic((DEFAULT_NUM_DISTINCT * DEFAULT_NUM_DISTINCT) as f64)
@@ -149,17 +150,14 @@ mod tests {
         );
 
         // Group by single column should return the n-distinct of the column.
-        let group_bys = list(vec![attr_ref(table_id, attr1_base_idx)]);
+        let group_bys = list(vec![attr_index(attr1_base_idx)]); // TODO: Fix this
         assert_eq!(
             cost_model.get_agg_row_cnt(group_bys).await.unwrap(),
             EstimatedStatistic(attr1_ndistinct as f64)
         );
 
         // Group by two columns should return the product of the n-distinct of the columns.
-        let group_bys = list(vec![
-            attr_ref(table_id, attr1_base_idx),
-            attr_ref(table_id, attr2_base_idx),
-        ]);
+        let group_bys = list(vec![attr_index(attr1_base_idx), attr_index(attr2_base_idx)]); // TODO: Fix this
         assert_eq!(
             cost_model.get_agg_row_cnt(group_bys).await.unwrap(),
             EstimatedStatistic((attr1_ndistinct * attr2_ndistinct) as f64)
@@ -168,9 +166,10 @@ mod tests {
         // Group by multiple columns should return the product of the n-distinct of the columns. If one of the columns
         // does not have stats, it should use the default value instead.
         let group_bys = list(vec![
-            attr_ref(table_id, attr1_base_idx),
-            attr_ref(table_id, attr2_base_idx),
-            attr_ref(table_id, attr3_base_idx),
+            // TODO: Fix this
+            attr_index(attr1_base_idx),
+            attr_index(attr2_base_idx),
+            attr_index(attr3_base_idx),
         ]);
         assert_eq!(
             cost_model.get_agg_row_cnt(group_bys).await.unwrap(),

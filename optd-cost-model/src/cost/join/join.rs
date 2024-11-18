@@ -6,7 +6,7 @@ use crate::{
     common::{
         nodes::{ArcPredicateNode, JoinType, PredicateType, ReprPredicateNode},
         predicates::{
-            attr_ref_pred::AttrRefPred,
+            attr_index_pred::AttrIndexPred,
             bin_op_pred::BinOpType,
             list_pred::ListPred,
             log_op_pred::{LogOpPred, LogOpType},
@@ -122,8 +122,8 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
             .zip(right_keys.to_vec())
             .map(|(left_key, right_key)| {
                 (
-                    AttrRefPred::from_pred_node(left_key).expect("keys should be AttrRefPreds"),
-                    AttrRefPred::from_pred_node(right_key).expect("keys should be AttrRefPreds"),
+                    AttrIndexPred::from_pred_node(left_key).expect("keys should be AttrRefPreds"),
+                    AttrIndexPred::from_pred_node(right_key).expect("keys should be AttrRefPreds"),
                 )
             })
             .collect_vec();
@@ -156,7 +156,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
     async fn get_join_selectivity_core(
         &self,
         join_typ: JoinType,
-        on_attr_ref_pairs: Vec<(AttrRefPred, AttrRefPred)>,
+        on_attr_ref_pairs: Vec<(AttrIndexPred, AttrIndexPred)>,
         filter_expr_tree: Option<ArcPredicateNode>,
         attr_refs: &AttrRefs,
         input_correlation: Option<SemanticCorrelation>,
@@ -364,7 +364,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
     /// `get_join_selectivity_from_redundant_predicates`.
     async fn get_join_on_selectivity(
         &self,
-        on_attr_ref_pairs: &[(AttrRefPred, AttrRefPred)],
+        on_attr_ref_pairs: &[(AttrIndexPred, AttrIndexPred)],
         attr_refs: &AttrRefs,
         input_correlation: Option<SemanticCorrelation>,
         right_attr_ref_offset: usize,

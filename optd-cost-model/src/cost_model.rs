@@ -128,7 +128,7 @@ pub mod tests {
         common::{
             nodes::ReprPredicateNode,
             predicates::{
-                attr_ref_pred::AttrRefPred,
+                attr_index_pred::AttrIndexPred,
                 bin_op_pred::{BinOpPred, BinOpType},
                 cast_pred::CastPred,
                 constant_pred::{ConstantPred, ConstantType},
@@ -499,8 +499,8 @@ pub mod tests {
         }
     }
 
-    pub fn attr_ref(table_id: TableId, attr_base_index: u64) -> ArcPredicateNode {
-        AttrRefPred::new(table_id, attr_base_index).into_pred_node()
+    pub fn attr_index(attr_index: u64) -> ArcPredicateNode {
+        AttrIndexPred::new(attr_index).into_pred_node()
     }
 
     pub fn cnst(value: Value) -> ArcPredicateNode {
@@ -535,24 +535,19 @@ pub mod tests {
         ListPred::new(children).into_pred_node()
     }
 
-    pub fn in_list(
-        table_id: TableId,
-        attr_ref_idx: u64,
-        list: Vec<Value>,
-        negated: bool,
-    ) -> InListPred {
+    pub fn in_list(attr_idx: u64, list: Vec<Value>, negated: bool) -> InListPred {
         InListPred::new(
-            attr_ref(table_id, attr_ref_idx),
+            attr_index(attr_idx),
             ListPred::new(list.into_iter().map(cnst).collect_vec()),
             negated,
         )
     }
 
-    pub fn like(table_id: TableId, attr_ref_idx: u64, pattern: &str, negated: bool) -> LikePred {
+    pub fn like(attr_idx: u64, pattern: &str, negated: bool) -> LikePred {
         LikePred::new(
             negated,
             false,
-            attr_ref(table_id, attr_ref_idx),
+            attr_index(attr_idx),
             cnst(Value::String(pattern.into())),
         )
     }

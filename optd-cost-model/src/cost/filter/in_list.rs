@@ -2,7 +2,7 @@ use crate::{
     common::{
         nodes::{PredicateType, ReprPredicateNode},
         predicates::{
-            attr_ref_pred::AttrRefPred, constant_pred::ConstantPred, in_list_pred::InListPred,
+            attr_index_pred::AttrIndexPred, constant_pred::ConstantPred, in_list_pred::InListPred,
         },
     },
     cost_model::CostModelImpl,
@@ -18,7 +18,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
         let child = expr.child();
 
         // Check child is a attribute ref.
-        if !matches!(child.typ, PredicateType::AttrRef) {
+        if !matches!(child.typ, PredicateType::AttrIndex) {
             return Ok(UNIMPLEMENTED_SEL);
         }
 
@@ -32,9 +32,9 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
         }
 
         // Convert child and const expressions to concrete types.
-        let attr_ref_pred = AttrRefPred::from_pred_node(child).unwrap();
+        let attr_ref_pred = AttrIndexPred::from_pred_node(child).unwrap();
         let attr_ref_idx = attr_ref_pred.attr_index();
-        let table_id = attr_ref_pred.table_id();
+        let table_id = todo!(); // TODO: Fix this
         let list_exprs = list_exprs
             .into_iter()
             .map(|expr| {
@@ -99,7 +99,7 @@ mod tests {
 
         assert_approx_eq::assert_approx_eq!(
             cost_model
-                .get_in_list_selectivity(&in_list(table_id, 0, vec![Value::Int32(1)], false))
+                .get_in_list_selectivity(&in_list(0, vec![Value::Int32(1)], false)) // TODO: Fix this
                 .await
                 .unwrap(),
             0.8
@@ -107,7 +107,7 @@ mod tests {
         assert_approx_eq::assert_approx_eq!(
             cost_model
                 .get_in_list_selectivity(&in_list(
-                    table_id,
+                    // TODO: Fix this
                     0,
                     vec![Value::Int32(1), Value::Int32(2)],
                     false
@@ -118,14 +118,14 @@ mod tests {
         );
         assert_approx_eq::assert_approx_eq!(
             cost_model
-                .get_in_list_selectivity(&in_list(table_id, 0, vec![Value::Int32(3)], false))
+                .get_in_list_selectivity(&in_list(0, vec![Value::Int32(3)], false)) // TODO: Fix this
                 .await
                 .unwrap(),
             0.0
         );
         assert_approx_eq::assert_approx_eq!(
             cost_model
-                .get_in_list_selectivity(&in_list(table_id, 0, vec![Value::Int32(1)], true))
+                .get_in_list_selectivity(&in_list(0, vec![Value::Int32(1)], true)) // TODO: Fix this
                 .await
                 .unwrap(),
             0.2
@@ -133,7 +133,7 @@ mod tests {
         assert_approx_eq::assert_approx_eq!(
             cost_model
                 .get_in_list_selectivity(&in_list(
-                    table_id,
+                    // TODO: Fix this
                     0,
                     vec![Value::Int32(1), Value::Int32(2)],
                     true
@@ -144,7 +144,7 @@ mod tests {
         );
         assert_approx_eq::assert_approx_eq!(
             cost_model
-                .get_in_list_selectivity(&in_list(table_id, 0, vec![Value::Int32(3)], true))
+                .get_in_list_selectivity(&in_list(0, vec![Value::Int32(3)], true)) // TODO: Fix this
                 .await
                 .unwrap(),
             1.0
