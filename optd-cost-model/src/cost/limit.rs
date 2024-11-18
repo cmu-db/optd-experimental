@@ -22,7 +22,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
         if fetch == u64::MAX {
             Ok(child_row_cnt)
         } else {
-            Ok(EstimatedStatistic(child_row_cnt.0.min(fetch)))
+            Ok(EstimatedStatistic(child_row_cnt.0.min(fetch as f64)))
         }
     }
 }

@@ -18,10 +18,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
         cond: ArcPredicateNode,
     ) -> CostModelResult<EstimatedStatistic> {
         let selectivity = { self.get_filter_selectivity(cond).await? };
-        Ok(
-            EstimatedStatistic((child_row_cnt.0 as f64 * selectivity) as u64)
-                .max(EstimatedStatistic(1)),
-        )
+        Ok(EstimatedStatistic((child_row_cnt.0 * selectivity).max(1.0)))
     }
 
     pub async fn get_filter_selectivity(

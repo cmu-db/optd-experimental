@@ -17,7 +17,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
     ) -> CostModelResult<EstimatedStatistic> {
         let group_by = ListPred::from_pred_node(group_by).unwrap();
         if group_by.is_empty() {
-            Ok(EstimatedStatistic(1))
+            Ok(EstimatedStatistic(1.0))
         } else {
             // Multiply the n-distinct of all the group by columns.
             // TODO: improve with multi-dimensional n-distinct
@@ -57,7 +57,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
                     }
                 }
             }
-            Ok(EstimatedStatistic(row_cnt))
+            Ok(EstimatedStatistic(row_cnt as f64))
         }
     }
 }
@@ -110,21 +110,21 @@ mod tests {
         let group_bys = empty_list();
         assert_eq!(
             cost_model.get_agg_row_cnt(group_bys).await.unwrap(),
-            EstimatedStatistic(1)
+            EstimatedStatistic(1.0)
         );
 
         // Group by single column should return the default value since there are no stats.
         let group_bys = list(vec![attr_ref(table_id, 0)]);
         assert_eq!(
             cost_model.get_agg_row_cnt(group_bys).await.unwrap(),
-            EstimatedStatistic(DEFAULT_NUM_DISTINCT)
+            EstimatedStatistic(DEFAULT_NUM_DISTINCT as f64)
         );
 
         // Group by two columns should return the default value squared since there are no stats.
         let group_bys = list(vec![attr_ref(table_id, 0), attr_ref(table_id, 1)]);
         assert_eq!(
             cost_model.get_agg_row_cnt(group_bys).await.unwrap(),
-            EstimatedStatistic(DEFAULT_NUM_DISTINCT * DEFAULT_NUM_DISTINCT)
+            EstimatedStatistic((DEFAULT_NUM_DISTINCT * DEFAULT_NUM_DISTINCT) as f64)
         );
     }
 
@@ -193,14 +193,14 @@ mod tests {
         let group_bys = empty_list();
         assert_eq!(
             cost_model.get_agg_row_cnt(group_bys).await.unwrap(),
-            EstimatedStatistic(1)
+            EstimatedStatistic(1.0)
         );
 
         // Group by single column should return the n-distinct of the column.
         let group_bys = list(vec![attr_ref(table_id, attr1_base_idx)]);
         assert_eq!(
             cost_model.get_agg_row_cnt(group_bys).await.unwrap(),
-            EstimatedStatistic(attr1_ndistinct)
+            EstimatedStatistic(attr1_ndistinct as f64)
         );
 
         // Group by two columns should return the product of the n-distinct of the columns.
@@ -210,7 +210,7 @@ mod tests {
         ]);
         assert_eq!(
             cost_model.get_agg_row_cnt(group_bys).await.unwrap(),
-            EstimatedStatistic(attr1_ndistinct * attr2_ndistinct)
+            EstimatedStatistic((attr1_ndistinct * attr2_ndistinct) as f64)
         );
 
         // Group by multiple columns should return the product of the n-distinct of the columns. If one of the columns
@@ -222,7 +222,7 @@ mod tests {
         ]);
         assert_eq!(
             cost_model.get_agg_row_cnt(group_bys).await.unwrap(),
-            EstimatedStatistic(attr1_ndistinct * attr2_ndistinct * DEFAULT_NUM_DISTINCT)
+            EstimatedStatistic((attr1_ndistinct * attr2_ndistinct * DEFAULT_NUM_DISTINCT) as f64)
         );
     }
 }
