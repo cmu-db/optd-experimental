@@ -23,123 +23,67 @@ use crate::{
     CostModelResult,
 };
 
+pub(crate) fn get_input_correlation(
+    left_prop: GroupAttrRefs,
+    right_prop: GroupAttrRefs,
+) -> Option<SemanticCorrelation> {
+    SemanticCorrelation::merge(
+        left_prop.output_correlation().cloned(),
+        right_prop.output_correlation().cloned(),
+    )
+}
+
+/// Check if an expr_tree is a join condition, returning the join on attr ref pair if it is.
+/// The reason the check and the info are in the same function is because their code is almost
+/// identical. It only picks out equality conditions between two attribute refs on different
+/// tables
+pub(crate) fn get_on_attr_ref_pair(
+    expr_tree: ArcPredicateNode,
+    attr_refs: &AttrRefs,
+) -> Option<(AttrRefPred, AttrRefPred)> {
+    // 1. Check that it's equality
+    if expr_tree.typ == PredicateType::BinOp(BinOpType::Eq) {
+        let left_child = expr_tree.child(0);
+        let right_child = expr_tree.child(1);
+        // 2. Check that both sides are attribute refs
+        if left_child.typ == PredicateType::AttrRef && right_child.typ == PredicateType::AttrRef {
+            // 3. Check that both sides don't belong to the same table (if we don't know, that
+            //    means they don't belong)
+            let left_attr_ref_expr = AttrRefPred::from_pred_node(left_child)
+                .expect("we already checked that the type is AttrRef");
+            let right_attr_ref_expr = AttrRefPred::from_pred_node(right_child)
+                .expect("we already checked that the type is AttrRef");
+            let left_attr_ref = &attr_refs[left_attr_ref_expr.attr_index() as usize];
+            let right_attr_ref = &attr_refs[right_attr_ref_expr.attr_index() as usize];
+            let is_same_table = if let (
+                AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                    table_id: left_table_id,
+                    ..
+                }),
+                AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                    table_id: right_table_id,
+                    ..
+                }),
+            ) = (left_attr_ref, right_attr_ref)
+            {
+                left_table_id == right_table_id
+            } else {
+                false
+            };
+            if !is_same_table {
+                Some((left_attr_ref_expr, right_attr_ref_expr))
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    } else {
+        None
+    }
+}
+
 impl<S: CostModelStorageManager> CostModelImpl<S> {
-    #[allow(clippy::too_many_arguments)]
-    pub async fn get_nlj_row_cnt(
-        &self,
-        join_typ: JoinType,
-        group_id: GroupId,
-        left_row_cnt: f64,
-        right_row_cnt: f64,
-        left_group_id: GroupId,
-        right_group_id: GroupId,
-        join_cond: ArcPredicateNode,
-    ) -> CostModelResult<f64> {
-        let selectivity = {
-            let output_attr_refs = self.memo.get_attribute_ref(group_id);
-            let left_attr_refs = self.memo.get_attribute_ref(left_group_id);
-            let right_attr_refs = self.memo.get_attribute_ref(right_group_id);
-            let input_correlation = self.get_input_correlation(left_attr_refs, right_attr_refs);
-
-            self.get_join_selectivity_from_expr_tree(
-                join_typ,
-                join_cond,
-                output_attr_refs.attr_refs(),
-                input_correlation,
-                left_row_cnt,
-                right_row_cnt,
-            )
-            .await?
-        };
-        Ok((left_row_cnt * right_row_cnt * selectivity).max(1.0))
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    pub async fn get_hash_join_row_cnt(
-        &self,
-        join_typ: JoinType,
-        group_id: GroupId,
-        left_row_cnt: f64,
-        right_row_cnt: f64,
-        left_group_id: GroupId,
-        right_group_id: GroupId,
-        left_keys: ListPred,
-        right_keys: ListPred,
-    ) -> CostModelResult<f64> {
-        let selectivity = {
-            let output_attr_refs = self.memo.get_attribute_ref(group_id);
-            let left_attr_refs = self.memo.get_attribute_ref(left_group_id);
-            let right_attr_refs = self.memo.get_attribute_ref(right_group_id);
-            let left_attr_cnt = left_attr_refs.attr_refs().len();
-            // there may be more than one expression tree in a group.
-            // see comment in PredicateType::PhysicalFilter(_) for more information
-            let input_correlation = self.get_input_correlation(left_attr_refs, right_attr_refs);
-            self.get_join_selectivity_from_keys(
-                join_typ,
-                left_keys,
-                right_keys,
-                output_attr_refs.attr_refs(),
-                input_correlation,
-                left_row_cnt,
-                right_row_cnt,
-                left_attr_cnt,
-            )
-            .await?
-        };
-        Ok((left_row_cnt * right_row_cnt * selectivity).max(1.0))
-    }
-
-    fn get_input_correlation(
-        &self,
-        left_prop: GroupAttrRefs,
-        right_prop: GroupAttrRefs,
-    ) -> Option<SemanticCorrelation> {
-        SemanticCorrelation::merge(
-            left_prop.output_correlation().cloned(),
-            right_prop.output_correlation().cloned(),
-        )
-    }
-
-    /// A wrapper to convert the join keys to the format expected by get_join_selectivity_core()
-    #[allow(clippy::too_many_arguments)]
-    async fn get_join_selectivity_from_keys(
-        &self,
-        join_typ: JoinType,
-        left_keys: ListPred,
-        right_keys: ListPred,
-        attr_refs: &AttrRefs,
-        input_correlation: Option<SemanticCorrelation>,
-        left_row_cnt: f64,
-        right_row_cnt: f64,
-        left_attr_cnt: usize,
-    ) -> CostModelResult<f64> {
-        assert!(left_keys.len() == right_keys.len());
-        // I assume that the keys are already in the right order
-        // s.t. the ith key of left_keys corresponds with the ith key of right_keys
-        let on_attr_ref_pairs = left_keys
-            .to_vec()
-            .into_iter()
-            .zip(right_keys.to_vec())
-            .map(|(left_key, right_key)| {
-                (
-                    AttrRefPred::from_pred_node(left_key).expect("keys should be AttrRefPreds"),
-                    AttrRefPred::from_pred_node(right_key).expect("keys should be AttrRefPreds"),
-                )
-            })
-            .collect_vec();
-        self.get_join_selectivity_core(
-            join_typ,
-            on_attr_ref_pairs,
-            None,
-            attr_refs,
-            input_correlation,
-            left_row_cnt,
-            right_row_cnt,
-            left_attr_cnt,
-        )
-        .await
-    }
-
     /// The core logic of join selectivity which assumes we've already separated the expression
     /// into the on conditions and the filters.
     ///
@@ -153,7 +97,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
     /// For example, if the left table has 3 attributes, the first attribute of the right table
     /// is #3 instead of #0.
     #[allow(clippy::too_many_arguments)]
-    async fn get_join_selectivity_core(
+    pub(crate) async fn get_join_selectivity_core(
         &self,
         join_typ: JoinType,
         on_attr_ref_pairs: Vec<(AttrRefPred, AttrRefPred)>,
@@ -200,133 +144,6 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
             }
             _ => unimplemented!("join_typ={} is not implemented", join_typ),
         })
-    }
-
-    /// The expr_tree input must be a "mixed expression tree", just like with
-    /// `get_filter_selectivity`.
-    ///
-    /// This is a "wrapper" to separate the equality conditions from the filter conditions before
-    /// calling the "main" `get_join_selectivity_core` function.
-    #[allow(clippy::too_many_arguments)]
-    async fn get_join_selectivity_from_expr_tree(
-        &self,
-        join_typ: JoinType,
-        expr_tree: ArcPredicateNode,
-        attr_refs: &AttrRefs,
-        input_correlation: Option<SemanticCorrelation>,
-        left_row_cnt: f64,
-        right_row_cnt: f64,
-    ) -> CostModelResult<f64> {
-        if expr_tree.typ == PredicateType::LogOp(LogOpType::And) {
-            let mut on_attr_ref_pairs = vec![];
-            let mut filter_expr_trees = vec![];
-            for child_expr_tree in &expr_tree.children {
-                if let Some(on_attr_ref_pair) =
-                    Self::get_on_attr_ref_pair(child_expr_tree.clone(), attr_refs)
-                {
-                    on_attr_ref_pairs.push(on_attr_ref_pair)
-                } else {
-                    let child_expr = child_expr_tree.clone();
-                    filter_expr_trees.push(child_expr);
-                }
-            }
-            assert!(on_attr_ref_pairs.len() + filter_expr_trees.len() == expr_tree.children.len());
-            let filter_expr_tree = if filter_expr_trees.is_empty() {
-                None
-            } else {
-                Some(LogOpPred::new(LogOpType::And, filter_expr_trees).into_pred_node())
-            };
-            self.get_join_selectivity_core(
-                join_typ,
-                on_attr_ref_pairs,
-                filter_expr_tree,
-                attr_refs,
-                input_correlation,
-                left_row_cnt,
-                right_row_cnt,
-                0,
-            )
-            .await
-        } else {
-            #[allow(clippy::collapsible_else_if)]
-            if let Some(on_attr_ref_pair) = Self::get_on_attr_ref_pair(expr_tree.clone(), attr_refs)
-            {
-                self.get_join_selectivity_core(
-                    join_typ,
-                    vec![on_attr_ref_pair],
-                    None,
-                    attr_refs,
-                    input_correlation,
-                    left_row_cnt,
-                    right_row_cnt,
-                    0,
-                )
-                .await
-            } else {
-                self.get_join_selectivity_core(
-                    join_typ,
-                    vec![],
-                    Some(expr_tree),
-                    attr_refs,
-                    input_correlation,
-                    left_row_cnt,
-                    right_row_cnt,
-                    0,
-                )
-                .await
-            }
-        }
-    }
-
-    /// Check if an expr_tree is a join condition, returning the join on attr ref pair if it is.
-    /// The reason the check and the info are in the same function is because their code is almost
-    /// identical. It only picks out equality conditions between two attribute refs on different
-    /// tables
-    fn get_on_attr_ref_pair(
-        expr_tree: ArcPredicateNode,
-        attr_refs: &AttrRefs,
-    ) -> Option<(AttrRefPred, AttrRefPred)> {
-        // 1. Check that it's equality
-        if expr_tree.typ == PredicateType::BinOp(BinOpType::Eq) {
-            let left_child = expr_tree.child(0);
-            let right_child = expr_tree.child(1);
-            // 2. Check that both sides are attribute refs
-            if left_child.typ == PredicateType::AttrRef && right_child.typ == PredicateType::AttrRef
-            {
-                // 3. Check that both sides don't belong to the same table (if we don't know, that
-                //    means they don't belong)
-                let left_attr_ref_expr = AttrRefPred::from_pred_node(left_child)
-                    .expect("we already checked that the type is AttrRef");
-                let right_attr_ref_expr = AttrRefPred::from_pred_node(right_child)
-                    .expect("we already checked that the type is AttrRef");
-                let left_attr_ref = &attr_refs[left_attr_ref_expr.attr_index() as usize];
-                let right_attr_ref = &attr_refs[right_attr_ref_expr.attr_index() as usize];
-                let is_same_table = if let (
-                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
-                        table_id: left_table_id,
-                        ..
-                    }),
-                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
-                        table_id: right_table_id,
-                        ..
-                    }),
-                ) = (left_attr_ref, right_attr_ref)
-                {
-                    left_table_id == right_table_id
-                } else {
-                    false
-                };
-                if !is_same_table {
-                    Some((left_attr_ref_expr, right_attr_ref_expr))
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
-        } else {
-            None
-        }
     }
 
     /// Get the selectivity of one attribute eq predicate, e.g. attrA = attrB.
