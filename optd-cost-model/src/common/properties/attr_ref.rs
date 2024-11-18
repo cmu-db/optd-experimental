@@ -156,13 +156,13 @@ impl SemanticCorrelation {
 }
 
 #[derive(Clone, Debug)]
-pub struct GroupattributeRefs {
+pub struct GroupAttrRefs {
     attribute_refs: BaseTableAttrRefs,
     /// Correlation of the output attributes of the group.
     output_correlation: Option<SemanticCorrelation>,
 }
 
-impl GroupattributeRefs {
+impl GroupAttrRefs {
     pub fn new(
         attribute_refs: BaseTableAttrRefs,
         output_correlation: Option<SemanticCorrelation>,

@@ -10,6 +10,7 @@ use optd_persistent::{
 pub mod common;
 pub mod cost;
 pub mod cost_model;
+pub mod memo_ext;
 pub mod stats;
 pub mod storage;
 pub mod utils;
