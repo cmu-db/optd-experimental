@@ -163,7 +163,7 @@ impl SemanticCorrelation {
 /// [`GroupAttrRefs`] represents the attributes of a group in a query.
 #[derive(Clone, Debug)]
 pub struct GroupAttrRefs {
-    attribute_refs: AttrRefs,
+    attr_refs: AttrRefs,
     /// Correlation of the output attributes of the group.
     output_correlation: Option<SemanticCorrelation>,
 }
@@ -171,13 +171,13 @@ pub struct GroupAttrRefs {
 impl GroupAttrRefs {
     pub fn new(attribute_refs: AttrRefs, output_correlation: Option<SemanticCorrelation>) -> Self {
         Self {
-            attribute_refs,
+            attr_refs: attribute_refs,
             output_correlation,
         }
     }
 
-    pub fn base_table_attr_refs(&self) -> &AttrRefs {
-        &self.attribute_refs
+    pub fn attr_refs(&self) -> &AttrRefs {
+        &self.attr_refs
     }
 
     pub fn output_correlation(&self) -> Option<&SemanticCorrelation> {

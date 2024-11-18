@@ -22,7 +22,7 @@ use crate::{
 pub struct CostModelImpl<S: CostModelStorageManager> {
     pub storage_manager: S,
     pub default_catalog_source: CatalogSource,
-    _memo: Arc<dyn MemoExt>,
+    pub memo: Arc<dyn MemoExt>,
 }
 
 impl<S: CostModelStorageManager> CostModelImpl<S> {
@@ -35,7 +35,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
         Self {
             storage_manager,
             default_catalog_source,
-            _memo: memo,
+            memo,
         }
     }
 }

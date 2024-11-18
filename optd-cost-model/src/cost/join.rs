@@ -11,13 +11,11 @@ use crate::{
             list_pred::ListPred,
             log_op_pred::{LogOpPred, LogOpType},
         },
-        properties::{
-            attr_ref::{
-                self, AttrRef, AttrRefs, BaseTableAttrRef, EqPredicate, GroupAttrRefs,
-                SemanticCorrelation,
-            },
-            schema::Schema,
+        properties::attr_ref::{
+            self, AttrRef, AttrRefs, BaseTableAttrRef, EqPredicate, GroupAttrRefs,
+            SemanticCorrelation,
         },
+        types::GroupId,
     },
     cost_model::CostModelImpl,
     stats::DEFAULT_NUM_DISTINCT,
@@ -30,21 +28,23 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
     pub async fn get_nlj_row_cnt(
         &self,
         join_typ: JoinType,
+        group_id: GroupId,
         left_row_cnt: f64,
         right_row_cnt: f64,
-        output_schema: Schema,
-        output_attr_refs: GroupAttrRefs,
+        left_group_id: GroupId,
+        right_group_id: GroupId,
         join_cond: ArcPredicateNode,
-        left_attr_refs: GroupAttrRefs,
-        right_attr_refs: GroupAttrRefs,
     ) -> CostModelResult<f64> {
         let selectivity = {
+            let output_attr_refs = self.memo.get_attribute_ref(group_id);
+            let left_attr_refs = self.memo.get_attribute_ref(left_group_id);
+            let right_attr_refs = self.memo.get_attribute_ref(right_group_id);
             let input_correlation = self.get_input_correlation(left_attr_refs, right_attr_refs);
+
             self.get_join_selectivity_from_expr_tree(
                 join_typ,
                 join_cond,
-                &output_schema,
-                output_attr_refs.base_table_attr_refs(),
+                output_attr_refs.attr_refs(),
                 input_correlation,
                 left_row_cnt,
                 right_row_cnt,
@@ -58,20 +58,19 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
     pub async fn get_hash_join_row_cnt(
         &self,
         join_typ: JoinType,
+        group_id: GroupId,
         left_row_cnt: f64,
         right_row_cnt: f64,
+        left_group_id: GroupId,
+        right_group_id: GroupId,
         left_keys: ListPred,
         right_keys: ListPred,
-        output_schema: Schema,
-        output_attr_refs: GroupAttrRefs,
-        left_attr_refs: GroupAttrRefs,
-        right_attr_refs: GroupAttrRefs,
     ) -> CostModelResult<f64> {
         let selectivity = {
-            let schema = output_schema;
-            let attr_refs = output_attr_refs;
-            let attr_refs = attr_refs.base_table_attr_refs();
-            let left_attr_cnt = left_attr_refs.base_table_attr_refs().len();
+            let output_attr_refs = self.memo.get_attribute_ref(group_id);
+            let left_attr_refs = self.memo.get_attribute_ref(left_group_id);
+            let right_attr_refs = self.memo.get_attribute_ref(right_group_id);
+            let left_attr_cnt = left_attr_refs.attr_refs().len();
             // there may be more than one expression tree in a group.
             // see comment in PredicateType::PhysicalFilter(_) for more information
             let input_correlation = self.get_input_correlation(left_attr_refs, right_attr_refs);
@@ -79,8 +78,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
                 join_typ,
                 left_keys,
                 right_keys,
-                &schema,
-                attr_refs,
+                output_attr_refs.attr_refs(),
                 input_correlation,
                 left_row_cnt,
                 right_row_cnt,
@@ -109,7 +107,6 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
         join_typ: JoinType,
         left_keys: ListPred,
         right_keys: ListPred,
-        schema: &Schema,
         attr_refs: &AttrRefs,
         input_correlation: Option<SemanticCorrelation>,
         left_row_cnt: f64,
@@ -134,7 +131,6 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
             join_typ,
             on_attr_ref_pairs,
             None,
-            schema,
             attr_refs,
             input_correlation,
             left_row_cnt,
@@ -162,7 +158,6 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
         join_typ: JoinType,
         on_attr_ref_pairs: Vec<(AttrRefPred, AttrRefPred)>,
         filter_expr_tree: Option<ArcPredicateNode>,
-        schema: &Schema,
         attr_refs: &AttrRefs,
         input_correlation: Option<SemanticCorrelation>,
         left_row_cnt: f64,
@@ -217,7 +212,6 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
         &self,
         join_typ: JoinType,
         expr_tree: ArcPredicateNode,
-        schema: &Schema,
         attr_refs: &AttrRefs,
         input_correlation: Option<SemanticCorrelation>,
         left_row_cnt: f64,
@@ -246,7 +240,6 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
                 join_typ,
                 on_attr_ref_pairs,
                 filter_expr_tree,
-                schema,
                 attr_refs,
                 input_correlation,
                 left_row_cnt,
@@ -262,7 +255,6 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
                     join_typ,
                     vec![on_attr_ref_pair],
                     None,
-                    schema,
                     attr_refs,
                     input_correlation,
                     left_row_cnt,
@@ -275,7 +267,6 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
                     join_typ,
                     vec![],
                     Some(expr_tree),
-                    schema,
                     attr_refs,
                     input_correlation,
                     left_row_cnt,
