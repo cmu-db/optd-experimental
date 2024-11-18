@@ -12,7 +12,7 @@ use crate::{
     CostModelResult, EstimatedStatistic,
 };
 
-use super::join::get_input_correlation;
+use super::get_input_correlation;
 
 impl<S: CostModelStorageManager> CostModelImpl<S> {
     #[allow(clippy::too_many_arguments)]
@@ -35,7 +35,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
             // there may be more than one expression tree in a group.
             // see comment in PredicateType::PhysicalFilter(_) for more information
             let input_correlation = get_input_correlation(left_attr_refs, right_attr_refs);
-            self.get_hash_join_selectivity(
+            self.get_join_selectivity_from_keys(
                 join_typ,
                 left_keys,
                 right_keys,
@@ -50,44 +50,5 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
         Ok(EstimatedStatistic(
             (left_row_cnt * right_row_cnt * selectivity).max(1.0),
         ))
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    async fn get_hash_join_selectivity(
-        &self,
-        join_typ: JoinType,
-        left_keys: ListPred,
-        right_keys: ListPred,
-        attr_refs: &AttrRefs,
-        input_correlation: Option<SemanticCorrelation>,
-        left_row_cnt: f64,
-        right_row_cnt: f64,
-        left_attr_cnt: usize,
-    ) -> CostModelResult<f64> {
-        assert!(left_keys.len() == right_keys.len());
-        // I assume that the keys are already in the right order
-        // s.t. the ith key of left_keys corresponds with the ith key of right_keys
-        let on_attr_ref_pairs = left_keys
-            .to_vec()
-            .into_iter()
-            .zip(right_keys.to_vec())
-            .map(|(left_key, right_key)| {
-                (
-                    AttrRefPred::from_pred_node(left_key).expect("keys should be AttrRefPreds"),
-                    AttrRefPred::from_pred_node(right_key).expect("keys should be AttrRefPreds"),
-                )
-            })
-            .collect_vec();
-        self.get_join_selectivity_core(
-            join_typ,
-            on_attr_ref_pairs,
-            None,
-            attr_refs,
-            input_correlation,
-            left_row_cnt,
-            right_row_cnt,
-            left_attr_cnt,
-        )
-        .await
     }
 }
