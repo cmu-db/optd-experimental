@@ -3,7 +3,7 @@ use crate::common::{
     types::GroupId,
 };
 
-pub trait MemoExt {
+pub trait MemoExt: Send + Sync + 'static {
     fn get_schema(&self, group_id: GroupId) -> Schema;
     fn get_column_ref(&self, group_id: GroupId) -> GroupAttrRefs;
     fn get_attribute_info(&self, group_id: GroupId, attr_ref_idx: u64) -> Attribute;

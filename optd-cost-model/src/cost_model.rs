@@ -12,6 +12,7 @@ use crate::{
         nodes::{ArcPredicateNode, PhysicalNodeType},
         types::{AttrId, EpochId, ExprId, TableId},
     },
+    memo_ext::MemoExt,
     storage::CostModelStorageManager,
     ComputeCostContext, Cost, CostModel, CostModelResult, EstimatedStatistic, StatValue,
 };
@@ -20,6 +21,7 @@ use crate::{
 pub struct CostModelImpl<S: CostModelStorageLayer> {
     storage_manager: CostModelStorageManager<S>,
     default_catalog_source: CatalogSource,
+    _memo: Arc<dyn MemoExt>,
 }
 
 impl<S: CostModelStorageLayer> CostModelImpl<S> {
@@ -27,15 +29,17 @@ impl<S: CostModelStorageLayer> CostModelImpl<S> {
     pub fn new(
         storage_manager: CostModelStorageManager<S>,
         default_catalog_source: CatalogSource,
+        memo: Arc<dyn MemoExt>,
     ) -> Self {
         Self {
             storage_manager,
             default_catalog_source,
+            _memo: memo,
         }
     }
 }
 
-impl<S: CostModelStorageLayer + std::marker::Sync + 'static> CostModel for CostModelImpl<S> {
+impl<S: CostModelStorageLayer + Sync + 'static> CostModel for CostModelImpl<S> {
     fn compute_operation_cost(
         &self,
         node: &PhysicalNodeType,
