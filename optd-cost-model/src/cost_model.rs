@@ -174,6 +174,15 @@ pub mod tests {
         per_attribute_stats: Vec<HashMap<u64, TestPerAttributeStats>>,
         row_counts: Vec<Option<u64>>,
     ) -> TestOptCostModelMock {
+        create_mock_cost_model_with_memo(table_id, per_attribute_stats, row_counts, HashMap::new())
+    }
+
+    pub fn create_mock_cost_model_with_memo(
+        table_id: Vec<TableId>,
+        per_attribute_stats: Vec<HashMap<u64, TestPerAttributeStats>>,
+        row_counts: Vec<Option<u64>>,
+        memo: HashMap<GroupId, MemoGroupInfo>,
+    ) -> TestOptCostModelMock {
         let storage_manager = CostModelStorageMockManagerImpl::new(
             table_id
                 .into_iter()
@@ -196,7 +205,7 @@ pub mod tests {
         CostModelImpl::new(
             storage_manager,
             CatalogSource::Mock,
-            Arc::new(MockMemoExtImpl::default()),
+            Arc::new(MockMemoExtImpl::from(memo)),
         )
     }
 

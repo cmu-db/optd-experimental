@@ -68,7 +68,9 @@ mod tests {
 
     use crate::{
         common::{
-            predicates::constant_pred::ConstantType, properties::Attribute, types::TableId,
+            predicates::constant_pred::ConstantType,
+            properties::Attribute,
+            types::{GroupId, TableId},
             values::Value,
         },
         cost_model::tests::{
@@ -82,21 +84,6 @@ mod tests {
     #[tokio::test]
     async fn test_agg_no_stats() {
         let table_id = TableId(0);
-        // let attr_infos = HashMap::from([(
-        //     table_id,
-        //     vec![
-        //         Attribute {
-        //             name: String::from("attr1"),
-        //             typ: ConstantType::Int32,
-        //             nullable: false,
-        //         },
-        //         Attribute {
-        //             name: String::from("attr2"),
-        //             typ: ConstantType::Int64,
-        //             nullable: false,
-        //         },
-        //     ],
-        // )]);
         let cost_model = create_mock_cost_model(vec![table_id], vec![], vec![None]);
 
         // Group by empty list should return 1.
@@ -124,29 +111,10 @@ mod tests {
     #[tokio::test]
     async fn test_agg_with_stats() {
         let table_id = TableId(0);
+        let group_id = GroupId(0);
         let attr1_base_idx = 0;
         let attr2_base_idx = 1;
         let attr3_base_idx = 2;
-        // let attr_infos = HashMap::from([(
-        //     table_id,
-        //     vec![
-        //         Attribute {
-        //             name: String::from("attr1"),
-        //             typ: ConstantType::Int32,
-        //             nullable: false,
-        //         },
-        //         Attribute {
-        //             name: String::from("attr2"),
-        //             typ: ConstantType::Int64,
-        //             nullable: false,
-        //         },
-        //         Attribute {
-        //             name: String::from("attr3"),
-        //             typ: ConstantType::Int64,
-        //             nullable: false,
-        //         },
-        //     ],
-        // )]);
 
         let attr1_ndistinct = 12;
         let attr2_ndistinct = 645;
