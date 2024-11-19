@@ -16,6 +16,10 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
     /// Also, get_attribute_equality_selectivity is a subroutine when computing range
     /// selectivity, which is another     reason for separating these into two functions
     /// is_eq means whether it's == or !=
+    ///
+    /// Currently, we only support calculating the equality selectivity for an existed attribute,
+    /// not a derived attribute.
+    /// TODO: Support derived attributes.
     pub(crate) async fn get_attribute_equality_selectivity(
         &self,
         table_id: TableId,
@@ -23,7 +27,6 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
         value: &Value,
         is_eq: bool,
     ) -> CostModelResult<f64> {
-        // TODO: The attribute could be a derived attribute
         let ret_sel = {
             if let Some(attribute_stats) = self
                 .get_attribute_comb_stats(table_id, &[attr_base_index])
@@ -89,6 +92,10 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
     }
 
     /// Compute the frequency of values in a attribute less than the given value.
+    ///
+    /// Currently, we only support calculating the equality selectivity for an existed attribute,
+    /// not a derived attribute.
+    /// TODO: Support derived attributes.
     async fn get_attribute_lt_value_freq(
         &self,
         attribute_stats: &AttributeCombValueStats,
@@ -116,6 +123,10 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
     /// Range predicates are handled entirely differently from equality predicates so this is its
     /// own function. If it is unable to find the statistics, it returns DEFAULT_INEQ_SEL.
     /// The selectivity is computed as quantile of the right bound minus quantile of the left bound.
+    ///
+    /// Currently, we only support calculating the equality selectivity for an existed attribute,
+    /// not a derived attribute.
+    /// TODO: Support derived attributes.
     pub(crate) async fn get_attribute_range_selectivity(
         &self,
         table_id: TableId,

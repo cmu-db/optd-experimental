@@ -165,23 +165,76 @@ pub mod tests {
     pub const TEST_GROUP3_ID: GroupId = GroupId(2);
     pub const TEST_GROUP4_ID: GroupId = GroupId(3);
 
+    // This is base index rather than ref index.
+    pub const TEST_ATTR1_BASE_INDEX: u64 = 0;
+    pub const TEST_ATTR2_BASE_INDEX: u64 = 1;
+    pub const TEST_ATTR3_BASE_INDEX: u64 = 2;
+
     pub type TestPerAttributeStats = AttributeCombValueStats;
     // TODO: add tests for non-mock storage manager
     pub type TestOptCostModelMock = CostModelImpl<CostModelStorageMockManagerImpl>;
 
+    // Use this method, we only create one group `TEST_GROUP1_ID` in the memo.
+    // We put the first attribute in the first table as the ref index 0 in the group.
+    // And put the second attribute in the first table as the ref index 1 in the group.
+    // etc.
+    // The orders of attributes and tables are defined by the order of their ids (smaller first).
     pub fn create_mock_cost_model(
         table_id: Vec<TableId>,
+        // u64 should be base attribute index.
         per_attribute_stats: Vec<HashMap<u64, TestPerAttributeStats>>,
         row_counts: Vec<Option<u64>>,
     ) -> TestOptCostModelMock {
-        create_mock_cost_model_with_memo(table_id, per_attribute_stats, row_counts, HashMap::new())
+        let attr_ids: Vec<(TableId, u64, Option<ConstantType>)> = per_attribute_stats
+            .iter()
+            .enumerate()
+            .map(|(idx, m)| (table_id[idx], m))
+            .flat_map(|(table_id, m)| {
+                m.iter()
+                    .map(|(attr_idx, _)| (table_id, *attr_idx, None))
+                    .collect_vec()
+            })
+            .sorted_by_key(|(table_id, attr_idx, _)| (*table_id, *attr_idx))
+            .collect();
+        create_mock_cost_model_with_memo(
+            table_id.clone(),
+            per_attribute_stats,
+            row_counts,
+            create_one_group_all_base_attributes_mock_memo(attr_ids),
+        )
+    }
+
+    pub fn create_mock_cost_model_with_attr_types(
+        table_id: Vec<TableId>,
+        // u64 should be base attribute index.
+        per_attribute_stats: Vec<HashMap<u64, TestPerAttributeStats>>,
+        attributes: Vec<HashMap<u64, ConstantType>>,
+        row_counts: Vec<Option<u64>>,
+    ) -> TestOptCostModelMock {
+        let attr_ids: Vec<(TableId, u64, Option<ConstantType>)> = attributes
+            .iter()
+            .enumerate()
+            .map(|(idx, m)| (table_id[idx], m))
+            .flat_map(|(table_id, m)| {
+                m.iter()
+                    .map(|(attr_idx, typ)| (table_id, *attr_idx, Some(*typ)))
+                    .collect_vec()
+            })
+            .sorted_by_key(|(table_id, attr_idx, _)| (*table_id, *attr_idx))
+            .collect();
+        create_mock_cost_model_with_memo(
+            table_id.clone(),
+            per_attribute_stats,
+            row_counts,
+            create_one_group_all_base_attributes_mock_memo(attr_ids),
+        )
     }
 
     pub fn create_mock_cost_model_with_memo(
         table_id: Vec<TableId>,
         per_attribute_stats: Vec<HashMap<u64, TestPerAttributeStats>>,
         row_counts: Vec<Option<u64>>,
-        memo: HashMap<GroupId, MemoGroupInfo>,
+        memo: MockMemoExtImpl,
     ) -> TestOptCostModelMock {
         let storage_manager = CostModelStorageMockManagerImpl::new(
             table_id
@@ -202,11 +255,36 @@ pub mod tests {
                 })
                 .collect(),
         );
-        CostModelImpl::new(
-            storage_manager,
-            CatalogSource::Mock,
-            Arc::new(MockMemoExtImpl::from(memo)),
-        )
+        CostModelImpl::new(storage_manager, CatalogSource::Mock, Arc::new(memo))
+    }
+
+    // attributes: Vec<(TableId, AttrBaseIndex)>
+    pub fn create_one_group_all_base_attributes_mock_memo(
+        attr_ids: Vec<(TableId, u64, Option<ConstantType>)>,
+    ) -> MockMemoExtImpl {
+        let group_info = MemoGroupInfo::new(
+            Schema::new(
+                attr_ids
+                    .clone()
+                    .into_iter()
+                    .map(|(_, _, typ)| Attribute {
+                        name: "attr".to_string(),
+                        typ: typ.unwrap_or(ConstantType::Int64),
+                        nullable: false,
+                    })
+                    .collect(),
+            ),
+            GroupAttrRefs::new(
+                attr_ids
+                    .into_iter()
+                    .map(|(table_id, attr_base_index, _)| {
+                        AttrRef::new_base_table_attr_ref(table_id, attr_base_index)
+                    })
+                    .collect(),
+                None,
+            ),
+        );
+        MockMemoExtImpl::from(HashMap::from([(TEST_GROUP1_ID, group_info)]))
     }
 
     /// Create a cost model two tables, each with one attribute. Each attribute has 100 values.

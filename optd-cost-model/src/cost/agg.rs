@@ -2,7 +2,8 @@ use crate::{
     common::{
         nodes::{ArcPredicateNode, PredicateType, ReprPredicateNode},
         predicates::{attr_index_pred::AttrIndexPred, list_pred::ListPred},
-        types::TableId,
+        properties::attr_ref::{AttrRef, BaseTableAttrRef},
+        types::GroupId,
     },
     cost_model::CostModelImpl,
     stats::DEFAULT_NUM_DISTINCT,
@@ -13,6 +14,7 @@ use crate::{
 impl<S: CostModelStorageManager> CostModelImpl<S> {
     pub async fn get_agg_row_cnt(
         &self,
+        group_id: GroupId,
         group_by: ArcPredicateNode,
     ) -> CostModelResult<EstimatedStatistic> {
         let group_by = ListPred::from_pred_node(group_by).unwrap();
@@ -32,12 +34,9 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
                                     "Expected AttributeRef predicate".to_string(),
                                 )
                             })?;
-                        let is_derived = todo!();
-                        if is_derived {
-                            row_cnt *= DEFAULT_NUM_DISTINCT;
-                        } else {
-                            let table_id = todo!();
-                            let attr_idx = attr_ref.attr_index();
+                        if let AttrRef::BaseTableAttrRef(BaseTableAttrRef { table_id, attr_idx }) =
+                            self.memo.get_attribute_ref(group_id, attr_ref.attr_index())
+                        {
                             // TODO: Only query ndistinct instead of all kinds of stats.
                             let stats_option =
                                 self.get_attribute_comb_stats(table_id, &[attr_idx]).await?;
@@ -50,6 +49,9 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
                                 }
                             };
                             row_cnt *= ndistinct;
+                        } else {
+                            // TOOD: Handle derived attributes.
+                            row_cnt *= DEFAULT_NUM_DISTINCT;
                         }
                     }
                     _ => {
@@ -65,7 +67,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
+    use std::{collections::HashMap, ops::Deref};
 
     use crate::{
         common::{
@@ -75,8 +77,9 @@ mod tests {
             values::Value,
         },
         cost_model::tests::{
-            attr_index, cnst, create_mock_cost_model, empty_list, empty_per_attr_stats, list,
-            TestPerAttributeStats,
+            attr_index, cnst, create_mock_cost_model, create_mock_cost_model_with_attr_types,
+            empty_list, empty_per_attr_stats, list, TestPerAttributeStats, TEST_ATTR1_BASE_INDEX,
+            TEST_ATTR2_BASE_INDEX, TEST_ATTR3_BASE_INDEX, TEST_GROUP1_ID, TEST_TABLE1_ID,
         },
         stats::{utilities::simple_map::SimpleMap, MostCommonValues, DEFAULT_NUM_DISTINCT},
         EstimatedStatistic,
@@ -84,39 +87,49 @@ mod tests {
 
     #[tokio::test]
     async fn test_agg_no_stats() {
-        let table_id = TableId(0);
-        let cost_model = create_mock_cost_model(vec![table_id], vec![], vec![None]);
+        let cost_model = create_mock_cost_model_with_attr_types(
+            vec![TEST_TABLE1_ID],
+            vec![],
+            vec![HashMap::from([
+                (TEST_ATTR1_BASE_INDEX, ConstantType::Int32),
+                (TEST_ATTR2_BASE_INDEX, ConstantType::Int32),
+            ])],
+            vec![None],
+        );
 
         // Group by empty list should return 1.
         let group_bys = empty_list();
         assert_eq!(
-            cost_model.get_agg_row_cnt(group_bys).await.unwrap(),
+            cost_model
+                .get_agg_row_cnt(TEST_GROUP1_ID, group_bys)
+                .await
+                .unwrap(),
             EstimatedStatistic(1.0)
         );
 
         // Group by single column should return the default value since there are no stats.
         let group_bys = list(vec![attr_index(0)]);
         assert_eq!(
-            cost_model.get_agg_row_cnt(group_bys).await.unwrap(),
+            cost_model
+                .get_agg_row_cnt(TEST_GROUP1_ID, group_bys)
+                .await
+                .unwrap(),
             EstimatedStatistic(DEFAULT_NUM_DISTINCT as f64)
         );
 
         // Group by two columns should return the default value squared since there are no stats.
         let group_bys = list(vec![attr_index(0), attr_index(1)]);
         assert_eq!(
-            cost_model.get_agg_row_cnt(group_bys).await.unwrap(),
+            cost_model
+                .get_agg_row_cnt(TEST_GROUP1_ID, group_bys)
+                .await
+                .unwrap(),
             EstimatedStatistic((DEFAULT_NUM_DISTINCT * DEFAULT_NUM_DISTINCT) as f64)
         );
     }
 
     #[tokio::test]
     async fn test_agg_with_stats() {
-        let table_id = TableId(0);
-        let group_id = GroupId(0);
-        let attr1_base_idx = 0;
-        let attr2_base_idx = 1;
-        let attr3_base_idx = 2;
-
         let attr1_ndistinct = 12;
         let attr2_ndistinct = 645;
         let attr1_stats = TestPerAttributeStats::new(
@@ -132,47 +145,58 @@ mod tests {
             0.0,
         );
 
-        let cost_model = create_mock_cost_model(
-            vec![table_id],
+        let cost_model = create_mock_cost_model_with_attr_types(
+            vec![TEST_TABLE1_ID],
             vec![HashMap::from([
-                (attr1_base_idx, attr1_stats),
-                (attr2_base_idx, attr2_stats),
+                (TEST_ATTR1_BASE_INDEX, attr1_stats),
+                (TEST_ATTR2_BASE_INDEX, attr2_stats),
+            ])],
+            vec![HashMap::from([
+                (TEST_ATTR1_BASE_INDEX, ConstantType::Int32),
+                (TEST_ATTR2_BASE_INDEX, ConstantType::Int32),
+                (TEST_ATTR3_BASE_INDEX, ConstantType::Int32),
             ])],
             vec![None],
-            // attr_infos,
         );
 
         // Group by empty list should return 1.
         let group_bys = empty_list();
         assert_eq!(
-            cost_model.get_agg_row_cnt(group_bys).await.unwrap(),
+            cost_model
+                .get_agg_row_cnt(TEST_GROUP1_ID, group_bys)
+                .await
+                .unwrap(),
             EstimatedStatistic(1.0)
         );
 
         // Group by single column should return the n-distinct of the column.
-        let group_bys = list(vec![attr_index(attr1_base_idx)]); // TODO: Fix this
+        let group_bys = list(vec![attr_index(0)]);
         assert_eq!(
-            cost_model.get_agg_row_cnt(group_bys).await.unwrap(),
+            cost_model
+                .get_agg_row_cnt(TEST_GROUP1_ID, group_bys)
+                .await
+                .unwrap(),
             EstimatedStatistic(attr1_ndistinct as f64)
         );
 
         // Group by two columns should return the product of the n-distinct of the columns.
-        let group_bys = list(vec![attr_index(attr1_base_idx), attr_index(attr2_base_idx)]); // TODO: Fix this
+        let group_bys = list(vec![attr_index(0), attr_index(1)]);
         assert_eq!(
-            cost_model.get_agg_row_cnt(group_bys).await.unwrap(),
+            cost_model
+                .get_agg_row_cnt(TEST_GROUP1_ID, group_bys)
+                .await
+                .unwrap(),
             EstimatedStatistic((attr1_ndistinct * attr2_ndistinct) as f64)
         );
 
         // Group by multiple columns should return the product of the n-distinct of the columns. If one of the columns
         // does not have stats, it should use the default value instead.
-        let group_bys = list(vec![
-            // TODO: Fix this
-            attr_index(attr1_base_idx),
-            attr_index(attr2_base_idx),
-            attr_index(attr3_base_idx),
-        ]);
+        let group_bys = list(vec![attr_index(0), attr_index(1), attr_index(2)]);
         assert_eq!(
-            cost_model.get_agg_row_cnt(group_bys).await.unwrap(),
+            cost_model
+                .get_agg_row_cnt(TEST_GROUP1_ID, group_bys)
+                .await
+                .unwrap(),
             EstimatedStatistic((attr1_ndistinct * attr2_ndistinct * DEFAULT_NUM_DISTINCT) as f64)
         );
     }

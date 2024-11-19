@@ -7,6 +7,8 @@ use crate::{
             attr_index_pred::AttrIndexPred, bin_op_pred::BinOpType, cast_pred::CastPred,
             constant_pred::ConstantPred,
         },
+        properties::attr_ref::{AttrRef, BaseTableAttrRef},
+        types::GroupId,
         values::Value,
     },
     cost_model::CostModelImpl,
@@ -19,6 +21,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
     /// Comparison operators are the base case for recursion in get_filter_selectivity()
     pub(crate) async fn get_comp_op_selectivity(
         &self,
+        group_id: GroupId,
         comp_bin_op_typ: BinOpType,
         left: ArcPredicateNode,
         right: ArcPredicateNode,
@@ -27,7 +30,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
 
         // I intentionally performed moves on left and right. This way, we don't accidentally use
         // them after this block
-        let semantic_res = self.get_semantic_nodes(left, right).await;
+        let semantic_res = self.get_semantic_nodes(group_id, left, right).await;
         if semantic_res.is_err() {
             return Ok(Self::get_default_comparison_op_selectivity(comp_bin_op_typ));
         }
@@ -41,67 +44,74 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
                 .first()
                 .expect("we just checked that attr_ref_exprs.len() == 1");
             let attr_ref_idx = attr_ref_expr.attr_index();
-            let table_id = todo!();
 
-            // TODO: Consider attribute is a derived attribute
-            if values.len() == 1 {
-                let value = values
-                    .first()
-                    .expect("we just checked that values.len() == 1");
-                match comp_bin_op_typ {
-                    BinOpType::Eq => {
-                        self.get_attribute_equality_selectivity(table_id, attr_ref_idx, value, true)
+            if let AttrRef::BaseTableAttrRef(BaseTableAttrRef { table_id, attr_idx }) =
+                self.memo.get_attribute_ref(group_id, attr_ref_idx)
+            {
+                if values.len() == 1 {
+                    let value = values
+                        .first()
+                        .expect("we just checked that values.len() == 1");
+                    match comp_bin_op_typ {
+                        BinOpType::Eq => {
+                            self.get_attribute_equality_selectivity(table_id, attr_idx, value, true)
+                                .await
+                        }
+                        BinOpType::Neq => {
+                            self.get_attribute_equality_selectivity(
+                                table_id,
+                                attr_ref_idx,
+                                value,
+                                false,
+                            )
                             .await
+                        }
+                        BinOpType::Lt | BinOpType::Leq | BinOpType::Gt | BinOpType::Geq => {
+                            let start = match (comp_bin_op_typ, is_left_attr_ref) {
+                                    (BinOpType::Lt, true) | (BinOpType::Geq, false) => Bound::Unbounded,
+                                    (BinOpType::Leq, true) | (BinOpType::Gt, false) => Bound::Unbounded,
+                                    (BinOpType::Gt, true) | (BinOpType::Leq, false) => Bound::Excluded(value),
+                                    (BinOpType::Geq, true) | (BinOpType::Lt, false) => Bound::Included(value),
+                                    _ => unreachable!("all comparison BinOpTypes were enumerated. this should be unreachable"),
+                                };
+                            let end = match (comp_bin_op_typ, is_left_attr_ref) {
+                                    (BinOpType::Lt, true) | (BinOpType::Geq, false) => Bound::Excluded(value),
+                                    (BinOpType::Leq, true) | (BinOpType::Gt, false) => Bound::Included(value),
+                                    (BinOpType::Gt, true) | (BinOpType::Leq, false) => Bound::Unbounded,
+                                    (BinOpType::Geq, true) | (BinOpType::Lt, false) => Bound::Unbounded,
+                                    _ => unreachable!("all comparison BinOpTypes were enumerated. this should be unreachable"),
+                                };
+                            self.get_attribute_range_selectivity(table_id, attr_ref_idx, start, end)
+                                .await
+                        }
+                        _ => unreachable!(
+                            "all comparison BinOpTypes were enumerated. this should be unreachable"
+                        ),
                     }
-                    BinOpType::Neq => {
-                        self.get_attribute_equality_selectivity(
-                            table_id,
-                            attr_ref_idx,
-                            value,
-                            false,
-                        )
-                        .await
+                } else {
+                    let non_attr_ref_expr = non_attr_ref_exprs.first().expect(
+                        "non_attr_ref_exprs should have a value since attr_ref_exprs.len() == 1",
+                    );
+
+                    match non_attr_ref_expr.as_ref().typ {
+                        PredicateType::BinOp(_) => {
+                            Ok(Self::get_default_comparison_op_selectivity(comp_bin_op_typ))
+                        }
+                        PredicateType::Cast => Ok(UNIMPLEMENTED_SEL),
+                        PredicateType::Constant(_) => {
+                            unreachable!(
+                                "we should have handled this in the values.len() == 1 branch"
+                            )
+                        }
+                        _ => unimplemented!(
+                            "unhandled case of comparing a attribute ref node to {}",
+                            non_attr_ref_expr.as_ref().typ
+                        ),
                     }
-                    BinOpType::Lt | BinOpType::Leq | BinOpType::Gt | BinOpType::Geq => {
-                        let start = match (comp_bin_op_typ, is_left_attr_ref) {
-                                (BinOpType::Lt, true) | (BinOpType::Geq, false) => Bound::Unbounded,
-                                (BinOpType::Leq, true) | (BinOpType::Gt, false) => Bound::Unbounded,
-                                (BinOpType::Gt, true) | (BinOpType::Leq, false) => Bound::Excluded(value),
-                                (BinOpType::Geq, true) | (BinOpType::Lt, false) => Bound::Included(value),
-                                _ => unreachable!("all comparison BinOpTypes were enumerated. this should be unreachable"),
-                            };
-                        let end = match (comp_bin_op_typ, is_left_attr_ref) {
-                                (BinOpType::Lt, true) | (BinOpType::Geq, false) => Bound::Excluded(value),
-                                (BinOpType::Leq, true) | (BinOpType::Gt, false) => Bound::Included(value),
-                                (BinOpType::Gt, true) | (BinOpType::Leq, false) => Bound::Unbounded,
-                                (BinOpType::Geq, true) | (BinOpType::Lt, false) => Bound::Unbounded,
-                                _ => unreachable!("all comparison BinOpTypes were enumerated. this should be unreachable"),
-                            };
-                        self.get_attribute_range_selectivity(table_id, attr_ref_idx, start, end)
-                            .await
-                    }
-                    _ => unreachable!(
-                        "all comparison BinOpTypes were enumerated. this should be unreachable"
-                    ),
                 }
             } else {
-                let non_attr_ref_expr = non_attr_ref_exprs.first().expect(
-                    "non_attr_ref_exprs should have a value since attr_ref_exprs.len() == 1",
-                );
-
-                match non_attr_ref_expr.as_ref().typ {
-                    PredicateType::BinOp(_) => {
-                        Ok(Self::get_default_comparison_op_selectivity(comp_bin_op_typ))
-                    }
-                    PredicateType::Cast => Ok(UNIMPLEMENTED_SEL),
-                    PredicateType::Constant(_) => {
-                        unreachable!("we should have handled this in the values.len() == 1 branch")
-                    }
-                    _ => unimplemented!(
-                        "unhandled case of comparing a attribute ref node to {}",
-                        non_attr_ref_expr.as_ref().typ
-                    ),
-                }
+                // TODO: attribute is derived
+                Ok(Self::get_default_comparison_op_selectivity(comp_bin_op_typ))
             }
         } else if attr_ref_exprs.len() == 2 {
             Ok(Self::get_default_comparison_op_selectivity(comp_bin_op_typ))
@@ -116,6 +126,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
     #[allow(clippy::type_complexity)]
     async fn get_semantic_nodes(
         &self,
+        group_id: GroupId,
         left: ArcPredicateNode,
         right: ArcPredicateNode,
     ) -> CostModelResult<(Vec<AttrIndexPred>, Vec<Value>, Vec<ArcPredicateNode>, bool)> {
@@ -170,18 +181,10 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
                         let attr_ref_expr = AttrIndexPred::from_pred_node(cast_expr_child)
                             .expect("we already checked that the type is AttributeRef");
                         let attr_ref_idx = attr_ref_expr.attr_index();
-                        let table_id = todo!();
                         cast_node = attr_ref_expr.into_pred_node();
                         // The "invert" cast is to invert the cast so that we're casting the
                         // non_cast_node to the attribute's original type.
-                        // TODO: Consider attribute info is None.
-                        // **TODO**: What if this attribute is a derived attribute?
-                        let attribute_info = self
-                            .storage_manager
-                            .get_attribute_info(table_id, attr_ref_idx)
-                            .await?
-                            .ok_or({ SemanticError::AttributeNotFound(table_id, attr_ref_idx) })?;
-
+                        let attribute_info = self.memo.get_attribute_info(group_id, attr_ref_idx);
                         let invert_cast_data_type = &attribute_info.typ.into_data_type();
 
                         match non_cast_node.typ {

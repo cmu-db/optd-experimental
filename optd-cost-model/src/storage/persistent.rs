@@ -4,7 +4,7 @@ use std::sync::Arc;
 use optd_persistent::{cost_model::interface::StatType, CostModelStorageLayer};
 
 use crate::{
-    common::{properties::Attribute, types::TableId},
+    common::types::TableId,
     stats::{utilities::counter::Counter, AttributeCombValueStats, Distribution, MostCommonValues},
     CostModelResult,
 };
@@ -26,14 +26,6 @@ impl<S: CostModelStorageLayer + Send + Sync> CostModelStorageManagerImpl<S> {
 impl<S: CostModelStorageLayer + Send + Sync> CostModelStorageManager
     for CostModelStorageManagerImpl<S>
 {
-    async fn get_attribute_info(
-        &self,
-        table_id: TableId,
-        attr_base_index: u64,
-    ) -> CostModelResult<Option<Attribute>> {
-        unimplemented!()
-    }
-
     /// Gets the latest statistics for a given table.
     ///
     /// TODO: Currently, in `AttributeCombValueStats`, only `Distribution` is optional.

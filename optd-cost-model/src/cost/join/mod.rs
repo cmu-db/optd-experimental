@@ -7,6 +7,7 @@ use crate::common::{
 };
 
 pub mod hash_join;
+// FIXME: module has the same name as its containing module
 pub mod join;
 pub mod nested_loop_join;
 

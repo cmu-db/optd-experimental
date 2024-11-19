@@ -4,6 +4,8 @@ use crate::{
         predicates::{
             attr_index_pred::AttrIndexPred, constant_pred::ConstantPred, in_list_pred::InListPred,
         },
+        properties::attr_ref::{AttrRef, BaseTableAttrRef},
+        types::GroupId,
     },
     cost_model::CostModelImpl,
     stats::UNIMPLEMENTED_SEL,
@@ -14,7 +16,11 @@ use crate::{
 impl<S: CostModelStorageManager> CostModelImpl<S> {
     /// Only support attrA in (val1, val2, val3) where attrA is a attribute ref and
     /// val1, val2, val3 are constants.
-    pub(crate) async fn get_in_list_selectivity(&self, expr: &InListPred) -> CostModelResult<f64> {
+    pub(crate) async fn get_in_list_selectivity(
+        &self,
+        group_id: GroupId,
+        expr: &InListPred,
+    ) -> CostModelResult<f64> {
         let child = expr.child();
 
         // Check child is a attribute ref.
@@ -34,7 +40,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
         // Convert child and const expressions to concrete types.
         let attr_ref_pred = AttrIndexPred::from_pred_node(child).unwrap();
         let attr_ref_idx = attr_ref_pred.attr_index();
-        let table_id = todo!(); // TODO: Fix this
+
         let list_exprs = list_exprs
             .into_iter()
             .map(|expr| {
@@ -44,24 +50,30 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
             .collect::<Vec<_>>();
         let negated = expr.negated();
 
-        // TODO: Consider attribute is a derived attribute
-        let mut in_sel = 0.0;
-        for expr in &list_exprs {
-            let selectivity = self
-                .get_attribute_equality_selectivity(
-                    table_id,
-                    attr_ref_idx,
-                    &expr.value(),
-                    /* is_equality */ true,
-                )
-                .await?;
-            in_sel += selectivity;
-        }
-        in_sel = in_sel.min(1.0);
-        if negated {
-            Ok(1.0 - in_sel)
+        if let AttrRef::BaseTableAttrRef(BaseTableAttrRef { table_id, attr_idx }) =
+            self.memo.get_attribute_ref(group_id, attr_ref_idx)
+        {
+            let mut in_sel = 0.0;
+            for expr in &list_exprs {
+                let selectivity = self
+                    .get_attribute_equality_selectivity(
+                        table_id,
+                        attr_idx,
+                        &expr.value(),
+                        /* is_equality */ true,
+                    )
+                    .await?;
+                in_sel += selectivity;
+            }
+            in_sel = in_sel.min(1.0);
+            if negated {
+                Ok(1.0 - in_sel)
+            } else {
+                Ok(in_sel)
+            }
         } else {
-            Ok(in_sel)
+            // TODO: Child is a derived attribute.
+            Ok(UNIMPLEMENTED_SEL)
         }
     }
 }
@@ -71,8 +83,12 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::{
-        common::{types::TableId, values::Value},
+        common::{
+            types::{GroupId, TableId},
+            values::Value,
+        },
         cost_model::tests::*,
+        memo_ext::tests::MemoGroupInfo,
         stats::{
             utilities::{counter::Counter, simple_map::SimpleMap},
             MostCommonValues,
@@ -90,61 +106,59 @@ mod tests {
             2,
             0.0,
         );
-        let table_id = TableId(0);
         let cost_model = create_mock_cost_model(
-            vec![table_id],
-            vec![HashMap::from([(0, per_attribute_stats)])],
+            vec![TEST_TABLE1_ID],
+            vec![HashMap::from([(
+                TEST_ATTR1_BASE_INDEX,
+                per_attribute_stats,
+            )])],
             vec![None],
         );
 
         assert_approx_eq::assert_approx_eq!(
             cost_model
-                .get_in_list_selectivity(&in_list(0, vec![Value::Int32(1)], false)) // TODO: Fix this
+                .get_in_list_selectivity(TEST_GROUP1_ID, &in_list(0, vec![Value::Int32(1)], false))
                 .await
                 .unwrap(),
             0.8
         );
         assert_approx_eq::assert_approx_eq!(
             cost_model
-                .get_in_list_selectivity(&in_list(
-                    // TODO: Fix this
-                    0,
-                    vec![Value::Int32(1), Value::Int32(2)],
-                    false
-                ))
+                .get_in_list_selectivity(
+                    TEST_GROUP1_ID,
+                    &in_list(0, vec![Value::Int32(1), Value::Int32(2)], false)
+                )
                 .await
                 .unwrap(),
             1.0
         );
         assert_approx_eq::assert_approx_eq!(
             cost_model
-                .get_in_list_selectivity(&in_list(0, vec![Value::Int32(3)], false)) // TODO: Fix this
+                .get_in_list_selectivity(TEST_GROUP1_ID, &in_list(0, vec![Value::Int32(3)], false))
                 .await
                 .unwrap(),
             0.0
         );
         assert_approx_eq::assert_approx_eq!(
             cost_model
-                .get_in_list_selectivity(&in_list(0, vec![Value::Int32(1)], true)) // TODO: Fix this
+                .get_in_list_selectivity(TEST_GROUP1_ID, &in_list(0, vec![Value::Int32(1)], true))
                 .await
                 .unwrap(),
             0.2
         );
         assert_approx_eq::assert_approx_eq!(
             cost_model
-                .get_in_list_selectivity(&in_list(
-                    // TODO: Fix this
-                    0,
-                    vec![Value::Int32(1), Value::Int32(2)],
-                    true
-                ))
+                .get_in_list_selectivity(
+                    TEST_GROUP1_ID,
+                    &in_list(0, vec![Value::Int32(1), Value::Int32(2)], true)
+                )
                 .await
                 .unwrap(),
             0.0
         );
         assert_approx_eq::assert_approx_eq!(
             cost_model
-                .get_in_list_selectivity(&in_list(0, vec![Value::Int32(3)], true)) // TODO: Fix this
+                .get_in_list_selectivity(TEST_GROUP1_ID, &in_list(0, vec![Value::Int32(3)], true)) // TODO: Fix this
                 .await
                 .unwrap(),
             1.0

@@ -2,6 +2,7 @@ use crate::{
     common::{
         nodes::{ArcPredicateNode, PredicateType, ReprPredicateNode},
         predicates::{in_list_pred::InListPred, like_pred::LikePred, un_op_pred::UnOpType},
+        types::GroupId,
     },
     cost_model::CostModelImpl,
     stats::UNIMPLEMENTED_SEL,
@@ -15,14 +16,16 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
     pub async fn get_filter_row_cnt(
         &self,
         child_row_cnt: EstimatedStatistic,
+        group_id: GroupId,
         cond: ArcPredicateNode,
     ) -> CostModelResult<EstimatedStatistic> {
-        let selectivity = { self.get_filter_selectivity(cond).await? };
+        let selectivity = { self.get_filter_selectivity(group_id, cond).await? };
         Ok(EstimatedStatistic((child_row_cnt.0 * selectivity).max(1.0)))
     }
 
     pub async fn get_filter_selectivity(
         &self,
+        group_id: GroupId,
         expr_tree: ArcPredicateNode,
     ) -> CostModelResult<f64> {
         Box::pin(async move {
@@ -36,7 +39,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
                         // not doesn't care about nulls so there's no complex logic. it just reverses
                         // the selectivity for instance, != _will not_ include nulls
                         // but "NOT ==" _will_ include nulls
-                        UnOpType::Not => Ok(1.0 - self.get_filter_selectivity(child).await?),
+                        UnOpType::Not => Ok(1.0 - self.get_filter_selectivity(group_id, child).await?),
                         UnOpType::Neg => panic!(
                             "the selectivity of operations that return numerical values is undefined"
                         ),
@@ -48,7 +51,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
                     let right_child = expr_tree.child(1);
 
                     if bin_op_typ.is_comparison() {
-                        self.get_comp_op_selectivity(*bin_op_typ, left_child, right_child).await
+                        self.get_comp_op_selectivity(group_id, *bin_op_typ, left_child, right_child).await
                     } else if bin_op_typ.is_numerical() {
                         panic!(
                             "the selectivity of operations that return numerical values is undefined"
@@ -58,7 +61,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
                     }
                 }
                 PredicateType::LogOp(log_op_typ) => {
-                    self.get_log_op_selectivity(*log_op_typ, &expr_tree.children).await
+                    self.get_log_op_selectivity(group_id, *log_op_typ, &expr_tree.children).await
                 }
                 PredicateType::Func(_) => unimplemented!("check bool type or else panic"),
                 PredicateType::SortOrder(_) => {
@@ -68,14 +71,14 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
                 PredicateType::Cast => unimplemented!("check bool type or else panic"),
                 PredicateType::Like => {
                     let like_expr = LikePred::from_pred_node(expr_tree).unwrap();
-                    self.get_like_selectivity(&like_expr).await
+                    self.get_like_selectivity(group_id, &like_expr).await
                 }
                 PredicateType::DataType(_) => {
                     panic!("the selectivity of a data type is not defined")
                 }
                 PredicateType::InList => {
                     let in_list_expr = InListPred::from_pred_node(expr_tree).unwrap();
-                    self.get_in_list_selectivity(&in_list_expr).await
+                    self.get_in_list_selectivity(group_id, &in_list_expr).await
                 }
                 _ => unreachable!(
                     "all expression DfPredType were enumerated. this should be unreachable"
@@ -117,14 +120,14 @@ mod tests {
         );
         assert_approx_eq::assert_approx_eq!(
             cost_model
-                .get_filter_selectivity(cnst(Value::Bool(true)))
+                .get_filter_selectivity(TEST_GROUP1_ID, cnst(Value::Bool(true)))
                 .await
                 .unwrap(),
             1.0
         );
         assert_approx_eq::assert_approx_eq!(
             cost_model
-                .get_filter_selectivity(cnst(Value::Bool(false)))
+                .get_filter_selectivity(TEST_GROUP1_ID, cnst(Value::Bool(false)))
                 .await
                 .unwrap(),
             0.0
@@ -160,12 +163,15 @@ mod tests {
             attr_index(0), // TODO: Fix this
         );
         assert_approx_eq::assert_approx_eq!(
-            cost_model.get_filter_selectivity(expr_tree).await.unwrap(),
+            cost_model
+                .get_filter_selectivity(TEST_GROUP1_ID, expr_tree)
+                .await
+                .unwrap(),
             0.3
         );
         assert_approx_eq::assert_approx_eq!(
             cost_model
-                .get_filter_selectivity(expr_tree_rev)
+                .get_filter_selectivity(TEST_GROUP1_ID, expr_tree_rev)
                 .await
                 .unwrap(),
             0.3
@@ -183,30 +189,27 @@ mod tests {
             5,
             0.0,
         );
-        let table_id = TableId(0);
         let cost_model = create_mock_cost_model(
-            vec![table_id],
-            vec![HashMap::from([(0, per_attribute_stats)])],
+            vec![TEST_TABLE1_ID],
+            vec![HashMap::from([(
+                TEST_ATTR1_BASE_INDEX,
+                per_attribute_stats,
+            )])],
             vec![None],
         );
 
-        let expr_tree = bin_op(
-            BinOpType::Eq,
-            attr_index(0), // TODO: Fix this
-            cnst(Value::Int32(2)),
-        );
-        let expr_tree_rev = bin_op(
-            BinOpType::Eq,
-            cnst(Value::Int32(2)),
-            attr_index(0), // TODO: Fix this
-        );
+        let expr_tree = bin_op(BinOpType::Eq, attr_index(0), cnst(Value::Int32(2)));
+        let expr_tree_rev = bin_op(BinOpType::Eq, cnst(Value::Int32(2)), attr_index(0));
         assert_approx_eq::assert_approx_eq!(
-            cost_model.get_filter_selectivity(expr_tree).await.unwrap(),
+            cost_model
+                .get_filter_selectivity(TEST_GROUP1_ID, expr_tree)
+                .await
+                .unwrap(),
             0.12
         );
         assert_approx_eq::assert_approx_eq!(
             cost_model
-                .get_filter_selectivity(expr_tree_rev)
+                .get_filter_selectivity(TEST_GROUP1_ID, expr_tree_rev)
                 .await
                 .unwrap(),
             0.12
@@ -225,30 +228,27 @@ mod tests {
             0,
             0.0,
         );
-        let table_id = TableId(0);
         let cost_model = create_mock_cost_model(
-            vec![table_id],
-            vec![HashMap::from([(0, per_attribute_stats)])],
+            vec![TEST_TABLE1_ID],
+            vec![HashMap::from([(
+                TEST_ATTR1_BASE_INDEX,
+                per_attribute_stats,
+            )])],
             vec![None],
         );
 
-        let expr_tree = bin_op(
-            BinOpType::Neq,
-            attr_index(0), // TODO: Fix this
-            cnst(Value::Int32(1)),
-        );
-        let expr_tree_rev = bin_op(
-            BinOpType::Neq,
-            cnst(Value::Int32(1)),
-            attr_index(0), // TODO: Fix this
-        );
+        let expr_tree = bin_op(BinOpType::Neq, attr_index(0), cnst(Value::Int32(1)));
+        let expr_tree_rev = bin_op(BinOpType::Neq, cnst(Value::Int32(1)), attr_index(0));
         assert_approx_eq::assert_approx_eq!(
-            cost_model.get_filter_selectivity(expr_tree).await.unwrap(),
+            cost_model
+                .get_filter_selectivity(TEST_GROUP1_ID, expr_tree)
+                .await
+                .unwrap(),
             1.0 - 0.3
         );
         assert_approx_eq::assert_approx_eq!(
             cost_model
-                .get_filter_selectivity(expr_tree_rev)
+                .get_filter_selectivity(TEST_GROUP1_ID, expr_tree_rev)
                 .await
                 .unwrap(),
             1.0 - 0.3
@@ -266,30 +266,27 @@ mod tests {
             10,
             0.0,
         );
-        let table_id = TableId(0);
         let cost_model = create_mock_cost_model(
-            vec![table_id],
-            vec![HashMap::from([(0, per_attribute_stats)])],
+            vec![TEST_TABLE1_ID],
+            vec![HashMap::from([(
+                TEST_ATTR1_BASE_INDEX,
+                per_attribute_stats,
+            )])],
             vec![None],
         );
 
-        let expr_tree = bin_op(
-            BinOpType::Leq,
-            attr_index(0), // TODO: Fix this
-            cnst(Value::Int32(15)),
-        );
-        let expr_tree_rev = bin_op(
-            BinOpType::Gt,
-            cnst(Value::Int32(15)),
-            attr_index(0), // TODO: Fix this
-        );
+        let expr_tree = bin_op(BinOpType::Leq, attr_index(0), cnst(Value::Int32(15)));
+        let expr_tree_rev = bin_op(BinOpType::Gt, cnst(Value::Int32(15)), attr_index(0));
         assert_approx_eq::assert_approx_eq!(
-            cost_model.get_filter_selectivity(expr_tree).await.unwrap(),
+            cost_model
+                .get_filter_selectivity(TEST_GROUP1_ID, expr_tree)
+                .await
+                .unwrap(),
             0.7
         );
         assert_approx_eq::assert_approx_eq!(
             cost_model
-                .get_filter_selectivity(expr_tree_rev)
+                .get_filter_selectivity(TEST_GROUP1_ID, expr_tree_rev)
                 .await
                 .unwrap(),
             0.7
@@ -312,30 +309,27 @@ mod tests {
             10,
             0.0,
         );
-        let table_id = TableId(0);
         let cost_model = create_mock_cost_model(
-            vec![table_id],
-            vec![HashMap::from([(0, per_attribute_stats)])],
+            vec![TEST_TABLE1_ID],
+            vec![HashMap::from([(
+                TEST_ATTR1_BASE_INDEX,
+                per_attribute_stats,
+            )])],
             vec![None],
         );
 
-        let expr_tree = bin_op(
-            BinOpType::Leq,
-            attr_index(0), // TODO: Fix this
-            cnst(Value::Int32(15)),
-        );
-        let expr_tree_rev = bin_op(
-            BinOpType::Gt,
-            cnst(Value::Int32(15)),
-            attr_index(0), // TODO: Fix this
-        );
+        let expr_tree = bin_op(BinOpType::Leq, attr_index(0), cnst(Value::Int32(15)));
+        let expr_tree_rev = bin_op(BinOpType::Gt, cnst(Value::Int32(15)), attr_index(0));
         assert_approx_eq::assert_approx_eq!(
-            cost_model.get_filter_selectivity(expr_tree).await.unwrap(),
+            cost_model
+                .get_filter_selectivity(TEST_GROUP1_ID, expr_tree)
+                .await
+                .unwrap(),
             0.85
         );
         assert_approx_eq::assert_approx_eq!(
             cost_model
-                .get_filter_selectivity(expr_tree_rev)
+                .get_filter_selectivity(TEST_GROUP1_ID, expr_tree_rev)
                 .await
                 .unwrap(),
             0.85
@@ -358,30 +352,27 @@ mod tests {
             10,
             0.0,
         );
-        let table_id = TableId(0);
         let cost_model = create_mock_cost_model(
-            vec![table_id],
-            vec![HashMap::from([(0, per_attribute_stats)])],
+            vec![TEST_TABLE1_ID],
+            vec![HashMap::from([(
+                TEST_ATTR1_BASE_INDEX,
+                per_attribute_stats,
+            )])],
             vec![None],
         );
 
-        let expr_tree = bin_op(
-            BinOpType::Leq,
-            attr_index(0), // TODO: Fix this
-            cnst(Value::Int32(15)),
-        );
-        let expr_tree_rev = bin_op(
-            BinOpType::Gt,
-            cnst(Value::Int32(15)),
-            attr_index(0), // TODO: Fix this
-        );
+        let expr_tree = bin_op(BinOpType::Leq, attr_index(0), cnst(Value::Int32(15)));
+        let expr_tree_rev = bin_op(BinOpType::Gt, cnst(Value::Int32(15)), attr_index(0));
         assert_approx_eq::assert_approx_eq!(
-            cost_model.get_filter_selectivity(expr_tree).await.unwrap(),
+            cost_model
+                .get_filter_selectivity(TEST_GROUP1_ID, expr_tree)
+                .await
+                .unwrap(),
             0.93
         );
         assert_approx_eq::assert_approx_eq!(
             cost_model
-                .get_filter_selectivity(expr_tree_rev)
+                .get_filter_selectivity(TEST_GROUP1_ID, expr_tree_rev)
                 .await
                 .unwrap(),
             0.93
@@ -399,30 +390,27 @@ mod tests {
             10,
             0.0,
         );
-        let table_id = TableId(0);
         let cost_model = create_mock_cost_model(
-            vec![table_id],
-            vec![HashMap::from([(0, per_attribute_stats)])],
+            vec![TEST_TABLE1_ID],
+            vec![HashMap::from([(
+                TEST_ATTR1_BASE_INDEX,
+                per_attribute_stats,
+            )])],
             vec![None],
         );
 
-        let expr_tree = bin_op(
-            BinOpType::Lt,
-            attr_index(0), // TODO: Fix this
-            cnst(Value::Int32(15)),
-        );
-        let expr_tree_rev = bin_op(
-            BinOpType::Geq,
-            cnst(Value::Int32(15)),
-            attr_index(0), // TODO: Fix this
-        );
+        let expr_tree = bin_op(BinOpType::Lt, attr_index(0), cnst(Value::Int32(15)));
+        let expr_tree_rev = bin_op(BinOpType::Geq, cnst(Value::Int32(15)), attr_index(0));
         assert_approx_eq::assert_approx_eq!(
-            cost_model.get_filter_selectivity(expr_tree).await.unwrap(),
+            cost_model
+                .get_filter_selectivity(TEST_GROUP1_ID, expr_tree)
+                .await
+                .unwrap(),
             0.6
         );
         assert_approx_eq::assert_approx_eq!(
             cost_model
-                .get_filter_selectivity(expr_tree_rev)
+                .get_filter_selectivity(TEST_GROUP1_ID, expr_tree_rev)
                 .await
                 .unwrap(),
             0.6
@@ -446,30 +434,27 @@ mod tests {
                  * remaining value has freq 0.1 */
             0.0,
         );
-        let table_id = TableId(0);
         let cost_model = create_mock_cost_model(
-            vec![table_id],
-            vec![HashMap::from([(0, per_attribute_stats)])],
+            vec![TEST_TABLE1_ID],
+            vec![HashMap::from([(
+                TEST_ATTR1_BASE_INDEX,
+                per_attribute_stats,
+            )])],
             vec![None],
         );
 
-        let expr_tree = bin_op(
-            BinOpType::Lt,
-            attr_index(0), // TODO: Fix this
-            cnst(Value::Int32(15)),
-        );
-        let expr_tree_rev = bin_op(
-            BinOpType::Geq,
-            cnst(Value::Int32(15)),
-            attr_index(0), // TODO: Fix this
-        );
+        let expr_tree = bin_op(BinOpType::Lt, attr_index(0), cnst(Value::Int32(15)));
+        let expr_tree_rev = bin_op(BinOpType::Geq, cnst(Value::Int32(15)), attr_index(0));
         assert_approx_eq::assert_approx_eq!(
-            cost_model.get_filter_selectivity(expr_tree).await.unwrap(),
+            cost_model
+                .get_filter_selectivity(TEST_GROUP1_ID, expr_tree)
+                .await
+                .unwrap(),
             0.75
         );
         assert_approx_eq::assert_approx_eq!(
             cost_model
-                .get_filter_selectivity(expr_tree_rev)
+                .get_filter_selectivity(TEST_GROUP1_ID, expr_tree_rev)
                 .await
                 .unwrap(),
             0.75
@@ -493,30 +478,27 @@ mod tests {
                  * remaining value has freq 0.1 */
             0.0,
         );
-        let table_id = TableId(0);
         let cost_model = create_mock_cost_model(
-            vec![table_id],
-            vec![HashMap::from([(0, per_attribute_stats)])],
+            vec![TEST_TABLE1_ID],
+            vec![HashMap::from([(
+                TEST_ATTR1_BASE_INDEX,
+                per_attribute_stats,
+            )])],
             vec![None],
         );
 
-        let expr_tree = bin_op(
-            BinOpType::Lt,
-            attr_index(0), // TODO: Fix this
-            cnst(Value::Int32(15)),
-        );
-        let expr_tree_rev = bin_op(
-            BinOpType::Geq,
-            cnst(Value::Int32(15)),
-            attr_index(0), // TODO: Fix this
-        );
+        let expr_tree = bin_op(BinOpType::Lt, attr_index(0), cnst(Value::Int32(15)));
+        let expr_tree_rev = bin_op(BinOpType::Geq, cnst(Value::Int32(15)), attr_index(0));
         assert_approx_eq::assert_approx_eq!(
-            cost_model.get_filter_selectivity(expr_tree).await.unwrap(),
+            cost_model
+                .get_filter_selectivity(TEST_GROUP1_ID, expr_tree)
+                .await
+                .unwrap(),
             0.85
         );
         assert_approx_eq::assert_approx_eq!(
             cost_model
-                .get_filter_selectivity(expr_tree_rev)
+                .get_filter_selectivity(TEST_GROUP1_ID, expr_tree_rev)
                 .await
                 .unwrap(),
             0.85
@@ -536,30 +518,27 @@ mod tests {
             10,
             0.0,
         );
-        let table_id = TableId(0);
         let cost_model = create_mock_cost_model(
-            vec![table_id],
-            vec![HashMap::from([(0, per_attribute_stats)])],
+            vec![TEST_TABLE1_ID],
+            vec![HashMap::from([(
+                TEST_ATTR1_BASE_INDEX,
+                per_attribute_stats,
+            )])],
             vec![None],
         );
 
-        let expr_tree = bin_op(
-            BinOpType::Gt,
-            attr_index(0), // TODO: Fix this
-            cnst(Value::Int32(15)),
-        );
-        let expr_tree_rev = bin_op(
-            BinOpType::Leq,
-            cnst(Value::Int32(15)),
-            attr_index(0), // TODO: Fix this
-        );
+        let expr_tree = bin_op(BinOpType::Gt, attr_index(0), cnst(Value::Int32(15)));
+        let expr_tree_rev = bin_op(BinOpType::Leq, cnst(Value::Int32(15)), attr_index(0));
         assert_approx_eq::assert_approx_eq!(
-            cost_model.get_filter_selectivity(expr_tree).await.unwrap(),
+            cost_model
+                .get_filter_selectivity(TEST_GROUP1_ID, expr_tree)
+                .await
+                .unwrap(),
             1.0 - 0.7
         );
         assert_approx_eq::assert_approx_eq!(
             cost_model
-                .get_filter_selectivity(expr_tree_rev)
+                .get_filter_selectivity(TEST_GROUP1_ID, expr_tree_rev)
                 .await
                 .unwrap(),
             1.0 - 0.7
@@ -577,31 +556,28 @@ mod tests {
             10,
             0.0,
         );
-        let table_id = TableId(0);
         let cost_model = create_mock_cost_model(
-            vec![table_id],
-            vec![HashMap::from([(0, per_attribute_stats)])],
+            vec![TEST_TABLE1_ID],
+            vec![HashMap::from([(
+                TEST_ATTR1_BASE_INDEX,
+                per_attribute_stats,
+            )])],
             vec![None],
         );
 
-        let expr_tree = bin_op(
-            BinOpType::Geq,
-            attr_index(0), // TODO: Fix this
-            cnst(Value::Int32(15)),
-        );
-        let expr_tree_rev = bin_op(
-            BinOpType::Lt,
-            cnst(Value::Int32(15)),
-            attr_index(0), // TODO: Fix this
-        );
+        let expr_tree = bin_op(BinOpType::Geq, attr_index(0), cnst(Value::Int32(15)));
+        let expr_tree_rev = bin_op(BinOpType::Lt, cnst(Value::Int32(15)), attr_index(0));
 
         assert_approx_eq::assert_approx_eq!(
-            cost_model.get_filter_selectivity(expr_tree).await.unwrap(),
+            cost_model
+                .get_filter_selectivity(TEST_GROUP1_ID, expr_tree)
+                .await
+                .unwrap(),
             1.0 - 0.6
         );
         assert_approx_eq::assert_approx_eq!(
             cost_model
-                .get_filter_selectivity(expr_tree_rev)
+                .get_filter_selectivity(TEST_GROUP1_ID, expr_tree_rev)
                 .await
                 .unwrap(),
             1.0 - 0.6
@@ -620,46 +596,39 @@ mod tests {
             0,
             0.0,
         );
-        let table_id = TableId(0);
         let cost_model = create_mock_cost_model(
-            vec![table_id],
-            vec![HashMap::from([(0, per_attribute_stats)])],
+            vec![TEST_TABLE1_ID],
+            vec![HashMap::from([(
+                TEST_ATTR1_BASE_INDEX,
+                per_attribute_stats,
+            )])],
             vec![None],
         );
 
-        let eq1 = bin_op(
-            BinOpType::Eq,
-            attr_index(0), // TODO: Fix this
-            cnst(Value::Int32(1)),
-        );
-        let eq5 = bin_op(
-            BinOpType::Eq,
-            attr_index(0), // TODO: Fix this
-            cnst(Value::Int32(5)),
-        );
-        let eq8 = bin_op(
-            BinOpType::Eq,
-            attr_index(0), // TODO: Fix this
-            cnst(Value::Int32(8)),
-        );
+        let eq1 = bin_op(BinOpType::Eq, attr_index(0), cnst(Value::Int32(1)));
+        let eq5 = bin_op(BinOpType::Eq, attr_index(0), cnst(Value::Int32(5)));
+        let eq8 = bin_op(BinOpType::Eq, attr_index(0), cnst(Value::Int32(8)));
         let expr_tree = log_op(LogOpType::And, vec![eq1.clone(), eq5.clone(), eq8.clone()]);
         let expr_tree_shift1 = log_op(LogOpType::And, vec![eq5.clone(), eq8.clone(), eq1.clone()]);
         let expr_tree_shift2 = log_op(LogOpType::And, vec![eq8.clone(), eq1.clone(), eq5.clone()]);
 
         assert_approx_eq::assert_approx_eq!(
-            cost_model.get_filter_selectivity(expr_tree).await.unwrap(),
-            0.03
-        );
-        assert_approx_eq::assert_approx_eq!(
             cost_model
-                .get_filter_selectivity(expr_tree_shift1)
+                .get_filter_selectivity(TEST_GROUP1_ID, expr_tree)
                 .await
                 .unwrap(),
             0.03
         );
         assert_approx_eq::assert_approx_eq!(
             cost_model
-                .get_filter_selectivity(expr_tree_shift2)
+                .get_filter_selectivity(TEST_GROUP1_ID, expr_tree_shift1)
+                .await
+                .unwrap(),
+            0.03
+        );
+        assert_approx_eq::assert_approx_eq!(
+            cost_model
+                .get_filter_selectivity(TEST_GROUP1_ID, expr_tree_shift2)
                 .await
                 .unwrap(),
             0.03
@@ -678,46 +647,39 @@ mod tests {
             0,
             0.0,
         );
-        let table_id = TableId(0);
         let cost_model = create_mock_cost_model(
-            vec![table_id],
-            vec![HashMap::from([(0, per_attribute_stats)])],
+            vec![TEST_TABLE1_ID],
+            vec![HashMap::from([(
+                TEST_ATTR1_BASE_INDEX,
+                per_attribute_stats,
+            )])],
             vec![None],
         );
 
-        let eq1 = bin_op(
-            BinOpType::Eq,
-            attr_index(0), // TODO: Fix this
-            cnst(Value::Int32(1)),
-        );
-        let eq5 = bin_op(
-            BinOpType::Eq,
-            attr_index(0), // TODO: Fix this
-            cnst(Value::Int32(5)),
-        );
-        let eq8 = bin_op(
-            BinOpType::Eq,
-            attr_index(0), // TODO: Fix this
-            cnst(Value::Int32(8)),
-        );
+        let eq1 = bin_op(BinOpType::Eq, attr_index(0), cnst(Value::Int32(1)));
+        let eq5 = bin_op(BinOpType::Eq, attr_index(0), cnst(Value::Int32(5)));
+        let eq8 = bin_op(BinOpType::Eq, attr_index(0), cnst(Value::Int32(8)));
         let expr_tree = log_op(LogOpType::Or, vec![eq1.clone(), eq5.clone(), eq8.clone()]);
         let expr_tree_shift1 = log_op(LogOpType::Or, vec![eq5.clone(), eq8.clone(), eq1.clone()]);
         let expr_tree_shift2 = log_op(LogOpType::Or, vec![eq8.clone(), eq1.clone(), eq5.clone()]);
 
         assert_approx_eq::assert_approx_eq!(
-            cost_model.get_filter_selectivity(expr_tree).await.unwrap(),
-            0.72
-        );
-        assert_approx_eq::assert_approx_eq!(
             cost_model
-                .get_filter_selectivity(expr_tree_shift1)
+                .get_filter_selectivity(TEST_GROUP1_ID, expr_tree)
                 .await
                 .unwrap(),
             0.72
         );
         assert_approx_eq::assert_approx_eq!(
             cost_model
-                .get_filter_selectivity(expr_tree_shift2)
+                .get_filter_selectivity(TEST_GROUP1_ID, expr_tree_shift1)
+                .await
+                .unwrap(),
+            0.72
+        );
+        assert_approx_eq::assert_approx_eq!(
+            cost_model
+                .get_filter_selectivity(TEST_GROUP1_ID, expr_tree_shift2)
                 .await
                 .unwrap(),
             0.72
@@ -735,24 +697,25 @@ mod tests {
             0,
             0.0,
         );
-        let table_id = TableId(0);
         let cost_model = create_mock_cost_model(
-            vec![table_id],
-            vec![HashMap::from([(0, per_attribute_stats)])],
+            vec![TEST_TABLE1_ID],
+            vec![HashMap::from([(
+                TEST_ATTR1_BASE_INDEX,
+                per_attribute_stats,
+            )])],
             vec![None],
         );
 
         let expr_tree = un_op(
             UnOpType::Not,
-            bin_op(
-                BinOpType::Eq,
-                attr_index(0), // TODO: Fix this
-                cnst(Value::Int32(1)),
-            ),
+            bin_op(BinOpType::Eq, attr_index(0), cnst(Value::Int32(1))),
         );
 
         assert_approx_eq::assert_approx_eq!(
-            cost_model.get_filter_selectivity(expr_tree).await.unwrap(),
+            cost_model
+                .get_filter_selectivity(TEST_GROUP1_ID, expr_tree)
+                .await
+                .unwrap(),
             0.7
         );
     }
@@ -771,31 +734,36 @@ mod tests {
             0,
             0.0,
         );
-        let table_id = TableId(0);
         let cost_model = create_mock_cost_model(
-            vec![table_id],
-            vec![HashMap::from([(0, per_attribute_stats)])],
+            vec![TEST_TABLE1_ID],
+            vec![HashMap::from([(
+                TEST_ATTR1_BASE_INDEX,
+                per_attribute_stats,
+            )])],
             vec![None],
         );
 
         let expr_tree = bin_op(
             BinOpType::Eq,
-            attr_index(0), // TODO: Fix this
+            attr_index(0),
             cast(cnst(Value::Int64(1)), DataType::Int32),
         );
         let expr_tree_rev = bin_op(
             BinOpType::Eq,
             cast(cnst(Value::Int64(1)), DataType::Int32),
-            attr_index(0), // TODO: Fix this
+            attr_index(0),
         );
 
         assert_approx_eq::assert_approx_eq!(
-            cost_model.get_filter_selectivity(expr_tree).await.unwrap(),
+            cost_model
+                .get_filter_selectivity(TEST_GROUP1_ID, expr_tree)
+                .await
+                .unwrap(),
             0.3
         );
         assert_approx_eq::assert_approx_eq!(
             cost_model
-                .get_filter_selectivity(expr_tree_rev)
+                .get_filter_selectivity(TEST_GROUP1_ID, expr_tree_rev)
                 .await
                 .unwrap(),
             0.3
@@ -813,18 +781,16 @@ mod tests {
             0,
             0.1,
         );
-        let table_id = TableId(0);
-        // let attr_infos = HashMap::from([(
-        //     table_id,
-        //     vec![Attribute {
-        //         name: String::from("attr1"),
-        //         typ: ConstantType::Int32,
-        //         nullable: false,
-        //     }],
-        // )]);
-        let cost_model = create_mock_cost_model(
-            vec![table_id],
-            vec![HashMap::from([(0, per_attribute_stats)])],
+        let cost_model = create_mock_cost_model_with_attr_types(
+            vec![TEST_TABLE1_ID],
+            vec![HashMap::from([(
+                TEST_ATTR1_BASE_INDEX,
+                per_attribute_stats,
+            )])],
+            vec![HashMap::from([(
+                TEST_ATTR1_BASE_INDEX,
+                ConstantType::Int32,
+            )])],
             vec![None],
         );
 
@@ -840,12 +806,15 @@ mod tests {
         );
 
         assert_approx_eq::assert_approx_eq!(
-            cost_model.get_filter_selectivity(expr_tree).await.unwrap(),
+            cost_model
+                .get_filter_selectivity(TEST_GROUP1_ID, expr_tree)
+                .await
+                .unwrap(),
             0.3
         );
         assert_approx_eq::assert_approx_eq!(
             cost_model
-                .get_filter_selectivity(expr_tree_rev)
+                .get_filter_selectivity(TEST_GROUP1_ID, expr_tree_rev)
                 .await
                 .unwrap(),
             0.3
@@ -866,45 +835,40 @@ mod tests {
             0.0,
         );
         let table_id = TableId(0);
-        // let attr_infos = HashMap::from([(
-        //     table_id,
-        //     vec![
-        //         Attribute {
-        //             name: String::from("attr1"),
-        //             typ: ConstantType::Int32,
-        //             nullable: false,
-        //         },
-        //         Attribute {
-        //             name: String::from("attr2"),
-        //             typ: ConstantType::Int64,
-        //             nullable: false,
-        //         },
-        //     ],
-        // )]);
-        let cost_model = create_mock_cost_model(
-            vec![table_id],
-            vec![HashMap::from([(0, per_attribute_stats)])],
+        let cost_model = create_mock_cost_model_with_attr_types(
+            vec![TEST_TABLE1_ID],
+            vec![HashMap::from([(
+                TEST_ATTR1_BASE_INDEX,
+                per_attribute_stats,
+            )])],
+            vec![HashMap::from([
+                (TEST_ATTR1_BASE_INDEX, ConstantType::Int32),
+                (TEST_ATTR2_BASE_INDEX, ConstantType::Int64),
+            ])],
             vec![None],
         );
 
         let expr_tree = bin_op(
             BinOpType::Eq,
-            cast(attr_index(0), DataType::Int64), // TODO: Fix this
-            attr_index(1),                        // TODO: Fix this
+            cast(attr_index(0), DataType::Int64),
+            attr_index(1),
         );
         let expr_tree_rev = bin_op(
             BinOpType::Eq,
-            attr_index(1),                        // TODO: Fix this
-            cast(attr_index(0), DataType::Int64), // TODO: Fix this
+            attr_index(1),
+            cast(attr_index(0), DataType::Int64),
         );
 
         assert_approx_eq::assert_approx_eq!(
-            cost_model.get_filter_selectivity(expr_tree).await.unwrap(),
+            cost_model
+                .get_filter_selectivity(TEST_GROUP1_ID, expr_tree)
+                .await
+                .unwrap(),
             DEFAULT_EQ_SEL
         );
         assert_approx_eq::assert_approx_eq!(
             cost_model
-                .get_filter_selectivity(expr_tree_rev)
+                .get_filter_selectivity(TEST_GROUP1_ID, expr_tree_rev)
                 .await
                 .unwrap(),
             DEFAULT_EQ_SEL

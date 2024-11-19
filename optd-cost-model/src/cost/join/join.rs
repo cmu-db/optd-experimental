@@ -180,8 +180,10 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
         // get_filter_selectivity() function, but this may change in the future.
         let join_filter_selectivity = match filter_expr_tree {
             Some(filter_expr_tree) => {
-                // FIXME: Pass in group id or schema & attr_refs
-                self.get_filter_selectivity(filter_expr_tree).await?
+                // FIXME(group_id): Pass in group id or schema & attr_refs
+                let group_id = GroupId(0);
+                self.get_filter_selectivity(group_id, filter_expr_tree)
+                    .await?
             }
             None => 1.0,
         };

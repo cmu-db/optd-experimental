@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{common::types::TableId, stats::AttributeCombValueStats, CostModelResult};
 
-use super::{Attribute, CostModelStorageManager};
+use super::CostModelStorageManager;
 
 pub type AttrIndices = Vec<u64>;
 
@@ -44,14 +44,6 @@ impl CostModelStorageMockManagerImpl {
 }
 
 impl CostModelStorageManager for CostModelStorageMockManagerImpl {
-    async fn get_attribute_info(
-        &self,
-        table_id: TableId,
-        attr_base_index: u64,
-    ) -> CostModelResult<Option<Attribute>> {
-        unimplemented!()
-    }
-
     async fn get_attributes_comb_statistics(
         &self,
         table_id: TableId,
