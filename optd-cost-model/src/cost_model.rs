@@ -117,7 +117,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
 /// optd-datafusion-bridge and optd-datafusion-repr
 #[cfg(test)]
 pub mod tests {
-    use std::collections::HashMap;
+    use std::{collections::HashMap, hash::Hash};
 
     use arrow_schema::DataType;
     use itertools::Itertools;
@@ -170,6 +170,11 @@ pub mod tests {
     pub const TEST_ATTR1_BASE_INDEX: u64 = 0;
     pub const TEST_ATTR2_BASE_INDEX: u64 = 1;
     pub const TEST_ATTR3_BASE_INDEX: u64 = 2;
+
+    pub const TEST_ATTR1_NAME: &str = "attr1";
+    pub const TEST_ATTR2_NAME: &str = "attr2";
+    pub const TEST_ATTR3_NAME: &str = "attr3";
+    pub const TEST_ATTR4_NAME: &str = "attr4";
 
     pub type TestPerAttributeStats = AttributeCombValueStats;
     // TODO: add tests for non-mock storage manager
@@ -292,12 +297,14 @@ pub mod tests {
     pub fn create_two_table_mock_cost_model(
         tbl1_per_attr_stats: TestPerAttributeStats,
         tbl2_per_attr_stats: TestPerAttributeStats,
+        additional_memo: Option<HashMap<GroupId, MemoGroupInfo>>,
     ) -> TestOptCostModelMock {
         create_two_table_mock_cost_model_custom_row_cnts(
             tbl1_per_attr_stats,
             tbl2_per_attr_stats,
             100,
             100,
+            additional_memo,
         )
     }
 
@@ -338,12 +345,7 @@ pub mod tests {
             (
                 TEST_GROUP1_ID,
                 MemoGroupInfo::new(
-                    vec![Attribute {
-                        name: "attr1".to_string(),
-                        typ: ConstantType::Int64,
-                        nullable: false,
-                    }]
-                    .into(),
+                    vec![Attribute::new_non_null_int64(TEST_ATTR1_NAME.to_string())].into(),
                     GroupAttrRefs::new(
                         vec![AttrRef::new_base_table_attr_ref(TEST_TABLE1_ID, 0)],
                         None,
@@ -353,12 +355,7 @@ pub mod tests {
             (
                 TEST_GROUP2_ID,
                 MemoGroupInfo::new(
-                    vec![Attribute {
-                        name: "attr2".to_string(),
-                        typ: ConstantType::Int64,
-                        nullable: false,
-                    }]
-                    .into(),
+                    vec![Attribute::new_non_null_int64(TEST_ATTR2_NAME.to_string())].into(),
                     GroupAttrRefs::new(
                         vec![AttrRef::new_base_table_attr_ref(TEST_TABLE2_ID, 0)],
                         None,
@@ -368,12 +365,7 @@ pub mod tests {
             (
                 TEST_GROUP3_ID,
                 MemoGroupInfo::new(
-                    vec![Attribute {
-                        name: "attr3".to_string(),
-                        typ: ConstantType::Int64,
-                        nullable: false,
-                    }]
-                    .into(),
+                    vec![Attribute::new_non_null_int64(TEST_ATTR3_NAME.to_string())].into(),
                     GroupAttrRefs::new(
                         vec![AttrRef::new_base_table_attr_ref(TEST_TABLE3_ID, 0)],
                         None,
@@ -433,12 +425,7 @@ pub mod tests {
             (
                 TEST_GROUP1_ID,
                 MemoGroupInfo::new(
-                    vec![Attribute {
-                        name: "attr1".to_string(),
-                        typ: ConstantType::Int64,
-                        nullable: false,
-                    }]
-                    .into(),
+                    vec![Attribute::new_non_null_int64(TEST_ATTR1_NAME.to_string())].into(),
                     GroupAttrRefs::new(
                         vec![AttrRef::new_base_table_attr_ref(TEST_TABLE1_ID, 0)],
                         None,
@@ -448,12 +435,7 @@ pub mod tests {
             (
                 TEST_GROUP2_ID,
                 MemoGroupInfo::new(
-                    vec![Attribute {
-                        name: "attr2".to_string(),
-                        typ: ConstantType::Int64,
-                        nullable: false,
-                    }]
-                    .into(),
+                    vec![Attribute::new_non_null_int64(TEST_ATTR2_NAME.to_string())].into(),
                     GroupAttrRefs::new(
                         vec![AttrRef::new_base_table_attr_ref(TEST_TABLE2_ID, 0)],
                         None,
@@ -463,12 +445,7 @@ pub mod tests {
             (
                 TEST_GROUP3_ID,
                 MemoGroupInfo::new(
-                    vec![Attribute {
-                        name: "attr3".to_string(),
-                        typ: ConstantType::Int64,
-                        nullable: false,
-                    }]
-                    .into(),
+                    vec![Attribute::new_non_null_int64(TEST_ATTR3_NAME.to_string())].into(),
                     GroupAttrRefs::new(
                         vec![AttrRef::new_base_table_attr_ref(TEST_TABLE3_ID, 0)],
                         None,
@@ -478,12 +455,7 @@ pub mod tests {
             (
                 TEST_GROUP4_ID,
                 MemoGroupInfo::new(
-                    vec![Attribute {
-                        name: "attr4".to_string(),
-                        typ: ConstantType::Int64,
-                        nullable: false,
-                    }]
-                    .into(),
+                    vec![Attribute::new_non_null_int64(TEST_ATTR4_NAME.to_string())].into(),
                     GroupAttrRefs::new(
                         vec![AttrRef::new_base_table_attr_ref(TEST_TABLE4_ID, 0)],
                         None,
@@ -504,6 +476,7 @@ pub mod tests {
         tbl2_per_column_stats: TestPerAttributeStats,
         tbl1_row_cnt: u64,
         tbl2_row_cnt: u64,
+        additional_memo: Option<HashMap<GroupId, MemoGroupInfo>>,
     ) -> TestOptCostModelMock {
         let storage_manager = CostModelStorageMockManagerImpl::new(
             vec![
@@ -525,16 +498,11 @@ pub mod tests {
             .into_iter()
             .collect(),
         );
-        let memo = HashMap::from([
+        let mut memo = HashMap::from([
             (
                 TEST_GROUP1_ID,
                 MemoGroupInfo::new(
-                    vec![Attribute {
-                        name: "attr1".to_string(),
-                        typ: ConstantType::Int64,
-                        nullable: false,
-                    }]
-                    .into(),
+                    vec![Attribute::new_non_null_int64(TEST_ATTR1_NAME.to_string())].into(),
                     GroupAttrRefs::new(
                         vec![AttrRef::new_base_table_attr_ref(TEST_TABLE1_ID, 0)],
                         None,
@@ -544,12 +512,7 @@ pub mod tests {
             (
                 TEST_GROUP2_ID,
                 MemoGroupInfo::new(
-                    vec![Attribute {
-                        name: "attr2".to_string(),
-                        typ: ConstantType::Int64,
-                        nullable: false,
-                    }]
-                    .into(),
+                    vec![Attribute::new_non_null_int64(TEST_ATTR2_NAME.to_string())].into(),
                     GroupAttrRefs::new(
                         vec![AttrRef::new_base_table_attr_ref(TEST_TABLE2_ID, 0)],
                         None,
@@ -557,6 +520,9 @@ pub mod tests {
                 ),
             ),
         ]);
+        if let Some(additional_memo) = additional_memo {
+            memo.extend(additional_memo);
+        }
         CostModelImpl::new(
             storage_manager,
             CatalogSource::Mock,

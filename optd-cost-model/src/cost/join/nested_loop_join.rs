@@ -32,6 +32,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
 
             self.get_join_selectivity_from_expr_tree(
                 join_typ,
+                group_id,
                 join_cond,
                 output_attr_refs.attr_refs(),
                 input_correlation,

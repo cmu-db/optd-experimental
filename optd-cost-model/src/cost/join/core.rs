@@ -34,6 +34,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
     pub(crate) async fn get_join_selectivity_from_expr_tree(
         &self,
         join_typ: JoinType,
+        group_id: GroupId,
         expr_tree: ArcPredicateNode,
         attr_refs: &AttrRefs,
         input_correlation: Option<SemanticCorrelation>,
@@ -61,6 +62,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
             };
             self.get_join_selectivity_core(
                 join_typ,
+                group_id,
                 on_attr_ref_pairs,
                 filter_expr_tree,
                 attr_refs,
@@ -75,6 +77,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
             if let Some(on_attr_ref_pair) = get_on_attr_ref_pair(expr_tree.clone(), attr_refs) {
                 self.get_join_selectivity_core(
                     join_typ,
+                    group_id,
                     vec![on_attr_ref_pair],
                     None,
                     attr_refs,
@@ -87,6 +90,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
             } else {
                 self.get_join_selectivity_core(
                     join_typ,
+                    group_id,
                     vec![],
                     Some(expr_tree),
                     attr_refs,
@@ -105,6 +109,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
     pub(crate) async fn get_join_selectivity_from_keys(
         &self,
         join_typ: JoinType,
+        group_id: GroupId,
         left_keys: ListPred,
         right_keys: ListPred,
         attr_refs: &AttrRefs,
@@ -129,6 +134,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
             .collect_vec();
         self.get_join_selectivity_core(
             join_typ,
+            group_id,
             on_attr_ref_pairs,
             None,
             attr_refs,
@@ -156,6 +162,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
     async fn get_join_selectivity_core(
         &self,
         join_typ: JoinType,
+        group_id: GroupId,
         on_attr_ref_pairs: Vec<(AttrIndexPred, AttrIndexPred)>,
         filter_expr_tree: Option<ArcPredicateNode>,
         attr_refs: &AttrRefs,
@@ -180,8 +187,6 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
         // get_filter_selectivity() function, but this may change in the future.
         let join_filter_selectivity = match filter_expr_tree {
             Some(filter_expr_tree) => {
-                // FIXME(group_id): Pass in group id or schema & attr_refs
-                let group_id = GroupId(0);
                 self.get_filter_selectivity(group_id, filter_expr_tree)
                     .await?
             }
@@ -405,19 +410,27 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::{
-        common::{predicates::attr_index_pred, types::TableId, values::Value},
+        common::{
+            predicates::{attr_index_pred, constant_pred::ConstantType},
+            properties::Attribute,
+            types::TableId,
+            values::Value,
+        },
         cost_model::tests::{
             attr_index, bin_op, cnst, create_four_table_mock_cost_model, create_mock_cost_model,
             create_three_table_mock_cost_model, create_two_table_mock_cost_model,
             create_two_table_mock_cost_model_custom_row_cnts, empty_per_attr_stats, log_op,
             per_attr_stats_with_dist_and_ndistinct, per_attr_stats_with_ndistinct,
-            TestOptCostModelMock, TestPerAttributeStats, TEST_TABLE1_ID, TEST_TABLE2_ID,
-            TEST_TABLE3_ID, TEST_TABLE4_ID,
+            TestOptCostModelMock, TestPerAttributeStats, TEST_ATTR1_NAME, TEST_ATTR2_NAME,
+            TEST_TABLE1_ID, TEST_TABLE2_ID, TEST_TABLE3_ID, TEST_TABLE4_ID,
         },
+        memo_ext::tests::MemoGroupInfo,
         stats::DEFAULT_EQ_SEL,
     };
 
     use super::*;
+
+    const JOIN_GROUP_ID: GroupId = GroupId(10);
 
     /// A wrapper around get_join_selectivity_from_expr_tree that extracts the
     /// table row counts from the cost model.
@@ -436,6 +449,7 @@ mod tests {
             cost_model
                 .get_join_selectivity_from_expr_tree(
                     join_typ,
+                    JOIN_GROUP_ID,
                     expr_tree,
                     attr_refs,
                     input_correlation,
@@ -448,6 +462,7 @@ mod tests {
             cost_model
                 .get_join_selectivity_from_expr_tree(
                     join_typ,
+                    JOIN_GROUP_ID,
                     expr_tree,
                     attr_refs,
                     input_correlation,
@@ -470,6 +485,7 @@ mod tests {
             cost_model
                 .get_join_selectivity_from_expr_tree(
                     JoinType::Inner,
+                    JOIN_GROUP_ID,
                     cnst(Value::Bool(true)),
                     &vec![],
                     None,
@@ -484,6 +500,7 @@ mod tests {
             cost_model
                 .get_join_selectivity_from_expr_tree(
                     JoinType::Inner,
+                    JOIN_GROUP_ID,
                     cnst(Value::Bool(false)),
                     &vec![],
                     None,
@@ -501,6 +518,7 @@ mod tests {
         let cost_model = create_two_table_mock_cost_model(
             per_attr_stats_with_ndistinct(5),
             per_attr_stats_with_ndistinct(4),
+            None,
         );
 
         let attr_refs = vec![
@@ -540,6 +558,7 @@ mod tests {
         let cost_model = create_two_table_mock_cost_model(
             per_attr_stats_with_ndistinct(5),
             per_attr_stats_with_ndistinct(4),
+            None,
         );
 
         let attr_refs = vec![
@@ -578,11 +597,28 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "index out of bounds: the len is 1 but the index is 1"]
     async fn test_inner_and_of_oncond_and_filter() {
+        let join_memo = HashMap::from([(
+            JOIN_GROUP_ID,
+            MemoGroupInfo::new(
+                vec![
+                    Attribute::new_non_null_int64(TEST_ATTR1_NAME.to_string()),
+                    Attribute::new_non_null_int64(TEST_ATTR2_NAME.to_string()),
+                ]
+                .into(),
+                GroupAttrRefs::new(
+                    vec![
+                        AttrRef::new_base_table_attr_ref(TEST_TABLE1_ID, 0),
+                        AttrRef::new_base_table_attr_ref(TEST_TABLE2_ID, 0),
+                    ],
+                    None,
+                ),
+            ),
+        )]);
         let cost_model = create_two_table_mock_cost_model(
             per_attr_stats_with_ndistinct(5),
             per_attr_stats_with_ndistinct(4),
+            Some(join_memo),
         );
 
         let attr_refs = vec![
@@ -621,11 +657,28 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "filter todo"]
     async fn test_inner_and_of_filters() {
+        let join_memo = HashMap::from([(
+            JOIN_GROUP_ID,
+            MemoGroupInfo::new(
+                vec![
+                    Attribute::new_non_null_int64(TEST_ATTR1_NAME.to_string()),
+                    Attribute::new_non_null_int64(TEST_ATTR2_NAME.to_string()),
+                ]
+                .into(),
+                GroupAttrRefs::new(
+                    vec![
+                        AttrRef::new_base_table_attr_ref(TEST_TABLE1_ID, 0),
+                        AttrRef::new_base_table_attr_ref(TEST_TABLE2_ID, 0),
+                    ],
+                    None,
+                ),
+            ),
+        )]);
         let cost_model = create_two_table_mock_cost_model(
             per_attr_stats_with_ndistinct(5),
             per_attr_stats_with_ndistinct(4),
+            Some(join_memo),
         );
 
         let attr_refs = vec![
@@ -668,6 +721,7 @@ mod tests {
         let cost_model = create_two_table_mock_cost_model(
             per_attr_stats_with_ndistinct(5),
             per_attr_stats_with_ndistinct(4),
+            None,
         );
 
         let attr_refs = vec![
@@ -812,6 +866,7 @@ mod tests {
             per_attr_stats_with_ndistinct(4),
             5,
             4,
+            None,
         );
 
         let attr_refs = vec![
@@ -863,6 +918,7 @@ mod tests {
             per_attr_stats_with_ndistinct(4),
             10,
             8,
+            None,
         );
 
         let attr_refs = vec![
@@ -916,6 +972,7 @@ mod tests {
             per_attr_stats_with_ndistinct(2),
             20,
             4,
+            None,
         );
 
         let attr_refs = vec![
@@ -964,11 +1021,29 @@ mod tests {
     /// the inner will be < 1 / row count of both tables
     #[tokio::test]
     async fn test_outer_unique_oncond_filter() {
+        let join_memo = HashMap::from([(
+            JOIN_GROUP_ID,
+            MemoGroupInfo::new(
+                vec![
+                    Attribute::new_non_null_int64(TEST_ATTR1_NAME.to_string()),
+                    Attribute::new_non_null_int64(TEST_ATTR2_NAME.to_string()),
+                ]
+                .into(),
+                GroupAttrRefs::new(
+                    vec![
+                        AttrRef::new_base_table_attr_ref(TEST_TABLE1_ID, 0),
+                        AttrRef::new_base_table_attr_ref(TEST_TABLE2_ID, 0),
+                    ],
+                    None,
+                ),
+            ),
+        )]);
         let cost_model = create_two_table_mock_cost_model_custom_row_cnts(
             per_attr_stats_with_dist_and_ndistinct(vec![(Value::Int32(128), 0.4)], 50),
             per_attr_stats_with_ndistinct(4),
             50,
             4,
+            Some(join_memo),
         );
 
         let attr_refs = vec![

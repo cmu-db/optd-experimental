@@ -37,6 +37,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
             let input_correlation = get_input_correlation(left_attr_refs, right_attr_refs);
             self.get_join_selectivity_from_keys(
                 join_typ,
+                group_id,
                 left_keys,
                 right_keys,
                 output_attr_refs.attr_refs(),
