@@ -385,22 +385,22 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
             let right_attr_ref =
                 &attr_refs[on_attr_ref_pair.1.attr_index() as usize + right_attr_ref_offset];
 
-            if let (AttrRef::BaseTableAttrRef(left), AttrRef::BaseTableAttrRef(right)) =
-                (left_attr_ref, right_attr_ref)
-            {
-                let predicate = EqPredicate::new(left.clone(), right.clone());
-                return self
-                    .get_join_selectivity_adjustment_when_adding_to_multi_equality_graph(
+            selectivity *=
+                if let (AttrRef::BaseTableAttrRef(left), AttrRef::BaseTableAttrRef(right)) =
+                    (left_attr_ref, right_attr_ref)
+                {
+                    let predicate = EqPredicate::new(left.clone(), right.clone());
+                    self.get_join_selectivity_adjustment_when_adding_to_multi_equality_graph(
                         &predicate,
                         &mut past_eq_attrs,
                     )
-                    .await;
-            }
-
-            selectivity *= self
-                .get_join_selectivity_from_on_attr_ref_pair(left_attr_ref, right_attr_ref)
-                .await?;
+                    .await?
+                } else {
+                    self.get_join_selectivity_from_on_attr_ref_pair(left_attr_ref, right_attr_ref)
+                        .await?
+                };
         }
+
         Ok(selectivity)
     }
 }
@@ -1103,7 +1103,6 @@ mod tests {
     /// first join. There can only be one condition because only two tables are involved at
     /// the time of the first join.
     #[tokio::test]
-    #[ignore = "fail"]
     #[test_case::test_case(&[(0, 1)])]
     #[test_case::test_case(&[(0, 2)])]
     #[test_case::test_case(&[(1, 2)])]
