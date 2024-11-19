@@ -26,7 +26,8 @@ impl<S: CostModelStorageLayer + Send + Sync> CostModelStorageManagerImpl<S> {
 impl<S: CostModelStorageLayer + Send + Sync> CostModelStorageManager
     for CostModelStorageManagerImpl<S>
 {
-    /// Gets the latest statistics for a given table.
+    /// Gets the latest statistics for a given table. Currently we only support base table
+    /// statistic retrieval.
     ///
     /// TODO: Currently, in `AttributeCombValueStats`, only `Distribution` is optional.
     /// This poses a question about the behavior of the system if there is no corresponding
@@ -38,9 +39,6 @@ impl<S: CostModelStorageLayer + Send + Sync> CostModelStorageManager
     ///
     /// TODO: Shall we pass in an epoch here to make sure that the statistics are from the same
     /// epoch?
-    ///
-    /// TODO(IMPORTANT): what if table is a derived (temporary) table? And what if
-    /// the attribute is a derived attribute?
     async fn get_attributes_comb_statistics(
         &self,
         table_id: TableId,
