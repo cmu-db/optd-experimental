@@ -1,6 +1,12 @@
+pub mod attr_index_pred;
 pub mod bin_op_pred;
+pub mod cast_pred;
 pub mod constant_pred;
+pub mod data_type_pred;
 pub mod func_pred;
+pub mod in_list_pred;
+pub mod like_pred;
+pub mod list_pred;
 pub mod log_op_pred;
 pub mod sort_order_pred;
 pub mod un_op_pred;

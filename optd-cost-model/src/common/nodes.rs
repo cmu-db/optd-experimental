@@ -1,4 +1,5 @@
-use std::sync::Arc;
+use core::fmt;
+use std::{fmt::Display, sync::Arc};
 
 use arrow_schema::DataType;
 
@@ -22,6 +23,12 @@ pub enum JoinType {
     RightSemi,
     LeftAnti,
     RightAnti,
+}
+
+impl Display for JoinType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 /// TODO: documentation
@@ -49,8 +56,7 @@ impl std::fmt::Display for PhysicalNodeType {
 pub enum PredicateType {
     List,
     Constant(ConstantType),
-    AttributeRef,
-    ExternAttributeRef,
+    AttrIndex,
     UnOp(UnOpType),
     BinOp(BinOpType),
     LogOp(LogOpType),
@@ -77,7 +83,7 @@ pub struct PredicateNode {
     /// A generic predicate node type
     pub typ: PredicateType,
     /// Child predicate nodes, always materialized
-    pub children: Vec<PredicateNode>,
+    pub children: Vec<ArcPredicateNode>,
     /// Data associated with the predicate, if any
     pub data: Option<Value>,
 }
@@ -92,5 +98,30 @@ impl std::fmt::Display for PredicateNode {
             write!(f, " {}", data)?;
         }
         write!(f, ")")
+    }
+}
+
+impl PredicateNode {
+    pub fn child(&self, idx: usize) -> ArcPredicateNode {
+        self.children[idx].clone()
+    }
+
+    pub fn unwrap_data(&self) -> Value {
+        self.data.clone().unwrap()
+    }
+}
+pub trait ReprPredicateNode: 'static + Clone {
+    fn into_pred_node(self) -> ArcPredicateNode;
+
+    fn from_pred_node(pred_node: ArcPredicateNode) -> Option<Self>;
+}
+
+impl ReprPredicateNode for ArcPredicateNode {
+    fn into_pred_node(self) -> ArcPredicateNode {
+        self
+    }
+
+    fn from_pred_node(pred_node: ArcPredicateNode) -> Option<Self> {
+        Some(pred_node)
     }
 }
