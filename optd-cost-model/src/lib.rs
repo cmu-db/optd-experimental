@@ -33,7 +33,8 @@ pub struct Cost(pub Vec<f64>);
 
 /// Estimated statistic calculated by the cost model.
 /// It is the estimated output row count of the targeted expression.
-pub struct EstimatedStatistic(pub u64);
+#[derive(PartialEq, PartialOrd, Debug)]
+pub struct EstimatedStatistic(pub f64);
 
 pub type CostModelResult<T> = Result<T, CostModelError>;
 
@@ -42,12 +43,13 @@ pub enum SemanticError {
     // TODO: Add more error types
     UnknownStatisticType,
     VersionedStatisticNotFound,
-    AttributeNotFound(TableId, i32), // (table_id, attribute_base_index)
+    AttributeNotFound(TableId, u64), // (table_id, attribute_base_index)
+    // FIXME: not sure if this should be put here
+    InvalidPredicate(String),
 }
 
 #[derive(Debug)]
 pub enum CostModelError {
-    // TODO: Add more error types
     ORMError(BackendError),
     SemanticError(SemanticError),
 }
@@ -55,6 +57,12 @@ pub enum CostModelError {
 impl From<BackendError> for CostModelError {
     fn from(err: BackendError) -> Self {
         CostModelError::ORMError(err)
+    }
+}
+
+impl From<SemanticError> for CostModelError {
+    fn from(err: SemanticError) -> Self {
+        CostModelError::SemanticError(err)
     }
 }
 

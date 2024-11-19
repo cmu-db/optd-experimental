@@ -4,6 +4,7 @@ use crate::entities::cascades_group;
 use crate::entities::logical_expression;
 use crate::entities::physical_expression;
 use crate::StorageResult;
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 use sea_orm::prelude::Json;
 use sea_orm::*;
 use sea_orm_migration::prelude::*;
@@ -16,6 +17,7 @@ pub type AttrId = i32;
 pub type ExprId = i32;
 pub type EpochId = i32;
 pub type StatId = i32;
+pub type AttrIndex = i32;
 
 /// TODO: documentation
 pub enum CatalogSource {
@@ -24,8 +26,10 @@ pub enum CatalogSource {
 }
 
 /// TODO: documentation
+#[repr(i32)]
+#[derive(Copy, Clone, Debug, PartialEq, IntoPrimitive, TryFromPrimitive)]
 pub enum AttrType {
-    Integer,
+    Integer = 1,
     Float,
     Varchar,
     Boolean,
@@ -96,7 +100,7 @@ pub struct Attr {
     pub table_id: i32,
     pub name: String,
     pub compression_method: String,
-    pub attr_type: i32,
+    pub attr_type: AttrType,
     pub base_index: i32,
     pub nullable: bool,
 }
@@ -149,7 +153,7 @@ pub trait CostModelStorageLayer {
     async fn get_stats_for_attr_indices_based(
         &self,
         table_id: TableId,
-        attr_base_indices: Vec<i32>,
+        attr_base_indices: Vec<AttrIndex>,
         stat_type: StatType,
         epoch_id: Option<EpochId>,
     ) -> StorageResult<Option<Json>>;
@@ -165,6 +169,6 @@ pub trait CostModelStorageLayer {
     async fn get_attribute(
         &self,
         table_id: TableId,
-        attribute_base_index: i32,
+        attribute_base_index: AttrIndex,
     ) -> StorageResult<Option<Attr>>;
 }

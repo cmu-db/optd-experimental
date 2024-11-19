@@ -15,9 +15,7 @@ use std::marker::PhantomData;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
-use crate::common::values::Value;
-
-use super::arith_encoder;
+use crate::{common::values::Value, stats::arith_encoder};
 
 pub const DEFAULT_COMPRESSION: f64 = 200.0;
 

@@ -1,12 +1,15 @@
 #![allow(unused)]
 
 mod arith_encoder;
-pub mod counter;
-pub mod tdigest;
+pub mod utilities;
 
 use crate::common::values::Value;
-use counter::Counter;
 use serde::{Deserialize, Serialize};
+use utilities::counter::Counter;
+use utilities::{
+    simple_map::{self, SimpleMap},
+    tdigest::TDigest,
+};
 
 // Default n-distinct estimate for derived columns or columns lacking statistics
 pub const DEFAULT_NUM_DISTINCT: u64 = 200;
@@ -27,10 +30,12 @@ pub const FIXED_CHAR_SEL_FACTOR: f64 = 0.2;
 
 pub type AttributeCombValue = Vec<Option<Value>>;
 
-#[derive(Serialize, Deserialize, Debug)]
+// TODO: remove the clone, see the comment in the [`AttributeCombValueStats`]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "type")]
 pub enum MostCommonValues {
     Counter(Counter<AttributeCombValue>),
+    SimpleFrequency(SimpleMap<AttributeCombValue>),
     // Add more types here...
 }
 
@@ -43,12 +48,14 @@ impl MostCommonValues {
     pub fn freq(&self, value: &AttributeCombValue) -> Option<f64> {
         match self {
             MostCommonValues::Counter(counter) => counter.frequencies().get(value).copied(),
+            MostCommonValues::SimpleFrequency(simple_map) => simple_map.m.get(value).copied(),
         }
     }
 
     pub fn total_freq(&self) -> f64 {
         match self {
             MostCommonValues::Counter(counter) => counter.frequencies().values().sum(),
+            MostCommonValues::SimpleFrequency(simple_map) => simple_map.m.values().sum(),
         }
     }
 
@@ -60,6 +67,12 @@ impl MostCommonValues {
                 .filter(|(val, _)| pred(val))
                 .map(|(_, freq)| freq)
                 .sum(),
+            MostCommonValues::SimpleFrequency(simple_map) => simple_map
+                .m
+                .iter()
+                .filter(|(val, _)| pred(val))
+                .map(|(_, freq)| freq)
+                .sum(),
         }
     }
 
@@ -67,14 +80,21 @@ impl MostCommonValues {
     pub fn cnt(&self) -> usize {
         match self {
             MostCommonValues::Counter(counter) => counter.frequencies().len(),
+            MostCommonValues::SimpleFrequency(simple_map) => simple_map.m.len(),
         }
+    }
+
+    pub fn empty() -> Self {
+        MostCommonValues::SimpleFrequency(SimpleMap::new(vec![]))
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+// TODO: remove the clone, see the comment in the [`AttributeCombValueStats`]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "type")]
 pub enum Distribution {
-    TDigest(tdigest::TDigest<Value>),
+    TDigest(TDigest<Value>),
+    SimpleDistribution(SimpleMap<Value>),
     // Add more types here...
 }
 
@@ -89,11 +109,25 @@ impl Distribution {
                     tdigest.centroids.len() as f64 * tdigest.cdf(value) / nb_rows as f64
                 }
             }
+            Distribution::SimpleDistribution(simple_distribution) => {
+                *simple_distribution.m.get(value).unwrap_or(&0.0)
+            }
         }
+    }
+
+    pub fn empty() -> Self {
+        Distribution::SimpleDistribution(SimpleMap::new(vec![]))
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+// TODO: Remove the clone. Now I have to add this because
+// persistent.rs doesn't have a memory cache, so we have to
+// return AttributeCombValueStats rather than &AttributeCombValueStats.
+// But this poses a problem for mock.rs when testing, since mock storage
+// only has memory hash map, so we need to return a clone of AttributeCombValueStats.
+// Later, if memory cache is added, we should change this to return a reference.
+// **and** remove the clone.
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AttributeCombValueStats {
     pub mcvs: MostCommonValues,      // Does NOT contain full nulls.
     pub distr: Option<Distribution>, // Does NOT contain mcvs; optional.
@@ -104,9 +138,9 @@ pub struct AttributeCombValueStats {
 impl AttributeCombValueStats {
     pub fn new(
         mcvs: MostCommonValues,
+        distr: Option<Distribution>,
         ndistinct: u64,
         null_frac: f64,
-        distr: Option<Distribution>,
     ) -> Self {
         Self {
             mcvs,
