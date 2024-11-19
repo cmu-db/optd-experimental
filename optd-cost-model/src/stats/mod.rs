@@ -83,6 +83,10 @@ impl MostCommonValues {
             MostCommonValues::SimpleFrequency(simple_map) => simple_map.m.len(),
         }
     }
+
+    pub fn empty() -> Self {
+        MostCommonValues::SimpleFrequency(SimpleMap::new(vec![]))
+    }
 }
 
 // TODO: remove the clone, see the comment in the [`AttributeCombValueStats`]
@@ -109,6 +113,10 @@ impl Distribution {
                 *simple_distribution.m.get(value).unwrap_or(&0.0)
             }
         }
+    }
+
+    pub fn empty() -> Self {
+        Distribution::SimpleDistribution(SimpleMap::new(vec![]))
     }
 }
 

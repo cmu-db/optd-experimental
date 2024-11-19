@@ -148,7 +148,8 @@ pub mod tests {
         },
         memo_ext::tests::{MemoGroupInfo, MockMemoExtImpl},
         stats::{
-            utilities::counter::Counter, AttributeCombValueStats, Distribution, MostCommonValues,
+            utilities::{counter::Counter, simple_map::SimpleMap},
+            AttributeCombValueStats, Distribution, MostCommonValues,
         },
         storage::mock::{CostModelStorageMockManagerImpl, TableStats},
     };
@@ -292,7 +293,7 @@ pub mod tests {
         tbl1_per_attr_stats: TestPerAttributeStats,
         tbl2_per_attr_stats: TestPerAttributeStats,
     ) -> TestOptCostModelMock {
-        create_two_table_cost_model_custom_row_cnts(
+        create_two_table_mock_cost_model_custom_row_cnts(
             tbl1_per_attr_stats,
             tbl2_per_attr_stats,
             100,
@@ -300,8 +301,8 @@ pub mod tests {
         )
     }
 
-    /// Create a cost model with three columns, one for each table. Each column has 100 values.
-    pub fn create_three_table_cost_model(
+    /// Create a cost model three tables, each with one attribute. Each attribute has 100 values.
+    pub fn create_three_table_mock_cost_model(
         tbl1_per_column_stats: TestPerAttributeStats,
         tbl2_per_column_stats: TestPerAttributeStats,
         tbl3_per_column_stats: TestPerAttributeStats,
@@ -387,8 +388,8 @@ pub mod tests {
         )
     }
 
-    /// Create a cost model with three columns, one for each table. Each column has 100 values.
-    pub fn create_four_table_cost_model(
+    /// Create a cost model four tables, each with one attribute. Each attribute has 100 values.
+    pub fn create_four_table_mock_cost_model(
         tbl1_per_column_stats: TestPerAttributeStats,
         tbl2_per_column_stats: TestPerAttributeStats,
         tbl3_per_column_stats: TestPerAttributeStats,
@@ -498,7 +499,7 @@ pub mod tests {
     }
 
     /// We need custom row counts because some join algorithms rely on the row cnt
-    pub fn create_two_table_cost_model_custom_row_cnts(
+    pub fn create_two_table_mock_cost_model_custom_row_cnts(
         tbl1_per_column_stats: TestPerAttributeStats,
         tbl2_per_column_stats: TestPerAttributeStats,
         tbl1_row_cnt: u64,
@@ -631,6 +632,32 @@ pub mod tests {
     }
 
     pub(crate) fn empty_per_attr_stats() -> TestPerAttributeStats {
-        TestPerAttributeStats::new(MostCommonValues::Counter(Counter::default()), None, 0, 0.0)
+        TestPerAttributeStats::new(
+            MostCommonValues::empty(),
+            Some(Distribution::empty()),
+            0,
+            0.0,
+        )
+    }
+
+    pub(crate) fn per_attr_stats_with_ndistinct(ndistinct: u64) -> TestPerAttributeStats {
+        TestPerAttributeStats::new(
+            MostCommonValues::empty(),
+            Some(Distribution::empty()),
+            ndistinct,
+            0.0,
+        )
+    }
+
+    pub(crate) fn per_attr_stats_with_dist_and_ndistinct(
+        dist: Vec<(Value, f64)>,
+        ndistinct: u64,
+    ) -> TestPerAttributeStats {
+        TestPerAttributeStats::new(
+            MostCommonValues::empty(),
+            Some(Distribution::SimpleDistribution(SimpleMap::new(dist))),
+            ndistinct,
+            0.0,
+        )
     }
 }

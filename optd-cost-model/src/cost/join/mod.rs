@@ -6,9 +6,8 @@ use crate::common::{
     },
 };
 
+pub mod core;
 pub mod hash_join;
-// FIXME: module has the same name as its containing module
-pub mod join;
 pub mod nested_loop_join;
 
 pub(crate) fn get_input_correlation(
