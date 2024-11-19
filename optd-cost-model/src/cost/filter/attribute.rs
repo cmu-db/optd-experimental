@@ -13,9 +13,8 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
     /// attribute") Will handle the case of statistics missing
     /// Equality predicates are handled entirely differently from range predicates so this is its
     /// own function
-    /// Also, get_attribute_equality_selectivity is a subroutine when computing range
-    /// selectivity, which is another     reason for separating these into two functions
-    /// is_eq means whether it's == or !=
+    /// Also, get_attribute_equality_selectivity is a subroutine when computing range selectivity,
+    /// which is another reason for separating these into two functions is_eq means whether it's == or !=
     ///
     /// Currently, we only support calculating the equality selectivity for an existed attribute,
     /// not a derived attribute.
