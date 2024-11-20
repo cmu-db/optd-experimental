@@ -4,7 +4,7 @@ use crate::cost_model::interface::Cost;
 use crate::entities::{prelude::*, *};
 use crate::{BackendError, BackendManager, CostModelStorageLayer, StorageResult};
 use sea_orm::prelude::{Expr, Json};
-use sea_orm::sea_query::Query;
+use sea_orm::sea_query::{ExprTrait, Query};
 use sea_orm::{sqlx::types::chrono::Utc, EntityTrait};
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, Condition, DbBackend, DbErr, DeleteResult, EntityOrSelect,
@@ -208,7 +208,7 @@ impl CostModelStorageLayer for BackendManager {
         // 0. Check if the stat already exists. If exists, get stat_id, else insert into statistic table.
         let stat_id = match stat.table_id {
             Some(table_id) => {
-                // TODO(lanlou): only select needed fields
+                // TODO: only select needed fields
                 let res = Statistic::find()
                     .filter(statistic::Column::TableId.eq(table_id))
                     .inner_join(versioned_statistic::Entity)
@@ -467,47 +467,68 @@ impl CostModelStorageLayer for BackendManager {
     }
 
     /// TODO: documentation
+    /// Each record in the `plan_cost` table can contain either the cost or the estimated statistic
+    /// or both, but never neither.
+    /// The name can be misleading, since it can also return the estimated statistic.
     async fn get_cost_analysis(
         &self,
         expr_id: ExprId,
         epoch_id: EpochId,
-    ) -> StorageResult<Option<Cost>> {
+    ) -> StorageResult<(Option<Cost>, Option<i32>)> {
         let cost = PlanCost::find()
             .filter(plan_cost::Column::PhysicalExpressionId.eq(expr_id))
             .filter(plan_cost::Column::EpochId.eq(epoch_id))
             .one(&self.db)
             .await?;
-        assert!(cost.is_some(), "Cost not found in Cost table");
-        assert!(cost.clone().unwrap().is_valid, "Cost is not valid");
-        Ok(cost.map(|c| Cost {
-            compute_cost: c.cost.get("compute_cost").unwrap().as_i64().unwrap() as i32,
-            io_cost: c.cost.get("io_cost").unwrap().as_i64().unwrap() as i32,
-            estimated_statistic: c.estimated_statistic,
-        }))
+        // When this cost is invalid or not found, we should return None
+        if cost.is_none() || !cost.clone().unwrap().is_valid {
+            return Ok((None, None));
+        }
+
+        let real_cost = cost.as_ref().and_then(|c| c.cost.as_ref()).map(|c| Cost {
+            compute_cost: c.get("compute_cost").unwrap().as_i64().unwrap() as i32,
+            io_cost: c.get("io_cost").unwrap().as_i64().unwrap() as i32,
+        });
+
+        Ok((real_cost, cost.unwrap().estimated_statistic))
     }
 
-    async fn get_cost(&self, expr_id: ExprId) -> StorageResult<Option<Cost>> {
+    /// TODO: documentation
+    /// It returns the cost and estimated statistic if applicable.
+    /// Each record in the `plan_cost` table can contain either the cost or the estimated statistic
+    /// or both, but never neither.
+    /// The name can be misleading, since it can also return the estimated statistic.
+    async fn get_cost(&self, expr_id: ExprId) -> StorageResult<(Option<Cost>, Option<i32>)> {
         let cost = PlanCost::find()
             .filter(plan_cost::Column::PhysicalExpressionId.eq(expr_id))
             .order_by_desc(plan_cost::Column::EpochId)
             .one(&self.db)
             .await?;
-        assert!(cost.is_some(), "Cost not found in Cost table");
-        assert!(cost.clone().unwrap().is_valid, "Cost is not valid");
-        Ok(cost.map(|c| Cost {
-            compute_cost: c.cost.get("compute_cost").unwrap().as_i64().unwrap() as i32,
-            io_cost: c.cost.get("io_cost").unwrap().as_i64().unwrap() as i32,
-            estimated_statistic: c.estimated_statistic,
-        }))
+        // When this cost is invalid or not found, we should return None
+        if cost.is_none() || !cost.clone().unwrap().is_valid {
+            return Ok((None, None));
+        }
+
+        let real_cost = cost.as_ref().and_then(|c| c.cost.as_ref()).map(|c| Cost {
+            compute_cost: c.get("compute_cost").unwrap().as_i64().unwrap() as i32,
+            io_cost: c.get("io_cost").unwrap().as_i64().unwrap() as i32,
+        });
+
+        Ok((real_cost, cost.unwrap().estimated_statistic))
     }
 
+    /// This method should handle the case when the cost is already stored.
+    /// The name maybe misleading, since it can also store the estimated statistic.
     /// TODO: documentation
     async fn store_cost(
         &self,
         physical_expression_id: ExprId,
-        cost: Cost,
+        cost: Option<Cost>,
+        estimated_statistic: Option<i32>,
         epoch_id: EpochId,
     ) -> StorageResult<()> {
+        assert!(cost.is_some() || estimated_statistic.is_some());
+        // TODO: should we do the following checks in the production environment?
         let expr_exists = PhysicalExpression::find_by_id(physical_expression_id)
             .one(&self.db)
             .await?;
@@ -520,7 +541,6 @@ impl CostModelStorageLayer for BackendManager {
                 .into(),
             ));
         }
-
         // Check if epoch_id exists in Event table
         let epoch_exists = Event::find()
             .filter(event::Column::EpochId.eq(epoch_id))
@@ -533,17 +553,42 @@ impl CostModelStorageLayer for BackendManager {
             ));
         }
 
-        let new_cost = plan_cost::ActiveModel {
-            physical_expression_id: sea_orm::ActiveValue::Set(physical_expression_id),
-            epoch_id: sea_orm::ActiveValue::Set(epoch_id),
-            cost: sea_orm::ActiveValue::Set(
-                json!({"compute_cost": cost.compute_cost, "io_cost": cost.io_cost}),
-            ),
-            estimated_statistic: sea_orm::ActiveValue::Set(cost.estimated_statistic),
-            is_valid: sea_orm::ActiveValue::Set(true),
-            ..Default::default()
-        };
-        let _ = PlanCost::insert(new_cost).exec(&self.db).await?;
+        let transaction = self.db.begin().await?;
+
+        let valid_cost = PlanCost::find()
+            .filter(plan_cost::Column::PhysicalExpressionId.eq(physical_expression_id))
+            .filter(plan_cost::Column::EpochId.eq(epoch_id))
+            .filter(plan_cost::Column::IsValid.eq(true))
+            .one(&transaction)
+            .await?;
+
+        if valid_cost.is_some() {
+            let mut new_cost: plan_cost::ActiveModel = valid_cost.unwrap().into();
+            if cost.is_some() {
+                new_cost.cost = sea_orm::ActiveValue::Set(Some(json!({
+                    "compute_cost": cost.clone().unwrap().compute_cost,
+                    "io_cost": cost.clone().unwrap().io_cost
+                })));
+            }
+            if estimated_statistic.is_some() {
+                new_cost.estimated_statistic = sea_orm::ActiveValue::Set(estimated_statistic);
+            }
+            let _ = PlanCost::update(new_cost).exec(&transaction).await?;
+        } else {
+            let new_cost = plan_cost::ActiveModel {
+                physical_expression_id: sea_orm::ActiveValue::Set(physical_expression_id),
+                epoch_id: sea_orm::ActiveValue::Set(epoch_id),
+                cost: sea_orm::ActiveValue::Set(
+                    cost.map(|c| json!({"compute_cost": c.compute_cost, "io_cost": c.io_cost})),
+                ),
+                estimated_statistic: sea_orm::ActiveValue::Set(estimated_statistic),
+                is_valid: sea_orm::ActiveValue::Set(true),
+                ..Default::default()
+            };
+            let _ = PlanCost::insert(new_cost).exec(&transaction).await?;
+        }
+
+        transaction.commit().await?;
         Ok(())
     }
 
@@ -755,13 +800,11 @@ mod tests {
         backend_manager
             .store_cost(
                 expr_id,
-                {
-                    Cost {
-                        compute_cost: 42,
-                        io_cost: 42,
-                        estimated_statistic: 42,
-                    }
-                },
+                Some(Cost {
+                    compute_cost: 42,
+                    io_cost: 42,
+                }),
+                Some(42),
                 versioned_stat_res[0].epoch_id,
             )
             .await
@@ -826,7 +869,10 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(cost_res.len(), 1);
-        assert_eq!(cost_res[0].cost, json!({"compute_cost": 42, "io_cost": 42}));
+        assert_eq!(
+            cost_res[0].cost,
+            Some(json!({"compute_cost": 42, "io_cost": 42}))
+        );
         assert_eq!(cost_res[0].epoch_id, epoch_id1);
         assert!(!cost_res[0].is_valid);
 
@@ -960,10 +1006,15 @@ mod tests {
         let cost = Cost {
             compute_cost: 42,
             io_cost: 42,
-            estimated_statistic: 42,
         };
+        let mut estimated_statistic = 42;
         backend_manager
-            .store_cost(physical_expression_id, cost.clone(), epoch_id)
+            .store_cost(
+                physical_expression_id,
+                Some(cost.clone()),
+                Some(estimated_statistic),
+                epoch_id,
+            )
             .await
             .unwrap();
         let costs = super::PlanCost::find()
@@ -975,11 +1026,37 @@ mod tests {
         assert_eq!(costs[1].physical_expression_id, physical_expression_id);
         assert_eq!(
             costs[1].cost,
-            json!({"compute_cost": cost.compute_cost, "io_cost": cost.io_cost})
+            Some(json!({"compute_cost": cost.compute_cost, "io_cost": cost.io_cost}))
         );
         assert_eq!(
-            costs[1].estimated_statistic as i32,
-            cost.estimated_statistic
+            costs[1].estimated_statistic.unwrap() as i32,
+            estimated_statistic
+        );
+
+        estimated_statistic = 50;
+        backend_manager
+            .store_cost(
+                physical_expression_id,
+                None,
+                Some(estimated_statistic),
+                epoch_id,
+            )
+            .await
+            .unwrap();
+        let costs = super::PlanCost::find()
+            .all(&backend_manager.db)
+            .await
+            .unwrap();
+        assert_eq!(costs.len(), 2); // We should not insert a new row
+        assert_eq!(costs[1].epoch_id, epoch_id);
+        assert_eq!(costs[1].physical_expression_id, physical_expression_id);
+        assert_eq!(
+            costs[1].cost,
+            Some(json!({"compute_cost": cost.compute_cost, "io_cost": cost.io_cost}))
+        );
+        assert_eq!(
+            costs[1].estimated_statistic.unwrap() as i32,
+            estimated_statistic // The estimated_statistic should be update
         );
 
         remove_db_file(DATABASE_FILE);
@@ -999,10 +1076,9 @@ mod tests {
         let cost = Cost {
             compute_cost: 42,
             io_cost: 42,
-            estimated_statistic: 42,
         };
         let _ = backend_manager
-            .store_cost(physical_expression_id, cost.clone(), epoch_id)
+            .store_cost(physical_expression_id, Some(cost.clone()), None, epoch_id)
             .await;
         let costs = super::PlanCost::find()
             .all(&backend_manager.db)
@@ -1013,18 +1089,16 @@ mod tests {
         assert_eq!(costs[1].physical_expression_id, physical_expression_id);
         assert_eq!(
             costs[1].cost,
-            json!({"compute_cost": cost.compute_cost, "io_cost": cost.io_cost})
+            Some(json!({"compute_cost": cost.compute_cost, "io_cost": cost.io_cost}))
         );
-        assert_eq!(
-            costs[1].estimated_statistic as i32,
-            cost.estimated_statistic
-        );
+        assert_eq!(costs[1].estimated_statistic, None);
 
         let res = backend_manager
             .get_cost(physical_expression_id)
             .await
             .unwrap();
-        assert_eq!(res.unwrap(), cost);
+        assert_eq!(res.0.unwrap(), cost);
+        assert_eq!(res.1, None);
 
         remove_db_file(DATABASE_FILE);
     }
@@ -1040,13 +1114,14 @@ mod tests {
             .await
             .unwrap();
         let physical_expression_id = 1;
-        let cost = Cost {
-            compute_cost: 1420,
-            io_cost: 42,
-            estimated_statistic: 42,
-        };
+        let estimated_statistic = 42;
         let _ = backend_manager
-            .store_cost(physical_expression_id, cost.clone(), epoch_id)
+            .store_cost(
+                physical_expression_id,
+                None,
+                Some(estimated_statistic),
+                epoch_id,
+            )
             .await;
         let costs = super::PlanCost::find()
             .all(&backend_manager.db)
@@ -1055,13 +1130,10 @@ mod tests {
         assert_eq!(costs.len(), 2); // The first row one is the initialized data
         assert_eq!(costs[1].epoch_id, epoch_id);
         assert_eq!(costs[1].physical_expression_id, physical_expression_id);
+        assert_eq!(costs[1].cost, None);
         assert_eq!(
-            costs[1].cost,
-            json!({"compute_cost": cost.compute_cost, "io_cost": cost.io_cost})
-        );
-        assert_eq!(
-            costs[1].estimated_statistic as i32,
-            cost.estimated_statistic
+            costs[1].estimated_statistic.unwrap() as i32,
+            estimated_statistic
         );
         println!("{:?}", costs);
 
@@ -1073,13 +1145,13 @@ mod tests {
 
         // The cost in the dummy data is 10
         assert_eq!(
-            res.unwrap(),
+            res.0.unwrap(),
             Cost {
                 compute_cost: 10,
                 io_cost: 10,
-                estimated_statistic: 10,
             }
         );
+        assert_eq!(res.1.unwrap(), 10);
 
         remove_db_file(DATABASE_FILE);
     }

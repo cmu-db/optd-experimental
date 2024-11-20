@@ -9,8 +9,8 @@ pub struct Model {
     pub id: i32,
     pub physical_expression_id: i32,
     pub epoch_id: i32,
-    pub cost: Json,
-    pub estimated_statistic: i32,
+    pub cost: Option<Json>,
+    pub estimated_statistic: Option<i32>,
     pub is_valid: bool,
 }
 
