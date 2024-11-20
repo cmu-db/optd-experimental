@@ -15,7 +15,7 @@ use crate::{
     },
     memo_ext::MemoExt,
     stats::AttributeCombValueStats,
-    storage::CostModelStorageManager,
+    storage::{self, CostModelStorageManager},
     ComputeCostContext, Cost, CostModel, CostModelResult, EstimatedStatistic, StatValue,
 };
 

@@ -474,7 +474,7 @@ impl CostModelStorageLayer for BackendManager {
         &self,
         expr_id: ExprId,
         epoch_id: EpochId,
-    ) -> StorageResult<(Option<Cost>, Option<i32>)> {
+    ) -> StorageResult<(Option<Cost>, Option<f32>)> {
         let cost = PlanCost::find()
             .filter(plan_cost::Column::PhysicalExpressionId.eq(expr_id))
             .filter(plan_cost::Column::EpochId.eq(epoch_id))
@@ -486,8 +486,8 @@ impl CostModelStorageLayer for BackendManager {
         }
 
         let real_cost = cost.as_ref().and_then(|c| c.cost.as_ref()).map(|c| Cost {
-            compute_cost: c.get("compute_cost").unwrap().as_i64().unwrap() as i32,
-            io_cost: c.get("io_cost").unwrap().as_i64().unwrap() as i32,
+            compute_cost: c.get("compute_cost").unwrap().as_f64().unwrap(),
+            io_cost: c.get("io_cost").unwrap().as_f64().unwrap(),
         });
 
         Ok((real_cost, cost.unwrap().estimated_statistic))
@@ -498,7 +498,7 @@ impl CostModelStorageLayer for BackendManager {
     /// Each record in the `plan_cost` table can contain either the cost or the estimated statistic
     /// or both, but never neither.
     /// The name can be misleading, since it can also return the estimated statistic.
-    async fn get_cost(&self, expr_id: ExprId) -> StorageResult<(Option<Cost>, Option<i32>)> {
+    async fn get_cost(&self, expr_id: ExprId) -> StorageResult<(Option<Cost>, Option<f32>)> {
         let cost = PlanCost::find()
             .filter(plan_cost::Column::PhysicalExpressionId.eq(expr_id))
             .order_by_desc(plan_cost::Column::EpochId)
@@ -510,8 +510,8 @@ impl CostModelStorageLayer for BackendManager {
         }
 
         let real_cost = cost.as_ref().and_then(|c| c.cost.as_ref()).map(|c| Cost {
-            compute_cost: c.get("compute_cost").unwrap().as_i64().unwrap() as i32,
-            io_cost: c.get("io_cost").unwrap().as_i64().unwrap() as i32,
+            compute_cost: c.get("compute_cost").unwrap().as_f64().unwrap(),
+            io_cost: c.get("io_cost").unwrap().as_f64().unwrap(),
         });
 
         Ok((real_cost, cost.unwrap().estimated_statistic))
@@ -524,7 +524,7 @@ impl CostModelStorageLayer for BackendManager {
         &self,
         physical_expression_id: ExprId,
         cost: Option<Cost>,
-        estimated_statistic: Option<i32>,
+        estimated_statistic: Option<f32>,
         epoch_id: EpochId,
     ) -> StorageResult<()> {
         assert!(cost.is_some() || estimated_statistic.is_some());
@@ -801,10 +801,10 @@ mod tests {
             .store_cost(
                 expr_id,
                 Some(Cost {
-                    compute_cost: 42,
-                    io_cost: 42,
+                    compute_cost: 42.0,
+                    io_cost: 42.0,
                 }),
-                Some(42),
+                Some(42.0),
                 versioned_stat_res[0].epoch_id,
             )
             .await
@@ -1004,10 +1004,10 @@ mod tests {
             .unwrap();
         let physical_expression_id = 1;
         let cost = Cost {
-            compute_cost: 42,
-            io_cost: 42,
+            compute_cost: 42.0,
+            io_cost: 42.0,
         };
-        let mut estimated_statistic = 42;
+        let mut estimated_statistic = 42.0;
         backend_manager
             .store_cost(
                 physical_expression_id,
@@ -1028,12 +1028,9 @@ mod tests {
             costs[1].cost,
             Some(json!({"compute_cost": cost.compute_cost, "io_cost": cost.io_cost}))
         );
-        assert_eq!(
-            costs[1].estimated_statistic.unwrap() as i32,
-            estimated_statistic
-        );
+        assert_eq!(costs[1].estimated_statistic.unwrap(), estimated_statistic);
 
-        estimated_statistic = 50;
+        estimated_statistic = 50.0;
         backend_manager
             .store_cost(
                 physical_expression_id,
@@ -1055,7 +1052,7 @@ mod tests {
             Some(json!({"compute_cost": cost.compute_cost, "io_cost": cost.io_cost}))
         );
         assert_eq!(
-            costs[1].estimated_statistic.unwrap() as i32,
+            costs[1].estimated_statistic.unwrap(),
             estimated_statistic // The estimated_statistic should be update
         );
 
@@ -1074,8 +1071,8 @@ mod tests {
             .unwrap();
         let physical_expression_id = 1;
         let cost = Cost {
-            compute_cost: 42,
-            io_cost: 42,
+            compute_cost: 42.0,
+            io_cost: 42.0,
         };
         let _ = backend_manager
             .store_cost(physical_expression_id, Some(cost.clone()), None, epoch_id)
@@ -1114,7 +1111,7 @@ mod tests {
             .await
             .unwrap();
         let physical_expression_id = 1;
-        let estimated_statistic = 42;
+        let estimated_statistic = 42.0;
         let _ = backend_manager
             .store_cost(
                 physical_expression_id,
@@ -1131,10 +1128,7 @@ mod tests {
         assert_eq!(costs[1].epoch_id, epoch_id);
         assert_eq!(costs[1].physical_expression_id, physical_expression_id);
         assert_eq!(costs[1].cost, None);
-        assert_eq!(
-            costs[1].estimated_statistic.unwrap() as i32,
-            estimated_statistic
-        );
+        assert_eq!(costs[1].estimated_statistic.unwrap(), estimated_statistic);
         println!("{:?}", costs);
 
         // Retrieve physical_expression_id 1 and epoch_id 1
@@ -1147,11 +1141,11 @@ mod tests {
         assert_eq!(
             res.0.unwrap(),
             Cost {
-                compute_cost: 10,
-                io_cost: 10,
+                compute_cost: 10.0,
+                io_cost: 10.0,
             }
         );
-        assert_eq!(res.1.unwrap(), 10);
+        assert_eq!(res.1.unwrap(), 10.0);
 
         remove_db_file(DATABASE_FILE);
     }

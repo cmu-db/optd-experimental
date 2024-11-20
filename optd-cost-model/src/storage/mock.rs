@@ -3,7 +3,11 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{common::types::TableId, stats::AttributeCombValueStats, CostModelResult};
+use crate::{
+    common::types::{EpochId, ExprId, TableId},
+    stats::AttributeCombValueStats,
+    Cost, CostModelResult, EstimatedStatistic,
+};
 
 use super::CostModelStorageManager;
 
@@ -62,5 +66,24 @@ impl CostModelStorageManager for CostModelStorageMockManagerImpl {
     async fn get_table_row_count(&self, table_id: TableId) -> CostModelResult<Option<u64>> {
         let table_stats = self.per_table_stats_map.get(&table_id);
         Ok(table_stats.map(|stats| stats.row_cnt))
+    }
+
+    /// TODO: finish this when implementing the cost get/store tests
+    async fn get_cost(
+        &self,
+        expr_id: ExprId,
+    ) -> CostModelResult<(Option<crate::Cost>, Option<EstimatedStatistic>)> {
+        todo!()
+    }
+
+    /// TODO: finish this when implementing the cost get/store tests
+    async fn store_cost(
+        &self,
+        expr_id: ExprId,
+        cost: Option<Cost>,
+        estimated_statistic: Option<EstimatedStatistic>,
+        epoch_id: EpochId,
+    ) -> CostModelResult<()> {
+        todo!()
     }
 }

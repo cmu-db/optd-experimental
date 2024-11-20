@@ -4,9 +4,9 @@ use std::sync::Arc;
 use optd_persistent::{cost_model::interface::StatType, CostModelStorageLayer};
 
 use crate::{
-    common::types::TableId,
+    common::types::{EpochId, ExprId, TableId},
     stats::{utilities::counter::Counter, AttributeCombValueStats, Distribution, MostCommonValues},
-    CostModelResult,
+    Cost, CostModelResult, EstimatedStatistic,
 };
 
 use super::CostModelStorageManager;
@@ -123,6 +123,39 @@ impl<S: CostModelStorageLayer + Send + Sync> CostModelStorageManager
             .await?
             .map(serde_json::from_value)
             .transpose()?)
+    }
+
+    /// TODO: The name is misleading, since we can also get the estimated statistic. We should
+    /// rename it.
+    async fn get_cost(
+        &self,
+        expr_id: ExprId,
+    ) -> CostModelResult<(Option<Cost>, Option<EstimatedStatistic>)> {
+        let (cost, estimated_statistic) = self.backend_manager.get_cost(expr_id.into()).await?;
+        Ok((
+            cost.map(|c| c.into()),
+            estimated_statistic.map(|x| x.into()),
+        ))
+    }
+
+    /// TODO: The name is misleading, since we can also get the estimated statistic. We should
+    /// rename it.
+    async fn store_cost(
+        &self,
+        expr_id: ExprId,
+        cost: Option<Cost>,
+        estimated_statistic: Option<EstimatedStatistic>,
+        epoch_id: EpochId,
+    ) -> CostModelResult<()> {
+        self.backend_manager
+            .store_cost(
+                expr_id.into(),
+                cost.map(|c| c.into()),
+                estimated_statistic.map(|x| x.into()),
+                epoch_id.into(),
+            )
+            .await?;
+        Ok(())
     }
 
     // TODO: Support querying for a specific type of statistics.

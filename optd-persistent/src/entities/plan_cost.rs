@@ -2,7 +2,7 @@
 
 use sea_orm::entity::prelude::*;
 
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
+#[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "plan_cost")]
 pub struct Model {
     #[sea_orm(primary_key)]
@@ -10,7 +10,8 @@ pub struct Model {
     pub physical_expression_id: i32,
     pub epoch_id: i32,
     pub cost: Option<Json>,
-    pub estimated_statistic: Option<i32>,
+    #[sea_orm(column_type = "Float", nullable)]
+    pub estimated_statistic: Option<f32>,
     pub is_valid: bool,
 }
 

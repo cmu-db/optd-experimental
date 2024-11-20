@@ -89,8 +89,8 @@ pub struct Stat {
 /// TODO: documentation
 #[derive(Clone, Debug, PartialEq)]
 pub struct Cost {
-    pub compute_cost: i32,
-    pub io_cost: i32,
+    pub compute_cost: f64,
+    pub io_cost: f64,
 }
 
 #[derive(Clone, Debug)]
@@ -120,7 +120,7 @@ pub trait CostModelStorageLayer {
         &self,
         expr_id: ExprId,
         cost: Option<Cost>,
-        estimated_statistic: Option<i32>,
+        estimated_statistic: Option<f32>,
         epoch_id: EpochId,
     ) -> StorageResult<()>;
 
@@ -165,9 +165,9 @@ pub trait CostModelStorageLayer {
         &self,
         expr_id: ExprId,
         epoch_id: EpochId,
-    ) -> StorageResult<(Option<Cost>, Option<i32>)>;
+    ) -> StorageResult<(Option<Cost>, Option<f32>)>;
 
-    async fn get_cost(&self, expr_id: ExprId) -> StorageResult<(Option<Cost>, Option<i32>)>;
+    async fn get_cost(&self, expr_id: ExprId) -> StorageResult<(Option<Cost>, Option<f32>)>;
 
     async fn get_attribute(
         &self,

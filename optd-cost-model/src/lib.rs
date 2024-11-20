@@ -30,12 +30,51 @@ pub struct ComputeCostContext {
 }
 
 #[derive(Default, Clone, Debug, PartialOrd, PartialEq)]
-pub struct Cost(pub Vec<f64>);
+pub struct Cost {
+    pub compute_cost: f64,
+    pub io_cost: f64,
+}
+
+impl From<Cost> for optd_persistent::cost_model::interface::Cost {
+    fn from(c: Cost) -> optd_persistent::cost_model::interface::Cost {
+        Self {
+            compute_cost: c.compute_cost,
+            io_cost: c.io_cost,
+        }
+    }
+}
+
+impl From<optd_persistent::cost_model::interface::Cost> for Cost {
+    fn from(c: optd_persistent::cost_model::interface::Cost) -> Cost {
+        Self {
+            compute_cost: c.compute_cost,
+            io_cost: c.io_cost,
+        }
+    }
+}
 
 /// Estimated statistic calculated by the cost model.
 /// It is the estimated output row count of the targeted expression.
 #[derive(PartialEq, PartialOrd, Clone, Debug)]
 pub struct EstimatedStatistic(pub f64);
+
+impl From<EstimatedStatistic> for f32 {
+    fn from(e: EstimatedStatistic) -> f32 {
+        e.0 as f32
+    }
+}
+
+impl From<EstimatedStatistic> for f64 {
+    fn from(e: EstimatedStatistic) -> f64 {
+        e.0
+    }
+}
+
+impl From<f32> for EstimatedStatistic {
+    fn from(f: f32) -> EstimatedStatistic {
+        Self(f as f64)
+    }
+}
 
 pub type CostModelResult<T> = Result<T, CostModelError>;
 

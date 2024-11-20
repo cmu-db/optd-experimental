@@ -58,7 +58,7 @@ impl MigrationTrait for Migration {
                             .on_update(ForeignKeyAction::Cascade),
                     )
                     .col(json_null(PlanCost::Cost))
-                    .col(integer_null(PlanCost::EstimatedStatistic))
+                    .col(float_null(PlanCost::EstimatedStatistic))
                     .col(boolean(PlanCost::IsValid))
                     .to_owned(),
             )
