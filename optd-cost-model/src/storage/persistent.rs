@@ -116,5 +116,14 @@ impl<S: CostModelStorageLayer + Send + Sync> CostModelStorageManager
         )))
     }
 
+    async fn get_table_row_count(&self, table_id: TableId) -> CostModelResult<Option<u64>> {
+        Ok(self
+            .backend_manager
+            .get_stats_for_table(table_id.into(), StatType::TableRowCount, None)
+            .await?
+            .map(|json| serde_json::from_value(json))
+            .transpose()?)
+    }
+
     // TODO: Support querying for a specific type of statistics.
 }

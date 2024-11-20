@@ -52,6 +52,7 @@ pub enum SemanticError {
 pub enum CostModelError {
     ORMError(BackendError),
     SemanticError(SemanticError),
+    SerdeError(serde_json::Error),
 }
 
 impl From<BackendError> for CostModelError {
@@ -63,6 +64,12 @@ impl From<BackendError> for CostModelError {
 impl From<SemanticError> for CostModelError {
     fn from(err: SemanticError) -> Self {
         CostModelError::SemanticError(err)
+    }
+}
+
+impl From<serde_json::Error> for CostModelError {
+    fn from(err: serde_json::Error) -> Self {
+        CostModelError::SerdeError(err)
     }
 }
 
@@ -85,7 +92,7 @@ pub trait CostModel: 'static + Send + Sync {
         &self,
         node: PhysicalNodeType,
         predicates: &[ArcPredicateNode],
-        children_statistics: &[Option<&EstimatedStatistic>],
+        children_stats: &[Option<&EstimatedStatistic>],
         context: ComputeCostContext,
     ) -> CostModelResult<EstimatedStatistic>;
 
