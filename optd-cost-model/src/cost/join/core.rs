@@ -904,7 +904,8 @@ mod tests {
             expected_inner_sel
         );
         // check the outer sels
-        assert_outer_selectivities(&cost_model, expr_tree, expr_tree_rev, &attr_refs, 0.25, 0.2);
+        assert_outer_selectivities(&cost_model, expr_tree, expr_tree_rev, &attr_refs, 0.25, 0.2)
+            .await;
     }
 
     /// Non-unique oncond means the column is not unique in either table

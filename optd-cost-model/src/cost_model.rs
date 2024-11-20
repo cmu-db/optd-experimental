@@ -9,7 +9,8 @@ use optd_persistent::{
 
 use crate::{
     common::{
-        nodes::{ArcPredicateNode, PhysicalNodeType},
+        nodes::{ArcPredicateNode, PhysicalNodeType, ReprPredicateNode},
+        predicates::list_pred::ListPred,
         types::{AttrId, EpochId, ExprId, TableId},
     },
     memo_ext::MemoExt,
@@ -40,28 +41,83 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
     }
 }
 
+#[async_trait::async_trait]
 impl<S: CostModelStorageManager + Send + Sync + 'static> CostModel for CostModelImpl<S> {
-    fn compute_operation_cost(
+    async fn compute_operation_cost(
         &self,
         node: &PhysicalNodeType,
         predicates: &[ArcPredicateNode],
-        children_stats: &[Option<&EstimatedStatistic>],
+        children_stats: &[EstimatedStatistic],
         context: ComputeCostContext,
     ) -> CostModelResult<Cost> {
         todo!()
     }
 
-    fn derive_statistics(
+    async fn derive_statistics(
         &self,
         node: PhysicalNodeType,
         predicates: &[ArcPredicateNode],
-        children_statistics: &[Option<&EstimatedStatistic>],
+        children_statistics: &[EstimatedStatistic],
         context: ComputeCostContext,
     ) -> CostModelResult<EstimatedStatistic> {
-        todo!()
+        match node {
+            PhysicalNodeType::PhysicalScan => {
+                let table_id = TableId(predicates[0].data.as_ref().unwrap().as_u64());
+                let row_cnt = self
+                    .storage_manager
+                    .get_table_row_count(table_id)
+                    .await?
+                    .unwrap_or(1) as f64;
+                Ok(EstimatedStatistic(row_cnt))
+            }
+            PhysicalNodeType::PhysicalEmptyRelation => Ok(EstimatedStatistic(0.01)),
+            PhysicalNodeType::PhysicalLimit => {
+                self.get_limit_row_cnt(children_statistics[0].clone(), predicates[1].clone())
+            }
+            PhysicalNodeType::PhysicalFilter => {
+                self.get_filter_row_cnt(
+                    children_statistics[0].clone(),
+                    context.group_id,
+                    predicates[0].clone(),
+                )
+                .await
+            }
+            PhysicalNodeType::PhysicalNestedLoopJoin(join_typ) => {
+                self.get_nlj_row_cnt(
+                    join_typ,
+                    context.group_id,
+                    children_statistics[0].clone(),
+                    children_statistics[1].clone(),
+                    context.children_group_ids[0],
+                    context.children_group_ids[1],
+                    predicates[0].clone(),
+                )
+                .await
+            }
+            PhysicalNodeType::PhysicalHashJoin(join_typ) => {
+                self.get_hash_join_row_cnt(
+                    join_typ,
+                    context.group_id,
+                    children_statistics[0].clone(),
+                    children_statistics[1].clone(),
+                    context.children_group_ids[0],
+                    context.children_group_ids[1],
+                    ListPred::from_pred_node(predicates[0].clone()).unwrap(),
+                    ListPred::from_pred_node(predicates[1].clone()).unwrap(),
+                )
+                .await
+            }
+            PhysicalNodeType::PhysicalAgg => {
+                self.get_agg_row_cnt(context.group_id, predicates[1].clone())
+                    .await
+            }
+            PhysicalNodeType::PhysicalSort | PhysicalNodeType::PhysicalProjection => {
+                Ok(children_statistics[0].clone())
+            }
+        }
     }
 
-    fn update_statistics(
+    async fn update_statistics(
         &self,
         stats: Vec<Stat>,
         source: String,
@@ -70,7 +126,7 @@ impl<S: CostModelStorageManager + Send + Sync + 'static> CostModel for CostModel
         todo!()
     }
 
-    fn get_table_statistic_for_analysis(
+    async fn get_table_statistic_for_analysis(
         &self,
         table_id: TableId,
         stat_type: StatType,
@@ -79,7 +135,7 @@ impl<S: CostModelStorageManager + Send + Sync + 'static> CostModel for CostModel
         todo!()
     }
 
-    fn get_attribute_statistic_for_analysis(
+    async fn get_attribute_statistic_for_analysis(
         &self,
         attr_ids: Vec<AttrId>,
         stat_type: StatType,
@@ -88,7 +144,7 @@ impl<S: CostModelStorageManager + Send + Sync + 'static> CostModel for CostModel
         todo!()
     }
 
-    fn get_cost_for_analysis(
+    async fn get_cost_for_analysis(
         &self,
         expr_id: ExprId,
         epoch_id: Option<EpochId>,

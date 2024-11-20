@@ -2246,6 +2246,7 @@ version = "0.1.0"
 dependencies = [
  "arrow-schema 53.2.0",
  "assert_approx_eq",
+ "async-trait",
  "chrono",
  "crossbeam",
  "datafusion",

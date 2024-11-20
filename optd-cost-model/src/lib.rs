@@ -33,7 +33,7 @@ pub struct Cost(pub Vec<f64>);
 
 /// Estimated statistic calculated by the cost model.
 /// It is the estimated output row count of the targeted expression.
-#[derive(PartialEq, PartialOrd, Debug)]
+#[derive(PartialEq, PartialOrd, Clone, Debug)]
 pub struct EstimatedStatistic(pub f64);
 
 pub type CostModelResult<T> = Result<T, CostModelError>;
@@ -73,13 +73,14 @@ impl From<serde_json::Error> for CostModelError {
     }
 }
 
+#[async_trait::async_trait]
 pub trait CostModel: 'static + Send + Sync {
     /// TODO: documentation
-    fn compute_operation_cost(
+    async fn compute_operation_cost(
         &self,
         node: &PhysicalNodeType,
         predicates: &[ArcPredicateNode],
-        children_stats: &[Option<&EstimatedStatistic>],
+        children_stats: &[EstimatedStatistic],
         context: ComputeCostContext,
     ) -> CostModelResult<Cost>;
 
@@ -88,18 +89,18 @@ pub trait CostModel: 'static + Send + Sync {
     /// statistic calculated by the cost model.
     /// TODO: Consider make it a helper function, so we can store Cost in the
     /// ORM more easily.
-    fn derive_statistics(
+    async fn derive_statistics(
         &self,
         node: PhysicalNodeType,
         predicates: &[ArcPredicateNode],
-        children_stats: &[Option<&EstimatedStatistic>],
+        children_stats: &[EstimatedStatistic],
         context: ComputeCostContext,
     ) -> CostModelResult<EstimatedStatistic>;
 
     /// TODO: documentation
     /// It is for **REAL** statistic updates, not for estimated statistics.
     /// TODO: Change data from String to other types.
-    fn update_statistics(
+    async fn update_statistics(
         &self,
         stats: Vec<Stat>,
         source: String,
@@ -107,7 +108,7 @@ pub trait CostModel: 'static + Send + Sync {
     ) -> CostModelResult<()>;
 
     /// TODO: documentation
-    fn get_table_statistic_for_analysis(
+    async fn get_table_statistic_for_analysis(
         &self,
         table_id: TableId,
         stat_type: StatType,
@@ -115,7 +116,7 @@ pub trait CostModel: 'static + Send + Sync {
     ) -> CostModelResult<Option<StatValue>>;
 
     /// TODO: documentation
-    fn get_attribute_statistic_for_analysis(
+    async fn get_attribute_statistic_for_analysis(
         &self,
         attr_ids: Vec<AttrId>,
         stat_type: StatType,
@@ -123,7 +124,7 @@ pub trait CostModel: 'static + Send + Sync {
     ) -> CostModelResult<Option<StatValue>>;
 
     /// TODO: documentation
-    fn get_cost_for_analysis(
+    async fn get_cost_for_analysis(
         &self,
         expr_id: ExprId,
         epoch_id: Option<EpochId>,
