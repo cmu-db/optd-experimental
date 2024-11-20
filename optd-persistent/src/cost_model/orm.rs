@@ -519,13 +519,14 @@ impl CostModelStorageLayer for BackendManager {
 
     /// This method should handle the case when the cost is already stored.
     /// The name maybe misleading, since it can also store the estimated statistic.
+    /// If epoch_id is none, we pick the latest epoch_id.
     /// TODO: documentation
     async fn store_cost(
         &self,
         physical_expression_id: ExprId,
         cost: Option<Cost>,
         estimated_statistic: Option<f32>,
-        epoch_id: EpochId,
+        epoch_id: Option<EpochId>,
     ) -> StorageResult<()> {
         assert!(cost.is_some() || estimated_statistic.is_some());
         // TODO: should we do the following checks in the production environment?
@@ -542,16 +543,31 @@ impl CostModelStorageLayer for BackendManager {
             ));
         }
         // Check if epoch_id exists in Event table
-        let epoch_exists = Event::find()
-            .filter(event::Column::EpochId.eq(epoch_id))
-            .one(&self.db)
-            .await
-            .unwrap();
-        if epoch_exists.is_none() {
-            return Err(BackendError::CostModel(
-                format!("epoch id {} not found when storing cost", epoch_id).into(),
-            ));
+        if epoch_id.is_some() {
+            let epoch_exists = Event::find()
+                .filter(event::Column::EpochId.eq(epoch_id.unwrap()))
+                .one(&self.db)
+                .await
+                .unwrap();
+            if epoch_exists.is_none() {
+                return Err(BackendError::CostModel(
+                    format!("epoch id {} not found when storing cost", epoch_id.unwrap()).into(),
+                ));
+            }
         }
+
+        let epoch_id = match epoch_id {
+            Some(id) => id,
+            None => {
+                // When init, please make sure there is at least one epoch in the Event table.
+                let latest_epoch_id = Event::find()
+                    .order_by_desc(event::Column::EpochId)
+                    .one(&self.db)
+                    .await?
+                    .unwrap();
+                latest_epoch_id.epoch_id
+            }
+        };
 
         let transaction = self.db.begin().await?;
 
@@ -805,7 +821,7 @@ mod tests {
                     io_cost: 42.0,
                 }),
                 Some(42.0),
-                versioned_stat_res[0].epoch_id,
+                Some(versioned_stat_res[0].epoch_id),
             )
             .await
             .unwrap();
@@ -871,7 +887,7 @@ mod tests {
         assert_eq!(cost_res.len(), 1);
         assert_eq!(
             cost_res[0].cost,
-            Some(json!({"compute_cost": 42, "io_cost": 42}))
+            Some(json!({"compute_cost": 42.0, "io_cost": 42.0}))
         );
         assert_eq!(cost_res[0].epoch_id, epoch_id1);
         assert!(!cost_res[0].is_valid);
@@ -1013,7 +1029,7 @@ mod tests {
                 physical_expression_id,
                 Some(cost.clone()),
                 Some(estimated_statistic),
-                epoch_id,
+                Some(epoch_id),
             )
             .await
             .unwrap();
@@ -1036,7 +1052,7 @@ mod tests {
                 physical_expression_id,
                 None,
                 Some(estimated_statistic),
-                epoch_id,
+                None,
             )
             .await
             .unwrap();
@@ -1075,7 +1091,12 @@ mod tests {
             io_cost: 42.0,
         };
         let _ = backend_manager
-            .store_cost(physical_expression_id, Some(cost.clone()), None, epoch_id)
+            .store_cost(
+                physical_expression_id,
+                Some(cost.clone()),
+                None,
+                Some(epoch_id),
+            )
             .await;
         let costs = super::PlanCost::find()
             .all(&backend_manager.db)
@@ -1117,7 +1138,7 @@ mod tests {
                 physical_expression_id,
                 None,
                 Some(estimated_statistic),
-                epoch_id,
+                Some(epoch_id),
             )
             .await;
         let costs = super::PlanCost::find()

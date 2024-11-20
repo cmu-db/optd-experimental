@@ -118,8 +118,9 @@ pub trait CostModel: 'static + Send + Sync {
     /// TODO: documentation
     async fn compute_operation_cost(
         &self,
-        node: &PhysicalNodeType,
+        node: PhysicalNodeType,
         predicates: &[ArcPredicateNode],
+        children_costs: &[Cost],
         children_stats: &[EstimatedStatistic],
         context: ComputeCostContext,
     ) -> CostModelResult<Cost>;
@@ -127,14 +128,31 @@ pub trait CostModel: 'static + Send + Sync {
     /// TODO: documentation
     /// It is for cardinality estimation. The output should be the estimated
     /// statistic calculated by the cost model.
+    /// If this method is called by `compute_operation_cost`, please set
+    /// `store_output_statistic` to `false`; if it is called by the optimizer,
+    /// please set `store_output_statistic` to `true`. Since we can store the
+    /// estimated statistic and cost by calling the ORM method once.
+    ///
+    /// TODO: I am not sure whether to introduce `store_output_statistic`, since
+    /// it add complexity to the interface, considering currently only Scan needs
+    /// the output row count to calculate the costs. So updating the database twice
+    /// seems cheap. But in the future, maybe more cost computations rely on the output
+    /// row count.
+    ///
     /// TODO: Consider make it a helper function, so we can store Cost in the
     /// ORM more easily.
+    ///
+    /// TODO: I would suggest to rename this method to `derive_row_count`, since
+    /// statistic is easily to be confused with the real statistic.
+    /// Also we need to update other places to use estimated statistic to row count,
+    /// either in this crate or in optd-persistent.
     async fn derive_statistics(
         &self,
         node: PhysicalNodeType,
         predicates: &[ArcPredicateNode],
         children_stats: &[EstimatedStatistic],
         context: ComputeCostContext,
+        store_output_statistic: bool,
     ) -> CostModelResult<EstimatedStatistic>;
 
     /// TODO: documentation

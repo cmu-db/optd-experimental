@@ -121,7 +121,7 @@ pub trait CostModelStorageLayer {
         expr_id: ExprId,
         cost: Option<Cost>,
         estimated_statistic: Option<f32>,
-        epoch_id: EpochId,
+        epoch_id: Option<EpochId>,
     ) -> StorageResult<()>;
 
     async fn store_expr_stats_mappings(

@@ -145,14 +145,14 @@ impl<S: CostModelStorageLayer + Send + Sync> CostModelStorageManager
         expr_id: ExprId,
         cost: Option<Cost>,
         estimated_statistic: Option<EstimatedStatistic>,
-        epoch_id: EpochId,
+        epoch_id: Option<EpochId>,
     ) -> CostModelResult<()> {
         self.backend_manager
             .store_cost(
                 expr_id.into(),
                 cost.map(|c| c.into()),
                 estimated_statistic.map(|x| x.into()),
-                epoch_id.into(),
+                epoch_id.map(|id| id.into()),
             )
             .await?;
         Ok(())

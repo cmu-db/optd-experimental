@@ -27,6 +27,6 @@ pub trait CostModelStorageManager {
         expr_id: ExprId,
         cost: Option<Cost>,
         estimated_statistic: Option<EstimatedStatistic>,
-        epoch_id: EpochId,
+        epoch_id: Option<EpochId>,
     ) -> CostModelResult<()>;
 }
