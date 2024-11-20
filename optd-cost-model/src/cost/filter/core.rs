@@ -98,16 +98,11 @@ mod tests {
                 bin_op_pred::BinOpType, constant_pred::ConstantType, log_op_pred::LogOpType,
                 un_op_pred::UnOpType,
             },
-            properties::Attribute,
             types::TableId,
             values::Value,
         },
         cost_model::tests::*,
-        memo_ext::tests::MemoGroupInfo,
-        stats::{
-            utilities::{counter::Counter, simple_map::SimpleMap},
-            Distribution, MostCommonValues, DEFAULT_EQ_SEL,
-        },
+        stats::{utilities::simple_map::SimpleMap, Distribution, MostCommonValues, DEFAULT_EQ_SEL},
     };
     use arrow_schema::DataType;
 
@@ -834,7 +829,7 @@ mod tests {
             0,
             0.0,
         );
-        let table_id = TableId(0);
+
         let cost_model = create_mock_cost_model_with_attr_types(
             vec![TEST_TABLE1_ID],
             vec![HashMap::from([(

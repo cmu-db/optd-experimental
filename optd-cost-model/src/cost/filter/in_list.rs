@@ -83,16 +83,9 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::{
-        common::{
-            types::{GroupId, TableId},
-            values::Value,
-        },
+        common::values::Value,
         cost_model::tests::*,
-        memo_ext::tests::MemoGroupInfo,
-        stats::{
-            utilities::{counter::Counter, simple_map::SimpleMap},
-            MostCommonValues,
-        },
+        stats::{utilities::simple_map::SimpleMap, MostCommonValues},
     };
 
     #[tokio::test]

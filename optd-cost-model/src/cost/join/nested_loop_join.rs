@@ -1,8 +1,6 @@
 use crate::{
     common::{
-        nodes::{ArcPredicateNode, JoinType, PredicateType, ReprPredicateNode},
-        predicates::log_op_pred::{LogOpPred, LogOpType},
-        properties::attr_ref::{AttrRefs, SemanticCorrelation},
+        nodes::{ArcPredicateNode, JoinType},
         types::GroupId,
     },
     cost_model::CostModelImpl,

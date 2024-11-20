@@ -1,12 +1,5 @@
-use itertools::Itertools;
-
 use crate::{
-    common::{
-        nodes::{JoinType, ReprPredicateNode},
-        predicates::{attr_index_pred::AttrIndexPred, list_pred::ListPred},
-        properties::attr_ref::{AttrRefs, SemanticCorrelation},
-        types::GroupId,
-    },
+    common::{nodes::JoinType, predicates::list_pred::ListPred, types::GroupId},
     cost_model::CostModelImpl,
     storage::CostModelStorageManager,
     CostModelResult, EstimatedStatistic,

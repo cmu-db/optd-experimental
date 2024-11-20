@@ -14,7 +14,7 @@ use crate::{
     cost_model::CostModelImpl,
     stats::{DEFAULT_EQ_SEL, DEFAULT_INEQ_SEL, UNIMPLEMENTED_SEL},
     storage::CostModelStorageManager,
-    CostModelResult, SemanticError,
+    CostModelResult,
 };
 
 impl<S: CostModelStorageManager> CostModelImpl<S> {

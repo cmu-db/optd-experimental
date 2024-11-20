@@ -113,10 +113,7 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::{
-        common::{
-            types::{GroupId, TableId},
-            values::Value,
-        },
+        common::values::Value,
         cost_model::tests::*,
         stats::{
             utilities::{counter::Counter, simple_map::SimpleMap},

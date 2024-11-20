@@ -25,7 +25,7 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
                 let mut or_sel_neg = 1.0;
                 for child in children {
                     let selectivity = self.get_filter_selectivity(group_id, child.clone()).await?;
-                    or_sel_neg *= (1.0 - selectivity);
+                    or_sel_neg *= 1.0 - selectivity;
                 }
                 Ok(1.0 - or_sel_neg)
             }
