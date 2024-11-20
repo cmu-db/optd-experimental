@@ -58,4 +58,9 @@ impl CostModelStorageManager for CostModelStorageMockManagerImpl {
             },
         }
     }
+
+    async fn get_table_row_count(&self, table_id: TableId) -> CostModelResult<Option<u64>> {
+        let table_stats = self.per_table_stats_map.get(&table_id);
+        Ok(table_stats.map(|stats| stats.row_cnt))
+    }
 }

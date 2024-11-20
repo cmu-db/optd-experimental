@@ -1,12 +1,5 @@
-use itertools::Itertools;
-
 use crate::{
-    common::{
-        nodes::{JoinType, ReprPredicateNode},
-        predicates::{attr_index_pred::AttrIndexPred, list_pred::ListPred},
-        properties::attr_ref::{AttrRefs, SemanticCorrelation},
-        types::GroupId,
-    },
+    common::{nodes::JoinType, predicates::list_pred::ListPred, types::GroupId},
     cost_model::CostModelImpl,
     storage::CostModelStorageManager,
     CostModelResult, EstimatedStatistic,
@@ -20,8 +13,8 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
         &self,
         join_typ: JoinType,
         group_id: GroupId,
-        left_row_cnt: f64,
-        right_row_cnt: f64,
+        left_row_cnt: EstimatedStatistic,
+        right_row_cnt: EstimatedStatistic,
         left_group_id: GroupId,
         right_group_id: GroupId,
         left_keys: ListPred,
@@ -42,14 +35,14 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
                 right_keys,
                 output_attr_refs.attr_refs(),
                 input_correlation,
-                left_row_cnt,
-                right_row_cnt,
+                left_row_cnt.0,
+                right_row_cnt.0,
                 left_attr_cnt,
             )
             .await?
         };
         Ok(EstimatedStatistic(
-            (left_row_cnt * right_row_cnt * selectivity).max(1.0),
+            (left_row_cnt.0 * right_row_cnt.0 * selectivity).max(1.0),
         ))
     }
 }

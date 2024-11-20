@@ -8,7 +8,7 @@ use crate::{
     cost_model::CostModelImpl,
     stats::DEFAULT_NUM_DISTINCT,
     storage::CostModelStorageManager,
-    CostModelError, CostModelResult, EstimatedStatistic, SemanticError,
+    CostModelResult, EstimatedStatistic, SemanticError,
 };
 
 impl<S: CostModelStorageManager> CostModelImpl<S> {
@@ -67,21 +67,16 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, ops::Deref};
+    use std::collections::HashMap;
 
     use crate::{
-        common::{
-            predicates::constant_pred::ConstantType,
-            properties::Attribute,
-            types::{GroupId, TableId},
-            values::Value,
-        },
-        cost_model::tests::{
-            attr_index, cnst, create_mock_cost_model, create_mock_cost_model_with_attr_types,
-            empty_list, empty_per_attr_stats, list, TestPerAttributeStats, TEST_ATTR1_BASE_INDEX,
-            TEST_ATTR2_BASE_INDEX, TEST_ATTR3_BASE_INDEX, TEST_GROUP1_ID, TEST_TABLE1_ID,
-        },
+        common::predicates::constant_pred::ConstantType,
         stats::{utilities::simple_map::SimpleMap, MostCommonValues, DEFAULT_NUM_DISTINCT},
+        test_utils::tests::{
+            attr_index, create_mock_cost_model_with_attr_types, empty_list, list,
+            TestPerAttributeStats, TEST_ATTR1_BASE_INDEX, TEST_ATTR2_BASE_INDEX,
+            TEST_ATTR3_BASE_INDEX, TEST_GROUP1_ID, TEST_TABLE1_ID,
+        },
         EstimatedStatistic,
     };
 

@@ -7,13 +7,11 @@ use crate::{
         nodes::{ArcPredicateNode, JoinType, PredicateType, ReprPredicateNode},
         predicates::{
             attr_index_pred::AttrIndexPred,
-            bin_op_pred::BinOpType,
             list_pred::ListPred,
             log_op_pred::{LogOpPred, LogOpType},
         },
         properties::attr_ref::{
-            self, AttrRef, AttrRefs, BaseTableAttrRef, EqPredicate, GroupAttrRefs,
-            SemanticCorrelation,
+            AttrRef, AttrRefs, BaseTableAttrRef, EqPredicate, SemanticCorrelation,
         },
         types::GroupId,
     },
@@ -409,23 +407,24 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
 mod tests {
     use std::collections::HashMap;
 
+    use attr_ref::GroupAttrRefs;
+
     use crate::{
         common::{
-            predicates::{attr_index_pred, constant_pred::ConstantType},
-            properties::Attribute,
-            types::TableId,
+            predicates::bin_op_pred::BinOpType,
+            properties::{attr_ref, Attribute},
             values::Value,
         },
-        cost_model::tests::{
+        stats::DEFAULT_EQ_SEL,
+        test_utils::tests::MemoGroupInfo,
+        test_utils::tests::{
             attr_index, bin_op, cnst, create_four_table_mock_cost_model, create_mock_cost_model,
             create_three_table_mock_cost_model, create_two_table_mock_cost_model,
             create_two_table_mock_cost_model_custom_row_cnts, empty_per_attr_stats, log_op,
             per_attr_stats_with_dist_and_ndistinct, per_attr_stats_with_ndistinct,
-            TestOptCostModelMock, TestPerAttributeStats, TEST_ATTR1_NAME, TEST_ATTR2_NAME,
-            TEST_TABLE1_ID, TEST_TABLE2_ID, TEST_TABLE3_ID, TEST_TABLE4_ID,
+            TestOptCostModelMock, TEST_ATTR1_NAME, TEST_ATTR2_NAME, TEST_TABLE1_ID, TEST_TABLE2_ID,
+            TEST_TABLE3_ID, TEST_TABLE4_ID,
         },
-        memo_ext::tests::MemoGroupInfo,
-        stats::DEFAULT_EQ_SEL,
     };
 
     use super::*;
@@ -905,7 +904,8 @@ mod tests {
             expected_inner_sel
         );
         // check the outer sels
-        assert_outer_selectivities(&cost_model, expr_tree, expr_tree_rev, &attr_refs, 0.25, 0.2);
+        assert_outer_selectivities(&cost_model, expr_tree, expr_tree_rev, &attr_refs, 0.25, 0.2)
+            .await;
     }
 
     /// Non-unique oncond means the column is not unique in either table

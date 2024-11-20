@@ -1,8 +1,6 @@
 use crate::{
     common::{
-        nodes::{ArcPredicateNode, JoinType, PredicateType, ReprPredicateNode},
-        predicates::log_op_pred::{LogOpPred, LogOpType},
-        properties::attr_ref::{AttrRefs, SemanticCorrelation},
+        nodes::{ArcPredicateNode, JoinType},
         types::GroupId,
     },
     cost_model::CostModelImpl,
@@ -18,8 +16,8 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
         &self,
         join_typ: JoinType,
         group_id: GroupId,
-        left_row_cnt: f64,
-        right_row_cnt: f64,
+        left_row_cnt: EstimatedStatistic,
+        right_row_cnt: EstimatedStatistic,
         left_group_id: GroupId,
         right_group_id: GroupId,
         join_cond: ArcPredicateNode,
@@ -36,13 +34,13 @@ impl<S: CostModelStorageManager> CostModelImpl<S> {
                 join_cond,
                 output_attr_refs.attr_refs(),
                 input_correlation,
-                left_row_cnt,
-                right_row_cnt,
+                left_row_cnt.0,
+                right_row_cnt.0,
             )
             .await?
         };
         Ok(EstimatedStatistic(
-            (left_row_cnt * right_row_cnt * selectivity).max(1.0),
+            (left_row_cnt.0 * right_row_cnt.0 * selectivity).max(1.0),
         ))
     }
 }

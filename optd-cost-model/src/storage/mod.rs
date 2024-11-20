@@ -10,4 +10,6 @@ pub trait CostModelStorageManager {
         table_id: TableId,
         attr_base_indices: &[u64],
     ) -> CostModelResult<Option<AttributeCombValueStats>>;
+
+    async fn get_table_row_count(&self, table_id: TableId) -> CostModelResult<Option<u64>>;
 }
