@@ -137,7 +137,8 @@ pub trait CostModel: 'static + Send + Sync {
     /// it add complexity to the interface, considering currently only Scan needs
     /// the output row count to calculate the costs. So updating the database twice
     /// seems cheap. But in the future, maybe more cost computations rely on the output
-    /// row count.
+    /// row count. (Of course, it should be removed if we separate the cost and
+    /// estimated_statistic into 2 tables.)
     ///
     /// TODO: Consider make it a helper function, so we can store Cost in the
     /// ORM more easily.
