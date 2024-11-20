@@ -580,16 +580,27 @@ impl CostModelStorageLayer for BackendManager {
 
         if valid_cost.is_some() {
             let mut new_cost: plan_cost::ActiveModel = valid_cost.unwrap().into();
+            let mut update = false;
             if cost.is_some() {
-                new_cost.cost = sea_orm::ActiveValue::Set(Some(json!({
+                let input_cost = sea_orm::ActiveValue::Set(Some(json!({
                     "compute_cost": cost.clone().unwrap().compute_cost,
                     "io_cost": cost.clone().unwrap().io_cost
                 })));
+                if new_cost.cost != input_cost {
+                    update = true;
+                    new_cost.cost = input_cost;
+                }
             }
             if estimated_statistic.is_some() {
-                new_cost.estimated_statistic = sea_orm::ActiveValue::Set(estimated_statistic);
+                let input_estimated_statistic = sea_orm::ActiveValue::Set(estimated_statistic);
+                if new_cost.estimated_statistic != input_estimated_statistic {
+                    update = true;
+                    new_cost.estimated_statistic = input_estimated_statistic;
+                }
             }
-            let _ = PlanCost::update(new_cost).exec(&transaction).await?;
+            if update {
+                let _ = PlanCost::update(new_cost).exec(&transaction).await?;
+            }
         } else {
             let new_cost = plan_cost::ActiveModel {
                 physical_expression_id: sea_orm::ActiveValue::Set(physical_expression_id),
