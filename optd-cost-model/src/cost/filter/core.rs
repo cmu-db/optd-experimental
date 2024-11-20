@@ -101,8 +101,8 @@ mod tests {
             types::TableId,
             values::Value,
         },
-        cost_model::tests::*,
         stats::{utilities::simple_map::SimpleMap, Distribution, MostCommonValues, DEFAULT_EQ_SEL},
+        test_utils::tests::*,
     };
     use arrow_schema::DataType;
 

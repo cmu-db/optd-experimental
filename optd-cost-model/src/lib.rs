@@ -13,6 +13,7 @@ pub mod cost_model;
 pub mod memo_ext;
 pub mod stats;
 pub mod storage;
+pub mod test_utils;
 pub mod utils;
 
 pub enum StatValue {

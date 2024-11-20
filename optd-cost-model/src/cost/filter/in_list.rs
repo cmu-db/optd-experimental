@@ -84,8 +84,8 @@ mod tests {
 
     use crate::{
         common::values::Value,
-        cost_model::tests::*,
         stats::{utilities::simple_map::SimpleMap, MostCommonValues},
+        test_utils::tests::*,
     };
 
     #[tokio::test]

@@ -415,7 +415,9 @@ mod tests {
             properties::{attr_ref, Attribute},
             values::Value,
         },
-        cost_model::tests::{
+        stats::DEFAULT_EQ_SEL,
+        test_utils::tests::MemoGroupInfo,
+        test_utils::tests::{
             attr_index, bin_op, cnst, create_four_table_mock_cost_model, create_mock_cost_model,
             create_three_table_mock_cost_model, create_two_table_mock_cost_model,
             create_two_table_mock_cost_model_custom_row_cnts, empty_per_attr_stats, log_op,
@@ -423,8 +425,6 @@ mod tests {
             TestOptCostModelMock, TEST_ATTR1_NAME, TEST_ATTR2_NAME, TEST_TABLE1_ID, TEST_TABLE2_ID,
             TEST_TABLE3_ID, TEST_TABLE4_ID,
         },
-        memo_ext::tests::MemoGroupInfo,
-        stats::DEFAULT_EQ_SEL,
     };
 
     use super::*;

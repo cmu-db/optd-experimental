@@ -114,11 +114,11 @@ mod tests {
 
     use crate::{
         common::values::Value,
-        cost_model::tests::*,
         stats::{
             utilities::{counter::Counter, simple_map::SimpleMap},
             MostCommonValues, FIXED_CHAR_SEL_FACTOR, FULL_WILDCARD_SEL_FACTOR,
         },
+        test_utils::tests::*,
     };
 
     #[tokio::test]

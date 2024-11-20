@@ -121,7 +121,7 @@ impl<S: CostModelStorageLayer + Send + Sync> CostModelStorageManager
             .backend_manager
             .get_stats_for_table(table_id.into(), StatType::TableRowCount, None)
             .await?
-            .map(|json| serde_json::from_value(json))
+            .map(serde_json::from_value)
             .transpose()?)
     }
 

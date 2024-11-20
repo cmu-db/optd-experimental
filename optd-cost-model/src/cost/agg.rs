@@ -71,12 +71,12 @@ mod tests {
 
     use crate::{
         common::predicates::constant_pred::ConstantType,
-        cost_model::tests::{
+        stats::{utilities::simple_map::SimpleMap, MostCommonValues, DEFAULT_NUM_DISTINCT},
+        test_utils::tests::{
             attr_index, create_mock_cost_model_with_attr_types, empty_list, list,
             TestPerAttributeStats, TEST_ATTR1_BASE_INDEX, TEST_ATTR2_BASE_INDEX,
             TEST_ATTR3_BASE_INDEX, TEST_GROUP1_ID, TEST_TABLE1_ID,
         },
-        stats::{utilities::simple_map::SimpleMap, MostCommonValues, DEFAULT_NUM_DISTINCT},
         EstimatedStatistic,
     };
 
