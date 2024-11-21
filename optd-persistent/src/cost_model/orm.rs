@@ -480,8 +480,8 @@ impl CostModelStorageLayer for BackendManager {
             .filter(plan_cost::Column::EpochId.eq(epoch_id))
             .one(&self.db)
             .await?;
-        // When this cost is invalid or not found, we should return None
-        if cost.is_none() || !cost.clone().unwrap().is_valid {
+        // When this cost is not found, we should return None
+        if cost.is_none() {
             return Ok((None, None));
         }
 
@@ -520,6 +520,11 @@ impl CostModelStorageLayer for BackendManager {
     /// This method should handle the case when the cost is already stored.
     /// The name maybe misleading, since it can also store the estimated statistic.
     /// If epoch_id is none, we pick the latest epoch_id.
+    ///
+    /// TODO: consider whether we need to pass the epoch_id here. When the epoch is
+    /// stale because someone else updates the stats while we're still computing cost,
+    /// what is the expected behavior?
+    ///
     /// TODO: documentation
     async fn store_cost(
         &self,

@@ -127,6 +127,8 @@ impl<S: CostModelStorageLayer + Send + Sync> CostModelStorageManager
 
     /// TODO: The name is misleading, since we can also get the estimated statistic. We should
     /// rename it.
+    ///
+    /// TODO: Add retry logic here.
     async fn get_cost(
         &self,
         expr_id: ExprId,
@@ -140,6 +142,8 @@ impl<S: CostModelStorageLayer + Send + Sync> CostModelStorageManager
 
     /// TODO: The name is misleading, since we can also get the estimated statistic. We should
     /// rename it.
+    ///
+    /// TODO: Add retry logic here.
     async fn store_cost(
         &self,
         expr_id: ExprId,
