@@ -1,4 +1,8 @@
-use crate::{common::types::TableId, stats::AttributeCombValueStats, CostModelResult};
+use crate::{
+    common::types::{EpochId, ExprId, TableId},
+    stats::AttributeCombValueStats,
+    Cost, CostModelResult, EstimatedStatistic,
+};
 
 pub mod mock;
 pub mod persistent;
@@ -12,4 +16,17 @@ pub trait CostModelStorageManager {
     ) -> CostModelResult<Option<AttributeCombValueStats>>;
 
     async fn get_table_row_count(&self, table_id: TableId) -> CostModelResult<Option<u64>>;
+
+    async fn get_cost(
+        &self,
+        expr_id: ExprId,
+    ) -> CostModelResult<(Option<Cost>, Option<EstimatedStatistic>)>;
+
+    async fn store_cost(
+        &self,
+        expr_id: ExprId,
+        cost: Option<Cost>,
+        estimated_statistic: Option<EstimatedStatistic>,
+        epoch_id: Option<EpochId>,
+    ) -> CostModelResult<()>;
 }

@@ -89,10 +89,8 @@ pub struct Stat {
 /// TODO: documentation
 #[derive(Clone, Debug, PartialEq)]
 pub struct Cost {
-    pub compute_cost: i32,
-    pub io_cost: i32,
-    // Raw estimated output row count of targeted expression.
-    pub estimated_statistic: i32,
+    pub compute_cost: f64,
+    pub io_cost: f64,
 }
 
 #[derive(Clone, Debug)]
@@ -118,8 +116,13 @@ pub trait CostModelStorageLayer {
         epoch_option: EpochOption,
     ) -> StorageResult<Option<EpochId>>;
 
-    async fn store_cost(&self, expr_id: ExprId, cost: Cost, epoch_id: EpochId)
-        -> StorageResult<()>;
+    async fn store_cost(
+        &self,
+        expr_id: ExprId,
+        cost: Option<Cost>,
+        estimated_statistic: Option<f32>,
+        epoch_id: Option<EpochId>,
+    ) -> StorageResult<()>;
 
     async fn store_expr_stats_mappings(
         &self,
@@ -162,9 +165,9 @@ pub trait CostModelStorageLayer {
         &self,
         expr_id: ExprId,
         epoch_id: EpochId,
-    ) -> StorageResult<Option<Cost>>;
+    ) -> StorageResult<(Option<Cost>, Option<f32>)>;
 
-    async fn get_cost(&self, expr_id: ExprId) -> StorageResult<Option<Cost>>;
+    async fn get_cost(&self, expr_id: ExprId) -> StorageResult<(Option<Cost>, Option<f32>)>;
 
     async fn get_attribute(
         &self,
