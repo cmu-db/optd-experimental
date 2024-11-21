@@ -654,6 +654,7 @@ impl CostModelStorageLayer for BackendManager {
     }
 }
 
+// TODO: add integration tests
 #[cfg(test)]
 mod tests {
     use crate::cost_model::interface::{Cost, EpochOption, StatType};
