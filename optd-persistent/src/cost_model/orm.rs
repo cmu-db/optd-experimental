@@ -628,7 +628,7 @@ impl CostModelStorageLayer for BackendManager {
                 }
             }
             if update {
-                assert!(new_cost.epoch_id == sea_orm::ActiveValue::Set(epoch_id_data));
+                assert!(new_cost.epoch_id.is_unchanged());
                 let _ = PlanCost::update(new_cost).exec(&transaction).await?;
             }
         } else {
@@ -1072,6 +1072,18 @@ mod tests {
             .create_new_epoch("source".to_string(), "data".to_string())
             .await
             .unwrap();
+        let stat = Stat {
+            stat_type: StatType::TableRowCount,
+            stat_value: json!(10),
+            attr_ids: vec![],
+            table_id: Some(1),
+            name: "row_count".to_owned(),
+        };
+        let res = backend_manager
+            .update_stats(stat, EpochOption::Existed(epoch_id))
+            .await;
+        assert!(res.is_ok());
+
         let physical_expression_id = 1;
         let cost = Cost {
             compute_cost: 42.0,
@@ -1139,6 +1151,18 @@ mod tests {
             .create_new_epoch("source".to_string(), "data".to_string())
             .await
             .unwrap();
+        let stat = Stat {
+            stat_type: StatType::TableRowCount,
+            stat_value: json!(10),
+            attr_ids: vec![],
+            table_id: Some(1),
+            name: "row_count".to_owned(),
+        };
+        let res = backend_manager
+            .update_stats(stat, EpochOption::Existed(epoch_id))
+            .await;
+        assert!(res.is_ok());
+
         let physical_expression_id = 1;
         let cost = Cost {
             compute_cost: 42.0,
@@ -1185,6 +1209,18 @@ mod tests {
             .create_new_epoch("source".to_string(), "data".to_string())
             .await
             .unwrap();
+        let stat = Stat {
+            stat_type: StatType::TableRowCount,
+            stat_value: json!(10),
+            attr_ids: vec![],
+            table_id: Some(1),
+            name: "row_count".to_owned(),
+        };
+        let res = backend_manager
+            .update_stats(stat, EpochOption::Existed(epoch_id))
+            .await;
+        assert!(res.is_ok());
+
         let physical_expression_id = 1;
         let estimated_statistic = 42.0;
         let _ = backend_manager
