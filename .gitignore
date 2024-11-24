@@ -12,3 +12,4 @@ target/
 .DS_Store
 
 optd-persistent/sql/
+optd_perfbench_workspace/
