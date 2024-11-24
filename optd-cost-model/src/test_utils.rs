@@ -1,7 +1,8 @@
 /// I thought about using the system's own parser and planner to generate these expression trees,
 /// but this is not currently feasible because it would create a cyclic dependency between
 /// optd-datafusion-bridge and optd-datafusion-repr
-#[cfg(test)]
+
+#[cfg(any(test, feature = "include-tests"))]
 pub mod tests {
     use itertools::Itertools;
     use std::{collections::HashMap, sync::Arc};
@@ -533,7 +534,7 @@ pub mod tests {
         )
     }
 
-    pub(crate) fn empty_per_attr_stats() -> TestPerAttributeStats {
+    pub fn empty_per_attr_stats() -> TestPerAttributeStats {
         TestPerAttributeStats::new(
             MostCommonValues::empty(),
             Some(Distribution::empty()),
@@ -542,7 +543,7 @@ pub mod tests {
         )
     }
 
-    pub(crate) fn per_attr_stats_with_ndistinct(ndistinct: u64) -> TestPerAttributeStats {
+    pub fn per_attr_stats_with_ndistinct(ndistinct: u64) -> TestPerAttributeStats {
         TestPerAttributeStats::new(
             MostCommonValues::empty(),
             Some(Distribution::empty()),
@@ -551,7 +552,7 @@ pub mod tests {
         )
     }
 
-    pub(crate) fn per_attr_stats_with_dist_and_ndistinct(
+    pub fn per_attr_stats_with_dist_and_ndistinct(
         dist: Vec<(Value, f64)>,
         ndistinct: u64,
     ) -> TestPerAttributeStats {

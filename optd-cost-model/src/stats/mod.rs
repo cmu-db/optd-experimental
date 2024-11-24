@@ -4,6 +4,7 @@ mod arith_encoder;
 pub mod utilities;
 
 use crate::common::values::Value;
+use arrow_schema::DataType;
 use serde::{Deserialize, Serialize};
 use utilities::counter::Counter;
 use utilities::{
@@ -29,6 +30,8 @@ pub const FULL_WILDCARD_SEL_FACTOR: f64 = 5.0;
 pub const FIXED_CHAR_SEL_FACTOR: f64 = 0.2;
 
 pub type AttributeCombValue = Vec<Option<Value>>;
+pub type ColumnsIdx = Vec<usize>;
+pub type ColumnsType = Vec<DataType>;
 
 // TODO: remove the clone, see the comment in the [`AttributeCombValueStats`]
 #[derive(Serialize, Deserialize, Debug, Clone)]
