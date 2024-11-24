@@ -133,7 +133,7 @@ fn create_tpch_q6_memo() -> HashMap<GroupId, MemoGroupInfo> {
                     nullable: true,
                 }],
             },
-            attr_refs: GroupAttrRefs::new(vec![], None), // What is the AttrRef in this case??
+            attr_refs: GroupAttrRefs::new(vec![AttrRef::Derived], None), // What is the AttrRef in this case??
         },
     );
 
