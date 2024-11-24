@@ -1,4 +1,7 @@
+pub mod q2;
 pub mod q6;
+pub mod q8;
+pub mod q9;
 
 use std::env::consts::OS;
 use std::fmt::{self, Display, Formatter};
