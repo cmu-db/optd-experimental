@@ -9,10 +9,11 @@ use optd_cost_model::{CostModel, EstimatedStatistic};
 use optd_cost_model_perf::dbms::DataFusionBaseTableStats;
 use optd_cost_model_perf::dbms::DatafusionDBMS;
 use optd_cost_model_perf::shell;
+use optd_cost_model_perf::tpch::q6::init_tpch_q6;
+use optd_cost_model_perf::tpch::OperatorNode;
 use optd_cost_model_perf::tpch::TpchKitConfig;
 use optd_cost_model_perf::tpch::TPCH_KIT_POSTGRES;
-use optd_cost_model_perf::tpch_q6::init_tpch_q6;
-use optd_cost_model_perf::tpch_q6::OperatorNode;
+
 use std::collections::HashMap;
 use std::fs;
 
@@ -120,19 +121,6 @@ async fn compute_stats(
     children_stats
 }
 
-/// TPC-H
-///
-/// | Table Name | ID |
-/// |------------|----|
-/// | part       | 0  |
-/// | region     | 1  |
-/// | supplier   | 2  |
-/// | orders     | 3  |
-/// | nation     | 4  |
-/// | lineitem   | 5  |
-/// | partsupp   | 6  |
-/// | customer   | 7  |
-///
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();

@@ -1,7 +1,5 @@
 use datafusion_expr::AggregateFunction;
-use optd_cost_model::common::nodes::{
-    ArcPredicateNode, PhysicalNodeType, PredicateNode, PredicateType,
-};
+use optd_cost_model::common::nodes::{PhysicalNodeType, PredicateNode, PredicateType};
 use optd_cost_model::common::predicates::log_op_pred::LogOpType;
 use optd_cost_model::common::predicates::{
     bin_op_pred::BinOpType, constant_pred::ConstantType, func_pred::FuncType,
@@ -12,28 +10,21 @@ use optd_cost_model::common::properties::Attribute;
 use optd_cost_model::common::types::{ExprId, GroupId, TableId};
 use optd_cost_model::common::values::{SerializableOrderedF64, Value};
 use optd_cost_model::test_utils::tests::MemoGroupInfo;
-use optd_cost_model::{ComputeCostContext, EstimatedStatistic};
+
+use optd_cost_model::ComputeCostContext;
 use ordered_float::OrderedFloat;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::vec;
 
-const LINETIME_TABLE_ID: u64 = 5;
-
-#[derive(Debug, Clone)]
-pub struct OperatorNode {
-    pub typ: PhysicalNodeType,
-    pub predicates: Vec<ArcPredicateNode>,
-    pub children_stats: Vec<EstimatedStatistic>,
-    pub context: ComputeCostContext,
-}
+use super::{OperatorNode, LINEITEM_TABLE_ID};
 
 fn create_tpch_q6_memo() -> HashMap<GroupId, MemoGroupInfo> {
     let mut memo = HashMap::new();
     let mut attribute_refs = vec![];
     for i in 0..15 {
         attribute_refs.push(AttrRef::BaseTableAttrRef(BaseTableAttrRef {
-            table_id: TableId(LINETIME_TABLE_ID), // lineitem
+            table_id: TableId(LINEITEM_TABLE_ID), // lineitem
             attr_idx: i,
         }));
     }
@@ -330,7 +321,7 @@ fn create_tpch_q6_nodes() -> Vec<OperatorNode> {
         predicates: vec![Arc::new(PredicateNode {
             typ: PredicateType::Constant(ConstantType::Utf8String),
             children: vec![],
-            data: Some(Value::UInt64(LINETIME_TABLE_ID)), // lineitem
+            data: Some(Value::UInt64(LINEITEM_TABLE_ID)), // lineitem
         })],
         children_stats: vec![],
         context: ComputeCostContext {
@@ -349,16 +340,18 @@ pub fn init_tpch_q6() -> (
 ) {
     let memo = create_tpch_q6_memo();
     let nodes = create_tpch_q6_nodes();
-    (vec![TableId(LINETIME_TABLE_ID)], memo, nodes)
+    (vec![TableId(LINEITEM_TABLE_ID)], memo, nodes)
 }
 
 #[cfg(test)]
 pub mod tests {
-    use crate::tpch_q6::create_tpch_q6_nodes;
+
     use optd_cost_model::{common::types::TableId, CostModel, EstimatedStatistic};
     use std::collections::HashMap;
 
     use optd_cost_model::test_utils::tests::create_mock_cost_model;
+
+    use crate::tpch::q6::create_tpch_q6_nodes;
 
     #[tokio::test]
     async fn naive_scan_test() {

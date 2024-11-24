@@ -1,7 +1,4 @@
-// Copyright (c) 2023-2024 CMU Database Group
-//
-// Use of this source code is governed by an MIT-style license that can be found in the LICENSE file or at
-// https://opensource.org/licenses/MIT.
+pub mod q6;
 
 use std::env::consts::OS;
 use std::fmt::{self, Display, Formatter};
@@ -13,6 +10,8 @@ use std::{env, fs, io};
 /// A wrapper around tpch-kit
 use csv2parquet::Opts;
 use datafusion::catalog::schema::SchemaProvider;
+use optd_cost_model::common::nodes::{ArcPredicateNode, PhysicalNodeType};
+use optd_cost_model::{ComputeCostContext, EstimatedStatistic};
 use serde::{Deserialize, Serialize};
 
 use crate::shell;
@@ -21,6 +20,36 @@ const TPCH_KIT_REPO_URL: &str = "https://github.com/wangpatrick57/tpch-kit.git";
 pub const TPCH_KIT_POSTGRES: &str = "POSTGRESQL";
 const NUM_TPCH_QUERIES: usize = 22;
 pub const WORKING_QUERY_IDS: &[&str] = &["6"];
+
+/// TPC-H
+///
+/// | Table Name | ID |
+/// |------------|----|
+/// | part       | 0  |
+/// | region     | 1  |
+/// | supplier   | 2  |
+/// | orders     | 3  |
+/// | nation     | 4  |
+/// | lineitem   | 5  |
+/// | partsupp   | 6  |
+/// | customer   | 7  |
+///
+pub const PART_TABLE_ID: u64 = 0;
+pub const REGION_TABLE_ID: u64 = 1;
+pub const SUPPLIER_TABLE_ID: u64 = 2;
+pub const ORDERS_TABLE_ID: u64 = 3;
+pub const NATION_TABLE_ID: u64 = 4;
+pub const LINEITEM_TABLE_ID: u64 = 5;
+pub const PARTSUPP_TABLE_ID: u64 = 6;
+pub const CUSTOMER_TABLE_ID: u64 = 7;
+
+#[derive(Debug, Clone)]
+pub struct OperatorNode {
+    pub typ: PhysicalNodeType,
+    pub predicates: Vec<ArcPredicateNode>,
+    pub children_stats: Vec<EstimatedStatistic>,
+    pub context: ComputeCostContext,
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TpchKitConfig {
