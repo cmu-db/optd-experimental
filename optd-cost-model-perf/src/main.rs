@@ -9,6 +9,9 @@ use optd_cost_model::{CostModel, EstimatedStatistic};
 use optd_cost_model_perf::dbms::DataFusionBaseTableStats;
 use optd_cost_model_perf::dbms::DatafusionDBMS;
 use optd_cost_model_perf::shell;
+use optd_cost_model_perf::tpch::q2::init_tpch_q2;
+use optd_cost_model_perf::tpch::q6::init_tpch_q6;
+use optd_cost_model_perf::tpch::q8::init_tpch_q8;
 use optd_cost_model_perf::tpch::q9::init_tpch_q9;
 use optd_cost_model_perf::tpch::OperatorNode;
 use optd_cost_model_perf::tpch::TpchKitConfig;
@@ -25,7 +28,7 @@ use optd_cost_model_perf::tpch::TPCH_KIT_POSTGRES;
 use std::collections::HashMap;
 use std::fs;
 
-const TPCH_QUERIES: &[&str] = &["6"];
+const TPCH_QUERIES: &[&str] = &["2", "6", "8", "9"];
 
 #[derive(Parser)]
 struct Cli {
@@ -89,7 +92,7 @@ fn get_single_attr_stats(
 async fn compute_stats(
     memo: HashMap<GroupId, MemoGroupInfo>,
     operator_nodes: Vec<OperatorNode>,
-    base_stats: DataFusionBaseTableStats,
+    base_stats: &DataFusionBaseTableStats,
 ) -> EstimatedStatistic {
     let mut per_attribute_stats = vec![];
     let mut row_counts = vec![];
@@ -135,10 +138,10 @@ async fn compute_stats(
             )
             .await
             .unwrap();
-        println!(
-            "Estimated cardinality for {:?}: {}",
-            operator_node.typ, stats.0
-        );
+        // println!(
+        //     "Estimated cardinality for {:?}: {}",
+        //     operator_node.typ, stats.0
+        // );
         derived_stats.insert(operator_node.context.group_id, stats);
     }
 
@@ -178,9 +181,25 @@ async fn main() -> anyhow::Result<()> {
                 query_ids: query_ids.clone(),
             };
             let base_stats = dbms.get_tpch_stats(&tpch_kit_config).await?;
-            let (memo, operator_nodes) = init_tpch_q9();
-            let stats = compute_stats(memo, operator_nodes, base_stats).await;
-            println!("Estimated cardinality: {}", stats.0);
+            for query_id in query_ids {
+                let (memo, operator_nodes) = match query_id.as_str() {
+                    "2" => init_tpch_q2(),
+                    "6" => init_tpch_q6(),
+                    "8" => init_tpch_q8(),
+                    "9" => init_tpch_q9(),
+                    _ => {
+                        return Err(anyhow::anyhow!(
+                            "TPC-H query {} not supported by the benchmark",
+                            query_id
+                        ));
+                    }
+                };
+                let stats = compute_stats(memo, operator_nodes, &base_stats).await;
+                println!(
+                    "Estimated cardinality for TPC-H query {}: {}",
+                    query_id, stats.0
+                );
+            }
             Ok(())
         }
     }
