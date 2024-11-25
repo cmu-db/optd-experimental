@@ -76,9 +76,8 @@ fn get_single_attr_stats(
 }
 
 /// Compute the estimated statistics for a query.
-/// WARNING: This is a VERY naive approach. It assumes that the plan nodes form a linear tree, which is not true in general.
-/// However, this assumption is valid for TPC-H Q6.
-/// TODO: post-order traversal of the plan tree.
+/// The nodes are assumed to be in the order of execution. That is to say, when we compute the stats
+/// for a node, the stats for its children should already be available.
 async fn compute_stats(
     table_ids: Vec<TableId>,
     memo: HashMap<GroupId, MemoGroupInfo>,
@@ -98,17 +97,24 @@ async fn compute_stats(
         row_counts,
         memo.into(),
     );
-    let mut children_stats = EstimatedStatistic(-1.0);
+    let mut derived_stats: HashMap<GroupId, EstimatedStatistic> = HashMap::new();
+    let root_group_id = operator_nodes.last().unwrap().context.group_id;
+
     for mut operator_node in operator_nodes {
-        if children_stats != EstimatedStatistic(-1.0) {
-            operator_node.children_stats.push(children_stats);
+        if !derived_stats.is_empty() {
+            for child_group in &operator_node.context.children_group_ids {
+                // Based on the way we construct the operator nodes, the children stats should be available
+                // at this point.
+                let child_stats = derived_stats.get(child_group).unwrap();
+                operator_node.children_stats.push(child_stats.clone());
+            }
         }
         let stats = cost_model
             .derive_statistics(
                 operator_node.typ,
                 &operator_node.predicates,
                 &operator_node.children_stats,
-                operator_node.context,
+                operator_node.context.clone(),
             )
             .await
             .unwrap();
@@ -116,9 +122,11 @@ async fn compute_stats(
             "Estimated cardinality for {:?}: {}",
             operator_node.typ, stats.0
         );
-        children_stats = stats;
+        derived_stats.insert(operator_node.context.group_id, stats);
     }
-    children_stats
+
+    // The last operator node, i.e. the root node, should have the final stats.
+    derived_stats.get(&root_group_id).unwrap().clone()
 }
 
 #[tokio::main]
