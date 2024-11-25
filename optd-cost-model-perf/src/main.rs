@@ -9,9 +9,17 @@ use optd_cost_model::{CostModel, EstimatedStatistic};
 use optd_cost_model_perf::dbms::DataFusionBaseTableStats;
 use optd_cost_model_perf::dbms::DatafusionDBMS;
 use optd_cost_model_perf::shell;
-use optd_cost_model_perf::tpch::q6::init_tpch_q6;
+use optd_cost_model_perf::tpch::q9::init_tpch_q9;
 use optd_cost_model_perf::tpch::OperatorNode;
 use optd_cost_model_perf::tpch::TpchKitConfig;
+use optd_cost_model_perf::tpch::CUSTOMER_TABLE_ID;
+use optd_cost_model_perf::tpch::LINEITEM_TABLE_ID;
+use optd_cost_model_perf::tpch::NATION_TABLE_ID;
+use optd_cost_model_perf::tpch::ORDERS_TABLE_ID;
+use optd_cost_model_perf::tpch::PARTSUPP_TABLE_ID;
+use optd_cost_model_perf::tpch::PART_TABLE_ID;
+use optd_cost_model_perf::tpch::REGION_TABLE_ID;
+use optd_cost_model_perf::tpch::SUPPLIER_TABLE_ID;
 use optd_cost_model_perf::tpch::TPCH_KIT_POSTGRES;
 
 use std::collections::HashMap;
@@ -79,20 +87,29 @@ fn get_single_attr_stats(
 /// The nodes are assumed to be in the order of execution. That is to say, when we compute the stats
 /// for a node, the stats for its children should already be available.
 async fn compute_stats(
-    table_ids: Vec<TableId>,
     memo: HashMap<GroupId, MemoGroupInfo>,
     operator_nodes: Vec<OperatorNode>,
     base_stats: DataFusionBaseTableStats,
 ) -> EstimatedStatistic {
     let mut per_attribute_stats = vec![];
     let mut row_counts = vec![];
-    for table_id in &table_ids {
+    let all_table_ids = vec![
+        TableId(PART_TABLE_ID),
+        TableId(REGION_TABLE_ID),
+        TableId(SUPPLIER_TABLE_ID),
+        TableId(ORDERS_TABLE_ID),
+        TableId(NATION_TABLE_ID),
+        TableId(LINEITEM_TABLE_ID),
+        TableId(PARTSUPP_TABLE_ID),
+        TableId(CUSTOMER_TABLE_ID),
+    ];
+    for table_id in &all_table_ids {
         let table_stats = &base_stats[&table_id];
         per_attribute_stats.push(get_single_attr_stats(table_stats.column_comb_stats.clone()));
         row_counts.push(Some(table_stats.row_cnt));
     }
     let cost_model = create_mock_cost_model_with_memo(
-        table_ids.clone(),
+        all_table_ids.clone(),
         per_attribute_stats,
         row_counts,
         memo.into(),
@@ -161,8 +178,8 @@ async fn main() -> anyhow::Result<()> {
                 query_ids: query_ids.clone(),
             };
             let base_stats = dbms.get_tpch_stats(&tpch_kit_config).await?;
-            let (table_ids, memo, operator_nodes) = init_tpch_q6();
-            let stats = compute_stats(table_ids, memo, operator_nodes, base_stats).await;
+            let (memo, operator_nodes) = init_tpch_q9();
+            let stats = compute_stats(memo, operator_nodes, base_stats).await;
             println!("Estimated cardinality: {}", stats.0);
             Ok(())
         }

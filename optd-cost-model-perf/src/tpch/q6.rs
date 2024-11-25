@@ -17,6 +17,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::vec;
 
+use crate::init_tpch_query;
+
 use super::{OperatorNode, LINEITEM_TABLE_ID};
 
 fn create_tpch_q6_memo() -> HashMap<GroupId, MemoGroupInfo> {
@@ -333,15 +335,7 @@ fn create_tpch_q6_nodes() -> Vec<OperatorNode> {
     vec![scan_node, filter_node, projection_node, agg_node]
 }
 
-pub fn init_tpch_q6() -> (
-    Vec<TableId>,
-    HashMap<GroupId, MemoGroupInfo>,
-    Vec<OperatorNode>,
-) {
-    let memo = create_tpch_q6_memo();
-    let nodes = create_tpch_q6_nodes();
-    (vec![TableId(LINEITEM_TABLE_ID)], memo, nodes)
-}
+init_tpch_query!(q6);
 
 #[cfg(test)]
 pub mod tests {

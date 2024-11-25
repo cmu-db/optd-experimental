@@ -317,3 +317,20 @@ impl TpchKit {
         Ok(sql_fpath_ordered_iter)
     }
 }
+
+#[macro_export]
+macro_rules! init_tpch_query {
+    ($query_id:ident) => {
+        paste::paste! {
+            pub fn [<init_tpch_ $query_id>]() -> (
+                HashMap<GroupId, MemoGroupInfo>,
+                Vec<OperatorNode>,
+            ) {
+                (
+                    [<create_tpch_ $query_id _memo>](),
+                    [<create_tpch_ $query_id _nodes>](),
+                )
+            }
+        }
+    };
+}

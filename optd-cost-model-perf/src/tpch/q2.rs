@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use datafusion_expr::AggregateFunction;
 use optd_cost_model::{
@@ -8,17 +8,2805 @@ use optd_cost_model::{
             bin_op_pred::BinOpType, constant_pred::ConstantType, func_pred::FuncType,
             log_op_pred::LogOpType, sort_order_pred::SortOrderType,
         },
-        types::{ExprId, GroupId},
+        properties::{
+            attr_ref::{
+                AttrRef, BaseTableAttrRef, EqPredicate, GroupAttrRefs, SemanticCorrelation,
+            },
+            schema::Schema,
+            Attribute,
+        },
+        types::{ExprId, GroupId, TableId},
         values::Value,
     },
+    test_utils::tests::MemoGroupInfo,
     ComputeCostContext,
 };
 
-use crate::tpch::{
-    NATION_TABLE_ID, PARTSUPP_TABLE_ID, PART_TABLE_ID, REGION_TABLE_ID, SUPPLIER_TABLE_ID,
+use crate::{
+    init_tpch_query,
+    tpch::{NATION_TABLE_ID, PARTSUPP_TABLE_ID, PART_TABLE_ID, REGION_TABLE_ID, SUPPLIER_TABLE_ID},
 };
 
 use super::OperatorNode;
+
+pub fn create_tpch_q2_memo() -> HashMap<GroupId, MemoGroupInfo> {
+    let mut memo = HashMap::new();
+
+    memo.insert(
+        GroupId(2),
+        MemoGroupInfo {
+            schema: Schema {
+                attributes: vec![
+                    Attribute {
+                        name: "p_partkey".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_name".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_mfgr".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_brand".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_type".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_size".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_container".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_retailprice".to_string(),
+                        typ: ConstantType::Decimal,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_comment".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                ],
+            },
+            attr_refs: GroupAttrRefs::new(
+                vec![
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 1,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 2,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 3,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 4,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 5,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 6,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 7,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 8,
+                    }),
+                ],
+                None,
+            ),
+        },
+    );
+
+    memo.insert(
+        GroupId(156),
+        MemoGroupInfo {
+            schema: Schema {
+                attributes: vec![
+                    Attribute {
+                        name: "p_partkey".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_name".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_mfgr".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_brand".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_type".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_size".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_container".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_retailprice".to_string(),
+                        typ: ConstantType::Decimal,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_comment".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                ],
+            },
+            attr_refs: GroupAttrRefs::new(
+                vec![
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 1,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 2,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 3,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 4,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 5,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 6,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 7,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 8,
+                    }),
+                ],
+                None,
+            ),
+        },
+    );
+
+    memo.insert(
+        GroupId(14),
+        MemoGroupInfo {
+            schema: Schema {
+                attributes: vec![
+                    Attribute {
+                        name: "ps_partkey".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "ps_suppkey".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "ps_availqty".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "ps_supplycost".to_string(),
+                        typ: ConstantType::Decimal,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "ps_comment".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                ],
+            },
+            attr_refs: GroupAttrRefs::new(
+                vec![
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 1,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 2,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 3,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 4,
+                    }),
+                ],
+                None,
+            ),
+        },
+    );
+
+    let mut semantic_correlation_245 = SemanticCorrelation::new();
+    let eq_predicates = vec![EqPredicate {
+        left: BaseTableAttrRef {
+            table_id: TableId(PART_TABLE_ID), // part
+            attr_idx: 0,
+        },
+        right: BaseTableAttrRef {
+            table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+            attr_idx: 0,
+        },
+    }];
+    for eq_predicate in eq_predicates {
+        semantic_correlation_245.add_predicate(eq_predicate);
+    }
+    memo.insert(
+        GroupId(245),
+        MemoGroupInfo {
+            schema: Schema {
+                attributes: vec![
+                    Attribute {
+                        name: "p_partkey".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_name".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_mfgr".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_brand".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_type".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_size".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_container".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_retailprice".to_string(),
+                        typ: ConstantType::Decimal,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_comment".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "ps_partkey".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "ps_suppkey".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "ps_availqty".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "ps_supplycost".to_string(),
+                        typ: ConstantType::Decimal,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "ps_comment".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                ],
+            },
+            attr_refs: GroupAttrRefs::new(
+                vec![
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 1,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 2,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 3,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 4,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 5,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 6,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 7,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 8,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 1,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 2,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 3,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 4,
+                    }),
+                ],
+                Some(semantic_correlation_245),
+            ),
+        },
+    );
+
+    memo.insert(
+        GroupId(26),
+        MemoGroupInfo {
+            schema: Schema {
+                attributes: vec![
+                    Attribute {
+                        name: "s_suppkey".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "s_name".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "s_address".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "s_nationkey".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "s_phone".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "s_acctbal".to_string(),
+                        typ: ConstantType::Decimal,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "s_comment".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                ],
+            },
+            attr_refs: GroupAttrRefs::new(
+                vec![
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 1,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 2,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 3,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 4,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 5,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 6,
+                    }),
+                ],
+                None,
+            ),
+        },
+    );
+
+    let mut semantic_correlation_1204 = SemanticCorrelation::new();
+    let eq_predicates = vec![
+        EqPredicate {
+            left: BaseTableAttrRef {
+                table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                attr_idx: 1,
+            },
+            right: BaseTableAttrRef {
+                table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                attr_idx: 0,
+            },
+        },
+        EqPredicate {
+            left: BaseTableAttrRef {
+                table_id: TableId(PART_TABLE_ID), // part
+                attr_idx: 0,
+            },
+            right: BaseTableAttrRef {
+                table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                attr_idx: 0,
+            },
+        },
+    ];
+    for eq_predicate in eq_predicates {
+        semantic_correlation_1204.add_predicate(eq_predicate);
+    }
+    memo.insert(
+        GroupId(1204),
+        MemoGroupInfo {
+            schema: Schema {
+                attributes: vec![
+                    Attribute {
+                        name: "p_partkey".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_name".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_mfgr".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_brand".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_type".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_size".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_container".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_retailprice".to_string(),
+                        typ: ConstantType::Decimal,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_comment".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "ps_partkey".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "ps_suppkey".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "ps_availqty".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "ps_supplycost".to_string(),
+                        typ: ConstantType::Decimal,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "ps_comment".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "s_suppkey".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "s_name".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "s_address".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "s_nationkey".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "s_phone".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "s_acctbal".to_string(),
+                        typ: ConstantType::Decimal,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "s_comment".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                ],
+            },
+            attr_refs: GroupAttrRefs::new(
+                vec![
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 1,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 2,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 3,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 4,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 5,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 6,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 7,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 8,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 1,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 2,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 3,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 4,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 1,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 2,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 3,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 4,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 5,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 6,
+                    }),
+                ],
+                Some(semantic_correlation_1204),
+            ),
+        },
+    );
+
+    memo.insert(
+        GroupId(35),
+        MemoGroupInfo {
+            schema: Schema {
+                attributes: vec![
+                    Attribute {
+                        name: "n_nationkey".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "n_name".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "n_regionkey".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "n_comment".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: true,
+                    },
+                ],
+            },
+            attr_refs: GroupAttrRefs::new(
+                vec![
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(NATION_TABLE_ID), // nation
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(NATION_TABLE_ID), // nation
+                        attr_idx: 1,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(NATION_TABLE_ID), // nation
+                        attr_idx: 2,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(NATION_TABLE_ID), // nation
+                        attr_idx: 3,
+                    }),
+                ],
+                None,
+            ),
+        },
+    );
+
+    memo.insert(
+        GroupId(38),
+        MemoGroupInfo {
+            schema: Schema {
+                attributes: vec![
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                ],
+            },
+            attr_refs: GroupAttrRefs::new(
+                vec![
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(NATION_TABLE_ID), // nation
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(NATION_TABLE_ID), // nation
+                        attr_idx: 1,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(NATION_TABLE_ID), // nation
+                        attr_idx: 2,
+                    }),
+                ],
+                None,
+            ),
+        },
+    );
+
+    let mut semantic_correlation_11494 = SemanticCorrelation::new();
+    let eq_predicates = vec![
+        EqPredicate {
+            left: BaseTableAttrRef {
+                table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                attr_idx: 1,
+            },
+            right: BaseTableAttrRef {
+                table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                attr_idx: 0,
+            },
+        },
+        EqPredicate {
+            left: BaseTableAttrRef {
+                table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                attr_idx: 3,
+            },
+            right: BaseTableAttrRef {
+                table_id: TableId(NATION_TABLE_ID), // nation
+                attr_idx: 0,
+            },
+        },
+        EqPredicate {
+            left: BaseTableAttrRef {
+                table_id: TableId(PART_TABLE_ID), // part
+                attr_idx: 0,
+            },
+            right: BaseTableAttrRef {
+                table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                attr_idx: 0,
+            },
+        },
+    ];
+    for eq_predicate in eq_predicates {
+        semantic_correlation_11494.add_predicate(eq_predicate);
+    }
+    memo.insert(
+        GroupId(11494),
+        MemoGroupInfo {
+            schema: Schema {
+                attributes: vec![
+                    Attribute {
+                        name: "p_partkey".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_name".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_mfgr".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_brand".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_type".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_size".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_container".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_retailprice".to_string(),
+                        typ: ConstantType::Decimal,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_comment".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "ps_partkey".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "ps_suppkey".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "ps_availqty".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "ps_supplycost".to_string(),
+                        typ: ConstantType::Decimal,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "ps_comment".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "s_suppkey".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "s_name".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "s_address".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "s_nationkey".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "s_phone".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "s_acctbal".to_string(),
+                        typ: ConstantType::Decimal,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "s_comment".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                ],
+            },
+            attr_refs: GroupAttrRefs::new(
+                vec![
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 1,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 2,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 3,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 4,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 5,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 6,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 7,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 8,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 1,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 2,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 3,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 4,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 1,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 2,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 3,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 4,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 5,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 6,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(NATION_TABLE_ID), // nation
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(NATION_TABLE_ID), // nation
+                        attr_idx: 1,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(NATION_TABLE_ID), // nation
+                        attr_idx: 2,
+                    }),
+                ],
+                Some(semantic_correlation_11494),
+            ),
+        },
+    );
+
+    memo.insert(
+        GroupId(47),
+        MemoGroupInfo {
+            schema: Schema {
+                attributes: vec![
+                    Attribute {
+                        name: "r_regionkey".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "r_name".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "r_comment".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: true,
+                    },
+                ],
+            },
+            attr_refs: GroupAttrRefs::new(
+                vec![
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(REGION_TABLE_ID), // region
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(REGION_TABLE_ID), // region
+                        attr_idx: 1,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(REGION_TABLE_ID), // region
+                        attr_idx: 2,
+                    }),
+                ],
+                None,
+            ),
+        },
+    );
+
+    memo.insert(
+        GroupId(120),
+        MemoGroupInfo {
+            schema: Schema {
+                attributes: vec![
+                    Attribute {
+                        name: "r_regionkey".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "r_name".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "r_comment".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: true,
+                    },
+                ],
+            },
+            attr_refs: GroupAttrRefs::new(
+                vec![
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(REGION_TABLE_ID), // region
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(REGION_TABLE_ID), // region
+                        attr_idx: 1,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(REGION_TABLE_ID), // region
+                        attr_idx: 2,
+                    }),
+                ],
+                None,
+            ),
+        },
+    );
+
+    memo.insert(
+        GroupId(56),
+        MemoGroupInfo {
+            schema: Schema {
+                attributes: vec![Attribute {
+                    name: "unnamed".to_string(),
+                    typ: ConstantType::UInt64,
+                    nullable: true,
+                }],
+            },
+            attr_refs: GroupAttrRefs::new(
+                vec![AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                    table_id: TableId(REGION_TABLE_ID), // region
+                    attr_idx: 0,
+                })],
+                None,
+            ),
+        },
+    );
+
+    let mut semantic_correlation_11835 = SemanticCorrelation::new();
+    let eq_predicates = vec![
+        EqPredicate {
+            left: BaseTableAttrRef {
+                table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                attr_idx: 1,
+            },
+            right: BaseTableAttrRef {
+                table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                attr_idx: 0,
+            },
+        },
+        EqPredicate {
+            left: BaseTableAttrRef {
+                table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                attr_idx: 3,
+            },
+            right: BaseTableAttrRef {
+                table_id: TableId(NATION_TABLE_ID), // nation
+                attr_idx: 0,
+            },
+        },
+        EqPredicate {
+            left: BaseTableAttrRef {
+                table_id: TableId(NATION_TABLE_ID), // nation
+                attr_idx: 2,
+            },
+            right: BaseTableAttrRef {
+                table_id: TableId(REGION_TABLE_ID), // region
+                attr_idx: 0,
+            },
+        },
+        EqPredicate {
+            left: BaseTableAttrRef {
+                table_id: TableId(PART_TABLE_ID), // part
+                attr_idx: 0,
+            },
+            right: BaseTableAttrRef {
+                table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                attr_idx: 0,
+            },
+        },
+    ];
+    for eq_predicate in eq_predicates {
+        semantic_correlation_11835.add_predicate(eq_predicate);
+    }
+    memo.insert(
+        GroupId(11835),
+        MemoGroupInfo {
+            schema: Schema {
+                attributes: vec![
+                    Attribute {
+                        name: "p_partkey".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_name".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_mfgr".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_brand".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_type".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_size".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_container".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_retailprice".to_string(),
+                        typ: ConstantType::Decimal,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_comment".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "ps_partkey".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "ps_suppkey".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "ps_availqty".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "ps_supplycost".to_string(),
+                        typ: ConstantType::Decimal,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "ps_comment".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "s_suppkey".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "s_name".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "s_address".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "s_nationkey".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "s_phone".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "s_acctbal".to_string(),
+                        typ: ConstantType::Decimal,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "s_comment".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                ],
+            },
+            attr_refs: GroupAttrRefs::new(
+                vec![
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 1,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 2,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 3,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 4,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 5,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 6,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 7,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 8,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 1,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 2,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 3,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 4,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 1,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 2,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 3,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 4,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 5,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 6,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(NATION_TABLE_ID), // nation
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(NATION_TABLE_ID), // nation
+                        attr_idx: 1,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(NATION_TABLE_ID), // nation
+                        attr_idx: 2,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(REGION_TABLE_ID), // region
+                        attr_idx: 0,
+                    }),
+                ],
+                Some(semantic_correlation_11835),
+            ),
+        },
+    );
+
+    memo.insert(
+        GroupId(17),
+        MemoGroupInfo {
+            schema: Schema {
+                attributes: vec![
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                ],
+            },
+            attr_refs: GroupAttrRefs::new(
+                vec![
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 1,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 3,
+                    }),
+                ],
+                None,
+            ),
+        },
+    );
+
+    memo.insert(
+        GroupId(68),
+        MemoGroupInfo {
+            schema: Schema {
+                attributes: vec![
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                ],
+            },
+            attr_refs: GroupAttrRefs::new(
+                vec![
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 3,
+                    }),
+                ],
+                None,
+            ),
+        },
+    );
+
+    let mut semantic_correlation_71 = SemanticCorrelation::new();
+    let eq_predicates = vec![EqPredicate {
+        left: BaseTableAttrRef {
+            table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+            attr_idx: 1,
+        },
+        right: BaseTableAttrRef {
+            table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+            attr_idx: 0,
+        },
+    }];
+    for eq_predicate in eq_predicates {
+        semantic_correlation_71.add_predicate(eq_predicate);
+    }
+    memo.insert(
+        GroupId(71),
+        MemoGroupInfo {
+            schema: Schema {
+                attributes: vec![
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                ],
+            },
+            attr_refs: GroupAttrRefs::new(
+                vec![
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 1,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 3,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 3,
+                    }),
+                ],
+                Some(semantic_correlation_71),
+            ),
+        },
+    );
+
+    let mut semantic_correlation_74 = SemanticCorrelation::new();
+    let eq_predicates = vec![EqPredicate {
+        left: BaseTableAttrRef {
+            table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+            attr_idx: 1,
+        },
+        right: BaseTableAttrRef {
+            table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+            attr_idx: 0,
+        },
+    }];
+    for eq_predicate in eq_predicates {
+        semantic_correlation_74.add_predicate(eq_predicate);
+    }
+    memo.insert(
+        GroupId(74),
+        MemoGroupInfo {
+            schema: Schema {
+                attributes: vec![
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                ],
+            },
+            attr_refs: GroupAttrRefs::new(
+                vec![
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 3,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 3,
+                    }),
+                ],
+                Some(semantic_correlation_74),
+            ),
+        },
+    );
+
+    memo.insert(
+        GroupId(78),
+        MemoGroupInfo {
+            schema: Schema {
+                attributes: vec![
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                ],
+            },
+            attr_refs: GroupAttrRefs::new(
+                vec![
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(NATION_TABLE_ID), // nation
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(NATION_TABLE_ID), // nation
+                        attr_idx: 2,
+                    }),
+                ],
+                None,
+            ),
+        },
+    );
+
+    let mut semantic_correlation_81 = SemanticCorrelation::new();
+    let eq_predicates = vec![
+        EqPredicate {
+            left: BaseTableAttrRef {
+                table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                attr_idx: 3,
+            },
+            right: BaseTableAttrRef {
+                table_id: TableId(NATION_TABLE_ID), // nation
+                attr_idx: 0,
+            },
+        },
+        EqPredicate {
+            left: BaseTableAttrRef {
+                table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                attr_idx: 1,
+            },
+            right: BaseTableAttrRef {
+                table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                attr_idx: 0,
+            },
+        },
+    ];
+    for eq_predicate in eq_predicates {
+        semantic_correlation_81.add_predicate(eq_predicate);
+    }
+    memo.insert(
+        GroupId(81),
+        MemoGroupInfo {
+            schema: Schema {
+                attributes: vec![
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                ],
+            },
+            attr_refs: GroupAttrRefs::new(
+                vec![
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 3,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 3,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(NATION_TABLE_ID), // nation
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(NATION_TABLE_ID), // nation
+                        attr_idx: 2,
+                    }),
+                ],
+                Some(semantic_correlation_81),
+            ),
+        },
+    );
+
+    let mut semantic_correlation_84 = SemanticCorrelation::new();
+    let eq_predicates = vec![
+        EqPredicate {
+            left: BaseTableAttrRef {
+                table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                attr_idx: 3,
+            },
+            right: BaseTableAttrRef {
+                table_id: TableId(NATION_TABLE_ID), // nation
+                attr_idx: 0,
+            },
+        },
+        EqPredicate {
+            left: BaseTableAttrRef {
+                table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                attr_idx: 1,
+            },
+            right: BaseTableAttrRef {
+                table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                attr_idx: 0,
+            },
+        },
+    ];
+    for eq_predicate in eq_predicates {
+        semantic_correlation_84.add_predicate(eq_predicate);
+    }
+    memo.insert(
+        GroupId(84),
+        MemoGroupInfo {
+            schema: Schema {
+                attributes: vec![
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                ],
+            },
+            attr_refs: GroupAttrRefs::new(
+                vec![
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 3,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(NATION_TABLE_ID), // nation
+                        attr_idx: 2,
+                    }),
+                ],
+                Some(semantic_correlation_84),
+            ),
+        },
+    );
+
+    let mut semantic_correlation_91 = SemanticCorrelation::new();
+    let eq_predicates = vec![
+        EqPredicate {
+            left: BaseTableAttrRef {
+                table_id: TableId(NATION_TABLE_ID), // nation
+                attr_idx: 2,
+            },
+            right: BaseTableAttrRef {
+                table_id: TableId(REGION_TABLE_ID), // region
+                attr_idx: 0,
+            },
+        },
+        EqPredicate {
+            left: BaseTableAttrRef {
+                table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                attr_idx: 3,
+            },
+            right: BaseTableAttrRef {
+                table_id: TableId(NATION_TABLE_ID), // nation
+                attr_idx: 0,
+            },
+        },
+        EqPredicate {
+            left: BaseTableAttrRef {
+                table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                attr_idx: 1,
+            },
+            right: BaseTableAttrRef {
+                table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                attr_idx: 0,
+            },
+        },
+    ];
+    for eq_predicate in eq_predicates {
+        semantic_correlation_91.add_predicate(eq_predicate);
+    }
+    memo.insert(
+        GroupId(91),
+        MemoGroupInfo {
+            schema: Schema {
+                attributes: vec![
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                ],
+            },
+            attr_refs: GroupAttrRefs::new(
+                vec![
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 3,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(NATION_TABLE_ID), // nation
+                        attr_idx: 2,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(REGION_TABLE_ID), // region
+                        attr_idx: 0,
+                    }),
+                ],
+                Some(semantic_correlation_91),
+            ),
+        },
+    );
+
+    let mut semantic_correlation_94 = SemanticCorrelation::new();
+    let eq_predicates = vec![
+        EqPredicate {
+            left: BaseTableAttrRef {
+                table_id: TableId(NATION_TABLE_ID), // nation
+                attr_idx: 2,
+            },
+            right: BaseTableAttrRef {
+                table_id: TableId(REGION_TABLE_ID), // region
+                attr_idx: 0,
+            },
+        },
+        EqPredicate {
+            left: BaseTableAttrRef {
+                table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                attr_idx: 3,
+            },
+            right: BaseTableAttrRef {
+                table_id: TableId(NATION_TABLE_ID), // nation
+                attr_idx: 0,
+            },
+        },
+        EqPredicate {
+            left: BaseTableAttrRef {
+                table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                attr_idx: 1,
+            },
+            right: BaseTableAttrRef {
+                table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                attr_idx: 0,
+            },
+        },
+    ];
+    for eq_predicate in eq_predicates {
+        semantic_correlation_94.add_predicate(eq_predicate);
+    }
+    memo.insert(
+        GroupId(94),
+        MemoGroupInfo {
+            schema: Schema {
+                attributes: vec![
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                ],
+            },
+            attr_refs: GroupAttrRefs::new(
+                vec![
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 3,
+                    }),
+                ],
+                Some(semantic_correlation_94),
+            ),
+        },
+    );
+
+    memo.insert(
+        GroupId(98),
+        MemoGroupInfo {
+            schema: Schema {
+                attributes: vec![
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::Binary,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                ],
+            },
+            attr_refs: GroupAttrRefs::new(
+                vec![
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 0,
+                    }),
+                    AttrRef::Derived,
+                ],
+                None,
+            ),
+        },
+    );
+
+    memo.insert(
+        GroupId(101),
+        MemoGroupInfo {
+            schema: Schema {
+                attributes: vec![
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                ],
+            },
+            attr_refs: GroupAttrRefs::new(
+                vec![
+                    AttrRef::Derived,
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 0,
+                    }),
+                ],
+                None,
+            ),
+        },
+    );
+
+    let mut semantic_correlation_12190 = SemanticCorrelation::new();
+    let eq_predicates = vec![
+        EqPredicate {
+            left: BaseTableAttrRef {
+                table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                attr_idx: 1,
+            },
+            right: BaseTableAttrRef {
+                table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                attr_idx: 0,
+            },
+        },
+        EqPredicate {
+            left: BaseTableAttrRef {
+                table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                attr_idx: 3,
+            },
+            right: BaseTableAttrRef {
+                table_id: TableId(NATION_TABLE_ID), // nation
+                attr_idx: 0,
+            },
+        },
+        EqPredicate {
+            left: BaseTableAttrRef {
+                table_id: TableId(NATION_TABLE_ID), // nation
+                attr_idx: 2,
+            },
+            right: BaseTableAttrRef {
+                table_id: TableId(REGION_TABLE_ID), // region
+                attr_idx: 0,
+            },
+        },
+        EqPredicate {
+            left: BaseTableAttrRef {
+                table_id: TableId(PART_TABLE_ID), // part
+                attr_idx: 0,
+            },
+            right: BaseTableAttrRef {
+                table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                attr_idx: 0,
+            },
+        },
+    ];
+    for eq_predicate in eq_predicates {
+        semantic_correlation_12190.add_predicate(eq_predicate);
+    }
+    memo.insert(
+        GroupId(12190),
+        MemoGroupInfo {
+            schema: Schema {
+                attributes: vec![
+                    Attribute {
+                        name: "p_partkey".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_name".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_mfgr".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_brand".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_type".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_size".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_container".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_retailprice".to_string(),
+                        typ: ConstantType::Decimal,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "p_comment".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "ps_partkey".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "ps_suppkey".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "ps_availqty".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "ps_supplycost".to_string(),
+                        typ: ConstantType::Decimal,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "ps_comment".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "s_suppkey".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "s_name".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "s_address".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "s_nationkey".to_string(),
+                        typ: ConstantType::Int32,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "s_phone".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "s_acctbal".to_string(),
+                        typ: ConstantType::Decimal,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "s_comment".to_string(),
+                        typ: ConstantType::Utf8String,
+                        nullable: false,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                ],
+            },
+            attr_refs: GroupAttrRefs::new(
+                vec![
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 1,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 2,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 3,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 4,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 5,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 6,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 7,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 8,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 1,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 2,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 3,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 4,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 1,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 2,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 3,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 4,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 5,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 6,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(NATION_TABLE_ID), // nation
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(NATION_TABLE_ID), // nation
+                        attr_idx: 1,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(NATION_TABLE_ID), // nation
+                        attr_idx: 2,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(REGION_TABLE_ID), // region
+                        attr_idx: 0,
+                    }),
+                    AttrRef::Derived,
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                        attr_idx: 0,
+                    }),
+                ],
+                Some(semantic_correlation_12190),
+            ),
+        },
+    );
+
+    let mut semantic_correlation_107 = SemanticCorrelation::new();
+    let eq_predicates = vec![
+        EqPredicate {
+            left: BaseTableAttrRef {
+                table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                attr_idx: 3,
+            },
+            right: BaseTableAttrRef {
+                table_id: TableId(NATION_TABLE_ID), // nation
+                attr_idx: 0,
+            },
+        },
+        EqPredicate {
+            left: BaseTableAttrRef {
+                table_id: TableId(PART_TABLE_ID), // part
+                attr_idx: 0,
+            },
+            right: BaseTableAttrRef {
+                table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                attr_idx: 0,
+            },
+        },
+        EqPredicate {
+            left: BaseTableAttrRef {
+                table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                attr_idx: 1,
+            },
+            right: BaseTableAttrRef {
+                table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                attr_idx: 0,
+            },
+        },
+        EqPredicate {
+            left: BaseTableAttrRef {
+                table_id: TableId(NATION_TABLE_ID), // nation
+                attr_idx: 2,
+            },
+            right: BaseTableAttrRef {
+                table_id: TableId(REGION_TABLE_ID), // region
+                attr_idx: 0,
+            },
+        },
+    ];
+    for eq_predicate in eq_predicates {
+        semantic_correlation_107.add_predicate(eq_predicate);
+    }
+    memo.insert(
+        GroupId(107),
+        MemoGroupInfo {
+            schema: Schema {
+                attributes: vec![
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                ],
+            },
+            attr_refs: GroupAttrRefs::new(
+                vec![
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 5,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 1,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(NATION_TABLE_ID), // nation
+                        attr_idx: 1,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 2,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 2,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 4,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 6,
+                    }),
+                ],
+                Some(semantic_correlation_107),
+            ),
+        },
+    );
+
+    let mut semantic_correlation_110 = SemanticCorrelation::new();
+    let eq_predicates = vec![
+        EqPredicate {
+            left: BaseTableAttrRef {
+                table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                attr_idx: 3,
+            },
+            right: BaseTableAttrRef {
+                table_id: TableId(NATION_TABLE_ID), // nation
+                attr_idx: 0,
+            },
+        },
+        EqPredicate {
+            left: BaseTableAttrRef {
+                table_id: TableId(PART_TABLE_ID), // part
+                attr_idx: 0,
+            },
+            right: BaseTableAttrRef {
+                table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                attr_idx: 0,
+            },
+        },
+        EqPredicate {
+            left: BaseTableAttrRef {
+                table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                attr_idx: 1,
+            },
+            right: BaseTableAttrRef {
+                table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                attr_idx: 0,
+            },
+        },
+        EqPredicate {
+            left: BaseTableAttrRef {
+                table_id: TableId(NATION_TABLE_ID), // nation
+                attr_idx: 2,
+            },
+            right: BaseTableAttrRef {
+                table_id: TableId(REGION_TABLE_ID), // region
+                attr_idx: 0,
+            },
+        },
+    ];
+    for eq_predicate in eq_predicates {
+        semantic_correlation_110.add_predicate(eq_predicate);
+    }
+    memo.insert(
+        GroupId(110),
+        MemoGroupInfo {
+            schema: Schema {
+                attributes: vec![
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                ],
+            },
+            attr_refs: GroupAttrRefs::new(
+                vec![
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 5,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 1,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(NATION_TABLE_ID), // nation
+                        attr_idx: 1,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 2,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 2,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 4,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 6,
+                    }),
+                ],
+                Some(semantic_correlation_110),
+            ),
+        },
+    );
+
+    let mut semantic_correlation_114 = SemanticCorrelation::new();
+    let eq_predicates = vec![
+        EqPredicate {
+            left: BaseTableAttrRef {
+                table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                attr_idx: 3,
+            },
+            right: BaseTableAttrRef {
+                table_id: TableId(NATION_TABLE_ID), // nation
+                attr_idx: 0,
+            },
+        },
+        EqPredicate {
+            left: BaseTableAttrRef {
+                table_id: TableId(PART_TABLE_ID), // part
+                attr_idx: 0,
+            },
+            right: BaseTableAttrRef {
+                table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                attr_idx: 0,
+            },
+        },
+        EqPredicate {
+            left: BaseTableAttrRef {
+                table_id: TableId(PARTSUPP_TABLE_ID), // partsupp
+                attr_idx: 1,
+            },
+            right: BaseTableAttrRef {
+                table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                attr_idx: 0,
+            },
+        },
+        EqPredicate {
+            left: BaseTableAttrRef {
+                table_id: TableId(NATION_TABLE_ID), // nation
+                attr_idx: 2,
+            },
+            right: BaseTableAttrRef {
+                table_id: TableId(REGION_TABLE_ID), // region
+                attr_idx: 0,
+            },
+        },
+    ];
+    for eq_predicate in eq_predicates {
+        semantic_correlation_114.add_predicate(eq_predicate);
+    }
+    memo.insert(
+        GroupId(114),
+        MemoGroupInfo {
+            schema: Schema {
+                attributes: vec![
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                    Attribute {
+                        name: "unnamed".to_string(),
+                        typ: ConstantType::UInt64,
+                        nullable: true,
+                    },
+                ],
+            },
+            attr_refs: GroupAttrRefs::new(
+                vec![
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 5,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 1,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(NATION_TABLE_ID), // nation
+                        attr_idx: 1,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 0,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(PART_TABLE_ID), // part
+                        attr_idx: 2,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 2,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 4,
+                    }),
+                    AttrRef::BaseTableAttrRef(BaseTableAttrRef {
+                        table_id: TableId(SUPPLIER_TABLE_ID), // supplier
+                        attr_idx: 6,
+                    }),
+                ],
+                Some(semantic_correlation_114),
+            ),
+        },
+    );
+
+    memo
+}
 
 pub fn create_tpch_q2_nodes() -> Vec<OperatorNode> {
     let node_114 = OperatorNode {
@@ -846,3 +3634,5 @@ pub fn create_tpch_q2_nodes() -> Vec<OperatorNode> {
         node_114,
     ]
 }
+
+init_tpch_query!(q2);

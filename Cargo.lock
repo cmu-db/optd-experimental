@@ -2408,6 +2408,7 @@ dependencies = [
  "optd-cost-model",
  "optd-persistent",
  "ordered-float 4.5.0",
+ "paste",
  "rayon",
  "serde",
  "serde_json",
