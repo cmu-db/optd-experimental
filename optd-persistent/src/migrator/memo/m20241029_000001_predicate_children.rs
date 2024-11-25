@@ -31,6 +31,7 @@ impl MigrationTrait for Migration {
                     .foreign_key(
                         ForeignKey::create()
                             .from(PredicateChildren::Table, PredicateChildren::ParentId)
+                            .name("ParentId")
                             .to(Predicate::Table, Predicate::Id)
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
@@ -39,6 +40,7 @@ impl MigrationTrait for Migration {
                     .foreign_key(
                         ForeignKey::create()
                             .from(PredicateChildren::Table, PredicateChildren::ChildId)
+                            .name("ChildId")
                             .to(Predicate::Table, Predicate::Id)
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),

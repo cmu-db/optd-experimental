@@ -276,6 +276,7 @@ async fn init_all_tables() -> Result<(), sea_orm::error::DbErr> {
         latest_winner: Set(None),
         in_progress: Set(true),
         is_optimized: Set(false),
+        parent_id: Set(None),
     };
     cascades_group::Entity::insert(cascades_group)
         .exec(&db)
@@ -288,7 +289,6 @@ async fn init_all_tables() -> Result<(), sea_orm::error::DbErr> {
         group_id: Set(1),
         fingerprint: Set(12345),
         variant_tag: Set(0),
-        data: Set(json!(r#"{"expr": "index_scan"}"#)),
     };
     logical_expression::Entity::insert(logical_expression)
         .exec(&db)
@@ -301,7 +301,6 @@ async fn init_all_tables() -> Result<(), sea_orm::error::DbErr> {
         group_id: Set(1),
         fingerprint: Set(12345),
         variant_tag: Set(0),
-        data: Set(json!(r#"{"expr": "index_scan"}"#)),
     };
     physical_expression::Entity::insert(physical_expression)
         .exec(&db)

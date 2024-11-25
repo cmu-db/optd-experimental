@@ -31,43 +31,43 @@ pub enum PhysicalOperator {
 /// expressions are equivalent.
 ///
 /// TODO actually make efficient.
-fn fingerprint(variant_tag: i16, data: &serde_json::Value) -> i64 {
+fn fingerprint(variant_tag: i16) -> i64 {
     let mut hasher = DefaultHasher::new();
 
     variant_tag.hash(&mut hasher);
-    data.hash(&mut hasher);
+    // data.hash(&mut hasher);
 
     hasher.finish() as i64
 }
 
 impl logical_expression::Model {
     /// Creates a new logical expression with an unset `id` and `group_id`.
-    pub fn new(variant_tag: LogicalOperator, data: serde_json::Value) -> Self {
+    pub fn new(variant_tag: LogicalOperator) -> Self {
         let tag = variant_tag as i16;
-        let fingerprint = fingerprint(tag, &data);
+        let fingerprint = fingerprint(tag);
 
         Self {
             id: 0,
             group_id: 0,
             fingerprint,
             variant_tag: tag,
-            data,
+            // data,
         }
     }
 }
 
 impl physical_expression::Model {
     /// Creates a new physical expression with an unset `id` and `group_id`.
-    pub fn new(variant_tag: PhysicalOperator, data: serde_json::Value) -> Self {
+    pub fn new(variant_tag: PhysicalOperator) -> Self {
         let tag = variant_tag as i16;
-        let fingerprint = fingerprint(tag, &data);
+        let fingerprint = fingerprint(tag);
 
         Self {
             id: 0,
             group_id: 0,
             fingerprint,
             variant_tag: tag,
-            data,
+            // data,
         }
     }
 }
