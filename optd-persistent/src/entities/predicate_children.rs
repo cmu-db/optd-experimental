@@ -31,4 +31,19 @@ pub enum Relation {
     Predicate1,
 }
 
+pub struct PredicateChildrenLink;
+
+impl Linked for PredicateChildrenLink {
+    type FromEntity = super::predicate::Entity;
+
+    type ToEntity = super::predicate::Entity;
+
+    fn link(&self) -> Vec<sea_orm::LinkDef> {
+        vec![
+            super::predicate_children::Relation::Predicate2.def(),
+            super::predicate_children::Relation::Predicate1.def(),
+        ]
+    }
+}
+
 impl ActiveModelBehavior for ActiveModel {}

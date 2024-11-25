@@ -46,11 +46,11 @@ async fn basic_demo() {
         group_id: group.id.clone(),
         fingerprint: ActiveValue::Set(42), // Example fingerprint
         variant_tag: ActiveValue::Set(1),  // Example variant tag
-        data: ActiveValue::Set(json!({ // Example operator
-            "type": "Scan",
-            "table": "lineitem",
-            "predicate": "l_quantity < 10",
-        })),
+        // data: ActiveValue::Set(json!({ // Example operator
+        //     "type": "Scan",
+        //     "table": "lineitem",
+        //     "predicate": "l_quantity < 10",
+        // })),
         ..Default::default()
     }
     .save(&db)
