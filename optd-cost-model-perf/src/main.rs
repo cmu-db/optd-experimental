@@ -11,6 +11,7 @@ use optd_cost_model_perf::dbms::DatafusionDBMS;
 use optd_cost_model_perf::shell;
 use optd_cost_model_perf::tpch::q2::init_tpch_q2;
 use optd_cost_model_perf::tpch::q6::init_tpch_q6;
+use optd_cost_model_perf::tpch::q7::init_tpch_q7;
 use optd_cost_model_perf::tpch::q8::init_tpch_q8;
 use optd_cost_model_perf::tpch::q9::init_tpch_q9;
 use optd_cost_model_perf::tpch::OperatorNode;
@@ -28,7 +29,7 @@ use optd_cost_model_perf::tpch::TPCH_KIT_POSTGRES;
 use std::collections::HashMap;
 use std::fs;
 
-const TPCH_QUERIES: &[&str] = &["2", "6", "8", "9"];
+const TPCH_QUERIES: &[&str] = &["2", "6", "7", "8", "9"];
 
 #[derive(Parser)]
 struct Cli {
@@ -138,10 +139,10 @@ async fn compute_stats(
             )
             .await
             .unwrap();
-        // println!(
-        //     "Estimated cardinality for {:?}: {}",
-        //     operator_node.typ, stats.0
-        // );
+        println!(
+            "Estimated cardinality for {:?}: {}",
+            operator_node.typ, stats.0
+        );
         derived_stats.insert(operator_node.context.group_id, stats);
     }
 
@@ -185,6 +186,7 @@ async fn main() -> anyhow::Result<()> {
                 let (memo, operator_nodes) = match query_id.as_str() {
                     "2" => init_tpch_q2(),
                     "6" => init_tpch_q6(),
+                    "7" => init_tpch_q7(),
                     "8" => init_tpch_q8(),
                     "9" => init_tpch_q9(),
                     _ => {
