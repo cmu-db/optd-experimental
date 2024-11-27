@@ -1,3 +1,3 @@
 [workspace]
-members = ["optd-cost-model", "optd-persistent"]
+members = ["optd-mvp"]
 resolver = "2"
