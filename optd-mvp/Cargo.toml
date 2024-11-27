@@ -1,0 +1,27 @@
+[package]
+name = "optd-mvp"
+version = "0.1.0"
+edition = "2021"
+authors = ["Connor Tsui"]
+
+[dependencies]
+
+# `VARIANTS` constant made public in "1.1.1".
+sea-orm = { version = "1.1.1", features = [
+    "sqlx-sqlite",
+    "runtime-tokio-rustls",
+    "macros",
+    "debug-print",
+    "with-json",
+] }
+sea-orm-migration = "1.0"
+serde = "1.0"
+serde_json = "1.0.118" # Support `Hash` on `serde_json::Value` in "1.0.118".
+tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
+trait-variant = "0.1.2" # Support `make(Send)` syntax in "0.1.2".
+thiserror = "2.0"
+
+# Pin more recent versions for `-Zminimal-versions`.
+async-trait = "0.1.43" # Remove lifetime parameter from "0.1.42".
+async-stream = "0.3.1"  # Fix unsatisfied trait bound from "0.3.0".
+strum = "0.26.0" # Fix `std::marker::Sized` from "0.25.0".
