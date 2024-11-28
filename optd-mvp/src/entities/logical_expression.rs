@@ -8,7 +8,6 @@ pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
     pub group_id: i32,
-    pub fingerprint: i64,
     pub kind: i16,
     pub data: Json,
 }
@@ -23,8 +22,16 @@ pub enum Relation {
         on_delete = "Cascade"
     )]
     CascadesGroup,
+    #[sea_orm(has_many = "super::fingerprint::Entity")]
+    Fingerprint,
     #[sea_orm(has_many = "super::logical_children::Entity")]
     LogicalChildren,
+}
+
+impl Related<super::fingerprint::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Fingerprint.def()
+    }
 }
 
 impl Related<super::logical_children::Entity> for Entity {

@@ -8,7 +8,6 @@ pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
     pub group_id: i32,
-    pub fingerprint: i64,
     pub kind: i16,
     pub data: Json,
 }

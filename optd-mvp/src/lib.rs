@@ -10,6 +10,8 @@ mod entities;
 mod memo;
 use memo::MemoError;
 
+mod expression;
+
 /// The filename of the SQLite database for migration.
 pub const DATABASE_FILENAME: &str = "sqlite.db";
 /// The URL of the SQLite database for migration.
@@ -34,4 +36,16 @@ pub type OptimizerResult<T> = Result<T, OptimizerError>;
 /// Applies all migrations.
 pub async fn migrate(db: &DatabaseConnection) -> Result<(), DbErr> {
     Migrator::refresh(db).await
+}
+
+/// Helper function for hashing expression data.
+///
+/// TODO remove this.
+fn hash_expression(kind: i16, data: &serde_json::Value) -> i64 {
+    use std::hash::{DefaultHasher, Hash, Hasher};
+
+    let mut hasher = DefaultHasher::new();
+    kind.hash(&mut hasher);
+    data.hash(&mut hasher);
+    hasher.finish() as i64
 }

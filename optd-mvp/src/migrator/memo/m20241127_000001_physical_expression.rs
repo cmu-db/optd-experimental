@@ -20,9 +20,10 @@
 //! Each `physical_expression` has a unique primary key ID, and other tables will store a foreign
 //! key reference to a specific `physical_expression`s.
 //!
-//! The more interesting column is the `fingerprint` column, in which we store a hashed fingerprint
-//! value that can be used to efficiently check equality between two potentially equivalent physical
-//! expressions (hash-consing). See ???FIXME??? for more information on expression fingerprints.
+//! Note that `physical_expression` does **not** store a fingerprint. Remember that we want to
+//! detect duplicates in the logical exploration phase. If there are no duplicate logical
+//! expressions in the memo table, then there cannot be any duplicate physical expressions, which
+//! are derived from said deduplicated logical expressions.
 //!
 //! Finally, since there are many different types of operators, we store a variant tag and a data
 //! column as JSON to represent the semi-structured data fields of logical operators.
@@ -44,7 +45,6 @@ pub enum PhysicalExpression {
     Table,
     Id,
     GroupId,
-    Fingerprint,
     Kind,
     Data,
 }
@@ -69,7 +69,6 @@ impl MigrationTrait for Migration {
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
-                    .col(big_unsigned(PhysicalExpression::Fingerprint))
                     .col(small_integer(PhysicalExpression::Kind))
                     .col(json(PhysicalExpression::Data))
                     .to_owned(),

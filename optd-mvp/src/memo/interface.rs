@@ -1,8 +1,11 @@
+//! This module defines the [`Memo`] trait, which defines shared behavior of all memo table that can
+//! be used for query optimization in the Cascades framework.
+
 use crate::OptimizerResult;
 use thiserror::Error;
 
-#[derive(Error, Debug)]
 /// The different kinds of errors that might occur while running operations on a memo table.
+#[derive(Error, Debug)]
 pub enum MemoError {
     #[error("unknown group ID {0}")]
     UnknownGroup(i32),
@@ -20,6 +23,8 @@ pub enum MemoError {
 /// See this [blog post](
 /// https://blog.rust-lang.org/2023/12/21/async-fn-rpit-in-traits.html#async-fn-in-public-traits)
 /// for more information.
+///
+/// TODO remove dead code.
 #[allow(dead_code)]
 #[trait_variant::make(Send)]
 pub trait Memo {
@@ -75,6 +80,18 @@ pub trait Memo {
         group_id: Self::GroupId,
     ) -> OptimizerResult<Vec<Self::PhysicalExpressionId>>;
 
+    /// Checks if a given logical expression is a duplicate / already exists in the memo table.
+    ///
+    /// In order to prevent a large amount of duplicate work, the memo table must support duplicate
+    /// expression detection.
+    ///
+    /// Returns `Some(expression_id)` if the memo table detects that the expression already exists,
+    /// and `None` otherwise.
+    async fn is_duplicate_logical_expression(
+        &self,
+        logical_expression: &Self::LogicalExpression,
+    ) -> OptimizerResult<Option<Self::LogicalExpressionId>>;
+
     /// Updates / replaces a group's best physical plan (winner). Optionally returns the previous
     /// winner's physical expression ID.
     ///
@@ -85,26 +102,7 @@ pub trait Memo {
         physical_expression_id: Self::PhysicalExpressionId,
     ) -> OptimizerResult<Option<Self::PhysicalExpressionId>>;
 
-    /// Adds a logical expression to an existing group via its [`Self::GroupId`]. This function
-    /// assumes that insertion of this expression would not create any duplicates.
-    ///
-    /// The caller is required to pass in a slice of `GroupId` that represent the child groups of
-    /// the input expression.
-    ///
-    /// The caller is also required to set the `group_id` field of the input `logical_expression`
-    /// to be equal to `group_id`, otherwise this function will return a
-    /// [`MemoError::InvalidExpression`] error.
-    ///
-    /// If the group does not exist, returns a [`MemoError::UnknownGroup`] error.
-    async fn add_logical_expression_to_group(
-        &self,
-        group_id: Self::GroupId,
-        logical_expression: Self::LogicalExpression,
-        children: &[Self::GroupId],
-    ) -> OptimizerResult<()>;
-
-    /// Adds a physical expression to an existing group via its [`Self::GroupId`]. This function
-    /// assumes that insertion of this expression would not create any duplicates.
+    /// Adds a physical expression to an existing group via its [`Self::GroupId`].
     ///
     /// The caller is required to pass in a slice of `GroupId` that represent the child groups of
     /// the input expression.
@@ -114,12 +112,39 @@ pub trait Memo {
     /// [`MemoError::InvalidExpression`] error.
     ///
     /// If the group does not exist, returns a [`MemoError::UnknownGroup`] error.
+    ///
+    /// On successful insertion, returns the ID of the physical expression.
     async fn add_physical_expression_to_group(
         &self,
         group_id: Self::GroupId,
         physical_expression: Self::PhysicalExpression,
         children: &[Self::GroupId],
-    ) -> OptimizerResult<()>;
+    ) -> OptimizerResult<Self::PhysicalExpressionId>;
+
+    /// Adds a logical expression to an existing group via its [`Self::GroupId`].
+    ///
+    /// The caller is required to pass in a slice of `GroupId` that represent the child groups of
+    /// the input expression.
+    ///
+    /// The caller is also required to set the `group_id` field of the input `logical_expression`
+    /// to be equal to `group_id`, otherwise this function will return a
+    /// [`MemoError::InvalidExpression`] error.
+    ///
+    /// If the group does not exist, returns a [`MemoError::UnknownGroup`] error.
+    ///
+    /// If the memo table detects that the input logical expression is a duplicate expression, it
+    /// will **not** insert the expression into the memo table. Instead, it will return an
+    /// `Ok(Err(expression_id))`, which is a unique identifier of the expression that the input is a
+    /// duplicate of. The caller can use this ID to retrieve the group the original belongs to.
+    ///
+    /// If the memo table detects that the input is unique, it will insert the expression into the
+    /// input group and return an `Ok(Ok(expression_id))`.
+    async fn add_logical_expression_to_group(
+        &self,
+        group_id: Self::GroupId,
+        logical_expression: Self::LogicalExpression,
+        children: &[Self::GroupId],
+    ) -> OptimizerResult<Result<Self::LogicalExpressionId, Self::LogicalExpressionId>>;
 
     /// Adds a new logical expression into the memo table, creating a new group if the expression
     /// does not already exist.
@@ -142,5 +167,10 @@ pub trait Memo {
         &self,
         expression: Self::LogicalExpression,
         children: &[Self::LogicalExpressionId],
-    ) -> OptimizerResult<(Self::GroupId, Self::LogicalExpressionId)>;
+    ) -> OptimizerResult<
+        Result<
+            (Self::GroupId, Self::LogicalExpressionId),
+            (Self::GroupId, Self::LogicalExpressionId),
+        >,
+    >;
 }

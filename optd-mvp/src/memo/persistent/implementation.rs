@@ -1,28 +1,11 @@
+//! This module contains the implementation of the [`Memo`] trait for [`PersistentMemo`].
+
+use super::*;
 use crate::{
-    entities::{prelude::*, *},
+    hash_expression,
     memo::{Memo, MemoError},
-    OptimizerResult, DATABASE_URL,
+    OptimizerResult,
 };
-use sea_orm::*;
-
-/// A persistent memo table, backed by a database on disk.
-///
-/// TODO more docs.
-pub struct PersistentMemo {
-    /// This `PersistentMemo` is reliant on the SeaORM [`DatabaseConnection`] that stores all of the
-    /// objects needed for query optimization.
-    db: DatabaseConnection,
-}
-
-impl PersistentMemo {
-    /// TODO remove dead code and write docs.
-    #[allow(dead_code)]
-    pub async fn new() -> Self {
-        Self {
-            db: Database::connect(DATABASE_URL).await.unwrap(),
-        }
-    }
-}
 
 impl Memo for PersistentMemo {
     type Group = cascades_group::Model;
@@ -91,6 +74,41 @@ impl Memo for PersistentMemo {
             .collect())
     }
 
+    /// FIXME Check that all of the children are root groups?
+    async fn is_duplicate_logical_expression(
+        &self,
+        logical_expression: &Self::LogicalExpression,
+    ) -> OptimizerResult<Option<Self::LogicalExpressionId>> {
+        // Lookup all expressions that have the same fingerprint and kind. There may be false
+        // positives, but we will check for those next.
+        let kind = logical_expression.kind;
+        let fingerprint = hash_expression(kind, &logical_expression.data);
+
+        let potential_matches = Fingerprint::find()
+            .filter(fingerprint::Column::Hash.eq(fingerprint))
+            .filter(fingerprint::Column::Kind.eq(kind))
+            .all(&self.db)
+            .await?;
+
+        if potential_matches.is_empty() {
+            return Ok(None);
+        }
+
+        let mut match_id = None;
+        for potential_match in potential_matches {
+            let expr_id = potential_match.logical_expression_id;
+            let expr = self.get_logical_expression(expr_id).await?;
+
+            if expr.data == logical_expression.data {
+                // There should be at most one duplicate expression.
+                match_id = Some(expr_id);
+                break;
+            }
+        }
+
+        Ok(match_id)
+    }
+
     /// FIXME: In the future, this should first check that we aren't overwriting a winner that was
     /// updated from another thread.
     async fn update_group_winner(
@@ -110,46 +128,12 @@ impl Memo for PersistentMemo {
         Ok(old)
     }
 
-    async fn add_logical_expression_to_group(
-        &self,
-        group_id: Self::GroupId,
-        logical_expression: Self::LogicalExpression,
-        children: &[Self::GroupId],
-    ) -> OptimizerResult<()> {
-        if logical_expression.group_id != group_id {
-            Err(MemoError::InvalidExpression)?
-        }
-
-        // Check if the group actually exists.
-        let _ = self.get_group(group_id).await?;
-
-        // Insert the child groups of the expression into the junction / children table.
-        if !children.is_empty() {
-            LogicalChildren::insert_many(children.iter().copied().map(|group_id| {
-                logical_children::ActiveModel {
-                    logical_expression_id: Set(logical_expression.id),
-                    group_id: Set(group_id),
-                }
-            }))
-            .exec(&self.db)
-            .await?;
-        }
-
-        // Insert the expression.
-        let _ = logical_expression
-            .into_active_model()
-            .insert(&self.db)
-            .await?;
-
-        Ok(())
-    }
-
     async fn add_physical_expression_to_group(
         &self,
         group_id: Self::GroupId,
         physical_expression: Self::PhysicalExpression,
         children: &[Self::GroupId],
-    ) -> OptimizerResult<()> {
+    ) -> OptimizerResult<Self::PhysicalExpressionId> {
         if physical_expression.group_id != group_id {
             Err(MemoError::InvalidExpression)?
         }
@@ -170,45 +154,75 @@ impl Memo for PersistentMemo {
         }
 
         // Insert the expression.
-        let _ = physical_expression
+        let res = physical_expression
             .into_active_model()
             .insert(&self.db)
             .await?;
 
-        Ok(())
+        Ok(res.id)
     }
 
+    /// FIXME Check that all of the children are reduced groups?
+    async fn add_logical_expression_to_group(
+        &self,
+        group_id: Self::GroupId,
+        logical_expression: Self::LogicalExpression,
+        children: &[Self::GroupId],
+    ) -> OptimizerResult<Result<Self::LogicalExpressionId, Self::LogicalExpressionId>> {
+        if logical_expression.group_id != group_id {
+            Err(MemoError::InvalidExpression)?
+        }
+
+        // Check if the expression already exists in the memo table.
+        if let Some(existing_id) = self
+            .is_duplicate_logical_expression(&logical_expression)
+            .await?
+        {
+            return Ok(Err(existing_id));
+        }
+
+        // Check if the group actually exists.
+        let _ = self.get_group(group_id).await?;
+
+        // Insert the child groups of the expression into the junction / children table.
+        if !children.is_empty() {
+            LogicalChildren::insert_many(children.iter().copied().map(|group_id| {
+                logical_children::ActiveModel {
+                    logical_expression_id: Set(logical_expression.id),
+                    group_id: Set(group_id),
+                }
+            }))
+            .exec(&self.db)
+            .await?;
+        }
+
+        // Insert the expression.
+        let res = logical_expression
+            .into_active_model()
+            .insert(&self.db)
+            .await?;
+
+        Ok(Ok(res.id))
+    }
+
+    /// FIXME Check that all of the children are reduced groups?
     async fn add_logical_expression(
         &self,
         logical_expression: Self::LogicalExpression,
         children: &[Self::GroupId],
-    ) -> OptimizerResult<(Self::GroupId, Self::LogicalExpressionId)> {
-        // Lookup all expressions that have the same fingerprint. There may be false positives, but
-        // we will check for those later.
-        let fingerprint = logical_expression.fingerprint;
-        let potential_matches = LogicalExpression::find()
-            .filter(logical_expression::Column::Fingerprint.eq(fingerprint))
-            .all(&self.db)
-            .await?;
-
-        // Of the expressions that have the same fingerprint, check if there already exists an
-        // expression that is exactly identical to the input expression.
-        let mut matches: Vec<_> = potential_matches
-            .into_iter()
-            .filter(|expr| expr == &logical_expression)
-            .collect();
-        assert!(
-            matches.len() <= 1,
-            "there cannot be more than 1 exact logical expression match"
-        );
-
-        // The expression already exists, so return its data.
-        if !matches.is_empty() {
-            let existing_expression = matches
-                .pop()
-                .expect("we just checked that an element exists");
-
-            return Ok((existing_expression.group_id, existing_expression.id));
+    ) -> OptimizerResult<
+        Result<
+            (Self::GroupId, Self::LogicalExpressionId),
+            (Self::GroupId, Self::LogicalExpressionId),
+        >,
+    > {
+        // Check if the expression already exists in the memo table.
+        if let Some(existing_id) = self
+            .is_duplicate_logical_expression(&logical_expression)
+            .await?
+        {
+            let expr = self.get_logical_expression(existing_id).await?;
+            return Ok(Err((expr.group_id, expr.id)));
         }
 
         // The expression does not exist yet, so we need to create a new group and new expression.
@@ -239,6 +253,18 @@ impl Memo for PersistentMemo {
             .await?;
         }
 
-        Ok((new_expr.group_id, new_expr.id))
+        // Insert the fingerprint of the logical expression.
+        let hash = hash_expression(new_expr.kind, &new_expr.data);
+        let fingerprint = fingerprint::ActiveModel {
+            id: NotSet,
+            logical_expression_id: Set(new_expr.id),
+            kind: Set(new_expr.kind),
+            hash: Set(hash),
+        };
+        let _ = fingerprint::Entity::insert(fingerprint)
+            .exec(&self.db)
+            .await?;
+
+        Ok(Ok((new_expr.group_id, new_expr.id)))
     }
 }

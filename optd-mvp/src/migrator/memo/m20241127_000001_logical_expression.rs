@@ -19,21 +19,23 @@
 //! Each `logical_expression` has a unique primary key ID, but it holds little importance other than
 //! helping distinguish between two different expressions.
 //!
-//! The more interesting column is the `fingerprint` column, in which we store a hashed fingerprint
-//! value that can be used to efficiently check equality between two potentially equivalent logical
-//! expressions (hash-consing). See ???FIXME??? for more information on expression fingerprints.
-//!
 //! Finally, since there are many different types of operators, we store a variant tag and a data
 //! column as JSON to represent the semi-structured data fields of logical operators.
 //!
 //! # Entity Relationships
 //!
-//! The only relationship that `logical_expression` has is to [`cascades_group`]. It has **both** a
+//! The main relationship that `logical_expression` has is to [`cascades_group`]. It has **both** a
 //! one-to-many **and** a many-to-many relationship with [`cascades_group`], and you can see more
 //! details about this in the module-level documentation for [`cascades_group`].
 //!
+//! The other relationship that `logical_expression` has is to [`fingerprint`]. This table stores
+//! 1 or more fingerprints for every (unique) logical expression. The reason we have multiple
+//! fingerprints is that an expression can belong to multiple groups during the exploration phase
+//! before the merging of groups.
+//!
 //! [`cascades_group`]: super::cascades_group
 //! [`physical_expression`]: super::physical_expression
+//! [`fingerprint`]: super::fingerprint
 
 use crate::migrator::memo::cascades_group::CascadesGroup;
 use sea_orm_migration::{prelude::*, schema::*};
@@ -43,7 +45,6 @@ pub enum LogicalExpression {
     Table,
     Id,
     GroupId,
-    Fingerprint,
     Kind,
     Data,
 }
@@ -68,7 +69,6 @@ impl MigrationTrait for Migration {
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
-                    .col(big_unsigned(LogicalExpression::Fingerprint))
                     .col(small_integer(LogicalExpression::Kind))
                     .col(json(LogicalExpression::Data))
                     .to_owned(),
