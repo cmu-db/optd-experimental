@@ -74,9 +74,9 @@ use sea_orm_migration::{prelude::*, schema::*};
 pub enum CascadesGroup {
     Table,
     Id,
+    Status,
     Winner,
     Cost,
-    IsOptimized,
     ParentId,
 }
 
@@ -92,8 +92,9 @@ impl MigrationTrait for Migration {
                     .table(CascadesGroup::Table)
                     .if_not_exists()
                     .col(pk_auto(CascadesGroup::Id))
+                    .col(tiny_integer(CascadesGroup::Status))
                     .col(integer_null(CascadesGroup::Winner))
-                    .col(big_unsigned_null(CascadesGroup::Cost))
+                    .col(big_integer_null(CascadesGroup::Cost))
                     .foreign_key(
                         ForeignKey::create()
                             .from(CascadesGroup::Table, CascadesGroup::Winner)
@@ -101,7 +102,6 @@ impl MigrationTrait for Migration {
                             .on_delete(ForeignKeyAction::SetNull)
                             .on_update(ForeignKeyAction::Cascade),
                     )
-                    .col(boolean(CascadesGroup::IsOptimized))
                     .col(integer_null(CascadesGroup::ParentId))
                     .foreign_key(
                         ForeignKey::create()

@@ -19,6 +19,14 @@ pub struct LogicalExpressionId(pub i32);
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct PhysicalExpressionId(pub i32);
 
+/// A status enum representing the different states a group can be during query optimization.
+#[repr(u8)]
+pub enum GroupStatus {
+    InProgress = 0,
+    Explored = 1,
+    Optimized = 2,
+}
+
 /// The different kinds of errors that might occur while running operations on a memo table.
 #[derive(Error, Debug)]
 pub enum MemoError {

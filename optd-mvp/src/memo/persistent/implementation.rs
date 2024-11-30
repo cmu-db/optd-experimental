@@ -10,7 +10,7 @@ use super::PersistentMemo;
 use crate::{
     entities::*,
     expression::{LogicalExpression, PhysicalExpression},
-    memo::{GroupId, LogicalExpressionId, MemoError, PhysicalExpressionId},
+    memo::{GroupId, GroupStatus, LogicalExpressionId, MemoError, PhysicalExpressionId},
     OptimizerResult, DATABASE_URL,
 };
 use sea_orm::{
@@ -64,6 +64,40 @@ impl PersistentMemo {
             .one(&self.db)
             .await?
             .ok_or(MemoError::UnknownGroup(group_id))?)
+    }
+
+    /// Retrieves the root / canonical group ID of the given group ID.
+    ///
+    /// The groups form a union find / disjoint set parent pointer forest, where group merging
+    /// causes two trees to merge.
+    ///
+    /// This function uses the path compression optimization, which amortizes the cost to a single
+    /// lookup (theoretically in constant time, but we must be wary of the I/O roundtrip).
+    pub async fn get_root_group(&self, group_id: GroupId) -> OptimizerResult<GroupId> {
+        let mut curr_group = self.get_group(group_id).await?;
+
+        // Traverse up the path and find the root group, keeping track of groups we have visited.
+        let mut path = vec![];
+        loop {
+            let Some(parent_id) = curr_group.parent_id else {
+                break;
+            };
+
+            let next_group = self.get_group(GroupId(parent_id)).await?;
+            path.push(curr_group);
+            curr_group = next_group;
+        }
+
+        let root_id = GroupId(curr_group.id);
+
+        // Path Compression Optimization:
+        // For every group along the path that we walked, set their parent id pointer to the root.
+        // This allows for an amortized O(1) cost for `get_root_group`.
+        for group in path {
+            self.update_group_parent(GroupId(group.id), root_id).await?;
+        }
+
+        Ok(root_id)
     }
 
     /// Retrieves a [`physical_expression::Model`] given a [`PhysicalExpressionId`].
@@ -146,6 +180,32 @@ impl PersistentMemo {
         Ok(children)
     }
 
+    /// Updates / replaces a group's status. Returns the previous group status.
+    ///
+    /// If the group does not exist, returns a [`MemoError::UnknownGroup`] error.
+    pub async fn update_group_status(
+        &self,
+        group_id: GroupId,
+        status: GroupStatus,
+    ) -> OptimizerResult<GroupStatus> {
+        // First retrieve the group record.
+        let mut group = self.get_group(group_id).await?.into_active_model();
+
+        // Update the group's status.
+        let old_status = group.status;
+        group.status = Set(status as u8 as i8);
+        group.update(&self.db).await?;
+
+        let old_status = match old_status.unwrap() {
+            0 => GroupStatus::InProgress,
+            1 => GroupStatus::Explored,
+            2 => GroupStatus::Optimized,
+            _ => panic!("encountered an invalid group status"),
+        };
+
+        Ok(old_status)
+    }
+
     /// Updates / replaces a group's best physical plan (winner). Optionally returns the previous
     /// winner's physical expression ID.
     ///
@@ -167,8 +227,32 @@ impl PersistentMemo {
         group.update(&self.db).await?;
 
         // Note that the `unwrap` here is unwrapping the `ActiveValue`, not the `Option`.
-        let old = old_id.unwrap().map(PhysicalExpressionId);
-        Ok(old)
+        let old_id = old_id.unwrap().map(PhysicalExpressionId);
+        Ok(old_id)
+    }
+
+    /// Updates / replaces a group's parent group. Optionally returns the previous parent.
+    ///
+    /// If either of the groups do not exist, returns a [`MemoError::UnknownGroup`] error.
+    pub async fn update_group_parent(
+        &self,
+        group_id: GroupId,
+        parent_id: GroupId,
+    ) -> OptimizerResult<Option<GroupId>> {
+        // First retrieve the group record.
+        let mut group = self.get_group(group_id).await?.into_active_model();
+
+        // Check that the parent group exists.
+        let _ = self.get_group(parent_id).await?;
+
+        // Update the group to point to the new parent.
+        let old_parent = group.parent_id;
+        group.parent_id = Set(Some(parent_id.0));
+        group.update(&self.db).await?;
+
+        // Note that the `unwrap` here is unwrapping the `ActiveValue`, not the `Option`.
+        let old_parent = old_parent.unwrap().map(GroupId);
+        Ok(old_parent)
     }
 
     /// Adds a logical expression to an existing group via its ID.
@@ -192,10 +276,10 @@ impl PersistentMemo {
         group_id: GroupId,
         logical_expression: LogicalExpression,
         children: &[GroupId],
-    ) -> OptimizerResult<Result<LogicalExpressionId, LogicalExpressionId>> {
+    ) -> OptimizerResult<Result<LogicalExpressionId, (GroupId, LogicalExpressionId)>> {
         // Check if the expression already exists anywhere in the memo table.
         if let Some(existing_id) = self
-            .is_duplicate_logical_expression(&logical_expression)
+            .is_duplicate_logical_expression(&logical_expression, children)
             .await?
         {
             return Ok(Err(existing_id));
@@ -227,7 +311,15 @@ impl PersistentMemo {
         // Finally, insert the fingerprint of the logical expression as well.
         let new_expr: LogicalExpression = new_model.into();
         let kind = new_expr.kind();
-        let hash = new_expr.fingerprint();
+
+        // In order to calculate a correct fingerprint, we will want to use the IDs of the root
+        // groups of the children instead of the child ID themselves.
+        let mut rewrites = vec![];
+        for &child_id in children {
+            let root_id = self.get_root_group(child_id).await?;
+            rewrites.push((child_id, root_id));
+        }
+        let hash = new_expr.fingerprint_with_rewrite(&rewrites);
 
         let fingerprint = fingerprint::ActiveModel {
             id: NotSet,
@@ -285,8 +377,8 @@ impl PersistentMemo {
     /// In order to prevent a large amount of duplicate work, the memo table must support duplicate
     /// expression detection.
     ///
-    /// Returns `Some(expression_id)` if the memo table detects that the expression already exists,
-    /// and `None` otherwise.
+    /// Returns `Some((group_id, expression_id))` if the memo table detects that the expression
+    /// already exists, and `None` otherwise.
     ///
     /// This function assumes that the child groups of the expression are currently roots of their
     /// group sets. For example, if G1 and G2 should be merged, and G1 is the root, then the input
@@ -296,13 +388,22 @@ impl PersistentMemo {
     pub async fn is_duplicate_logical_expression(
         &self,
         logical_expression: &LogicalExpression,
-    ) -> OptimizerResult<Option<LogicalExpressionId>> {
+        children: &[GroupId],
+    ) -> OptimizerResult<Option<(GroupId, LogicalExpressionId)>> {
         let model: logical_expression::Model = logical_expression.clone().into();
 
         // Lookup all expressions that have the same fingerprint and kind. There may be false
         // positives, but we will check for those next.
         let kind = model.kind;
-        let fingerprint = logical_expression.fingerprint();
+
+        // In order to calculate a correct fingerprint, we will want to use the IDs of the root
+        // groups of the children instead of the child ID themselves.
+        let mut rewrites = vec![];
+        for &child_id in children {
+            let root_id = self.get_root_group(child_id).await?;
+            rewrites.push((child_id, root_id));
+        }
+        let fingerprint = logical_expression.fingerprint_with_rewrite(&rewrites);
 
         // Filter first by the fingerprint, and then the kind.
         // FIXME: The kind is already embedded into the fingerprint, so we may not actually need the
@@ -323,11 +424,11 @@ impl PersistentMemo {
         let mut match_id = None;
         for potential_match in potential_matches {
             let expr_id = LogicalExpressionId(potential_match.logical_expression_id);
-            let (_, expr) = self.get_logical_expression(expr_id).await?;
+            let (group_id, expr) = self.get_logical_expression(expr_id).await?;
 
             // Check for an exact match.
             if &expr == logical_expression {
-                match_id = Some(expr_id);
+                match_id = Some((group_id, expr_id));
 
                 // There should be at most one duplicate expression, so we can break here.
                 break;
@@ -359,18 +460,17 @@ impl PersistentMemo {
     ) -> OptimizerResult<Result<(GroupId, LogicalExpressionId), (GroupId, LogicalExpressionId)>>
     {
         // Check if the expression already exists in the memo table.
-        if let Some(existing_id) = self
-            .is_duplicate_logical_expression(&logical_expression)
+        if let Some((group_id, existing_id)) = self
+            .is_duplicate_logical_expression(&logical_expression, children)
             .await?
         {
-            let (group_id, _expr) = self.get_logical_expression(existing_id).await?;
             return Ok(Err((group_id, existing_id)));
         }
 
         // The expression does not exist yet, so we need to create a new group and new expression.
         let group = cascades_group::ActiveModel {
             winner: Set(None),
-            is_optimized: Set(false),
+            status: Set(0), // `GroupStatus::InProgress` status.
             ..Default::default()
         };
 
@@ -401,7 +501,15 @@ impl PersistentMemo {
         // Finally, insert the fingerprint of the logical expression as well.
         let new_expr: LogicalExpression = new_model.into();
         let kind = new_expr.kind();
-        let hash = new_expr.fingerprint();
+
+        // In order to calculate a correct fingerprint, we will want to use the IDs of the root
+        // groups of the children instead of the child ID themselves.
+        let mut rewrites = vec![];
+        for &child_id in children {
+            let root_id = self.get_root_group(child_id).await?;
+            rewrites.push((child_id, root_id));
+        }
+        let hash = new_expr.fingerprint_with_rewrite(&rewrites);
 
         let fingerprint = fingerprint::ActiveModel {
             id: NotSet,

@@ -34,20 +34,22 @@ async fn test_simple_logical_duplicates() {
     // Test `add_logical_expression_to_group`.
     {
         // Attempting to add a duplicate expression into the same group should also fail every time.
-        let logical_expression_id_2a = memo
+        let (group_id_2a, logical_expression_id_2a) = memo
             .add_logical_expression_to_group(group_id, scan2a, &[])
             .await
             .unwrap()
             .err()
             .unwrap();
+        assert_eq!(group_id, group_id_2a);
         assert_eq!(logical_expression_id, logical_expression_id_2a);
 
-        let logical_expression_id_2b = memo
+        let (group_id_2b, logical_expression_id_2b) = memo
             .add_logical_expression_to_group(group_id, scan2b, &[])
             .await
             .unwrap()
             .err()
             .unwrap();
+        assert_eq!(group_id, group_id_2b);
         assert_eq!(logical_expression_id, logical_expression_id_2b);
     }
 
@@ -137,6 +139,74 @@ async fn test_simple_tree() {
         memo.get_logical_children(join_id).await.unwrap(),
         &[join_expr_id_1, join_expr_id_2]
     );
+
+    memo.cleanup().await;
+}
+
+/// Tests basic group merging. See comments in the test itself for more information.
+#[ignore]
+#[tokio::test]
+async fn test_simple_group_link() {
+    let memo = PersistentMemo::new().await;
+    memo.cleanup().await;
+
+    // Create two scan groups.
+    let scan1 = scan("t1".to_string());
+    let scan2 = scan("t2".to_string());
+    let (scan_id_1, _) = memo.add_group(scan1, &[]).await.unwrap().ok().unwrap();
+    let (scan_id_2, _) = memo.add_group(scan2, &[]).await.unwrap().ok().unwrap();
+
+    // Create two join expression that should be in the same group.
+    // Even though these are obviously the same expression (to humans), the fingerprints will be
+    // different, and so they will be put into different groups.
+    let join1 = join(scan_id_1, scan_id_2, "t1.a = t2.b".to_string());
+    let join2 = join(scan_id_2, scan_id_1, "t2.b = t1.a".to_string());
+    let join_unknown = join2.clone();
+
+    let (join_group_1, _) = memo
+        .add_group(join1, &[scan_id_1, scan_id_2])
+        .await
+        .unwrap()
+        .ok()
+        .unwrap();
+    let (join_group_2, join_expr_2) = memo
+        .add_group(join2, &[scan_id_2, scan_id_1])
+        .await
+        .unwrap()
+        .ok()
+        .unwrap();
+    assert_ne!(join_group_1, join_group_2);
+
+    // Assume that some rule was applied to `join1`, and it outputs something like `join_unknown`.
+    // The memo table will tell us that `join_unknown == join2`.
+    // Take note here that `join_unknown` is a clone of `join2`, not `join1`.
+    let (existing_group, not_actually_new_expr_id) = memo
+        .add_logical_expression_to_group(join_group_1, join_unknown, &[scan_id_2, scan_id_1])
+        .await
+        .unwrap()
+        .err()
+        .unwrap();
+    assert_eq!(existing_group, join_group_2);
+    assert_eq!(not_actually_new_expr_id, join_expr_2);
+
+    // The above tells the application that the expression already exists in the memo, specifically
+    // under `existing_group`. Thus, we should link these two groups together.
+    // Here, we arbitrarily choose to link group 1 into group 2.
+    memo.update_group_parent(join_group_1, join_group_2)
+        .await
+        .unwrap();
+
+    let test_root_1 = memo.get_root_group(join_group_1).await.unwrap();
+    let test_root_2 = memo.get_root_group(join_group_2).await.unwrap();
+    assert_eq!(test_root_1, test_root_2);
+
+    // TODO(Connor)
+    //
+    // We now need to find all logical expressions that had group 1 (or whatever the root group of
+    // the set that group 1 belongs to is, in this case it is just group 1) as a child, and add a
+    // new fingerprint for each one that uses group 2 as a child instead.
+    //
+    // In order to do this, we need to iterate through every group in group 1's set.
 
     memo.cleanup().await;
 }

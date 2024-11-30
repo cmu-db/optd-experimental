@@ -26,7 +26,7 @@ impl MigrationTrait for Migration {
                     .table(Fingerprint::Table)
                     .if_not_exists()
                     .col(pk_auto(Fingerprint::Id))
-                    .col(unsigned(Fingerprint::LogicalExpressionId))
+                    .col(integer(Fingerprint::LogicalExpressionId))
                     .foreign_key(
                         ForeignKey::create()
                             .from(Fingerprint::Table, Fingerprint::LogicalExpressionId)
@@ -34,8 +34,8 @@ impl MigrationTrait for Migration {
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
-                    .col(small_unsigned(Fingerprint::Kind))
-                    .col(big_unsigned(Fingerprint::Hash))
+                    .col(small_integer(Fingerprint::Kind))
+                    .col(big_integer(Fingerprint::Hash))
                     .to_owned(),
             )
             .await

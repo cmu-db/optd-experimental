@@ -7,9 +7,9 @@ use sea_orm::entity::prelude::*;
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
+    pub status: i8,
     pub winner: Option<i32>,
     pub cost: Option<i64>,
-    pub is_optimized: bool,
     pub parent_id: Option<i32>,
 }
 
