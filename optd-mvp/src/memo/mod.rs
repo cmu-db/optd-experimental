@@ -3,7 +3,33 @@
 //!
 //! TODO more docs.
 
-mod persistent;
+use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
-mod interface;
-pub use interface::{Memo, MemoError};
+/// A new type of an integer identifying a unique group.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(transparent)]
+pub struct GroupId(pub i32);
+
+/// A new type of an integer identifying a unique logical expression.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct LogicalExpressionId(pub i32);
+
+/// A new type of an integer identifying a unique physical expression.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PhysicalExpressionId(pub i32);
+
+/// The different kinds of errors that might occur while running operations on a memo table.
+#[derive(Error, Debug)]
+pub enum MemoError {
+    #[error("unknown group ID {0:?}")]
+    UnknownGroup(GroupId),
+    #[error("unknown logical expression ID {0:?}")]
+    UnknownLogicalExpression(LogicalExpressionId),
+    #[error("unknown physical expression ID {0:?}")]
+    UnknownPhysicalExpression(PhysicalExpressionId),
+    #[error("invalid expression encountered")]
+    InvalidExpression,
+}
+
+mod persistent;

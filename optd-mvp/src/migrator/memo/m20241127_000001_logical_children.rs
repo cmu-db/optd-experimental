@@ -40,7 +40,7 @@ impl MigrationTrait for Migration {
                     )
                     .foreign_key(
                         ForeignKey::create()
-                            .from(LogicalChildren::Table, LogicalChildren::GroupId)
+                            .from(LogicalChildren::Table, LogicalChildren::LogicalExpressionId)
                             .to(LogicalExpression::Table, LogicalExpression::Id)
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),

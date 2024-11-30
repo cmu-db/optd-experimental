@@ -1,35 +1,38 @@
 //! Definition of physical expressions / operators in the Cascades query optimization framework.
 //!
-//! FIXME: All fields are placeholders, and group IDs are just represented as i32 for now.
+//! FIXME: All fields are placeholders.
 //!
-//! TODO figure out if each operator should be in a different submodule.
+//! TODO Remove dead code.
+//! TODO Figure out if each operator should be in a different submodule.
 //! TODO This entire file is a WIP.
 
-use crate::entities::*;
+#![allow(dead_code)]
+
+use crate::{entities::*, memo::GroupId};
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PhysicalExpression {
     TableScan(TableScan),
     Filter(PhysicalFilter),
     HashJoin(HashJoin),
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct TableScan {
     table_schema: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct PhysicalFilter {
-    child: i32,
+    child: GroupId,
     expression: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct HashJoin {
-    left: i32,
-    right: i32,
+    left: GroupId,
+    right: GroupId,
     expression: String,
 }
 
@@ -92,24 +95,28 @@ pub use build::*;
 #[cfg(test)]
 mod build {
     use super::*;
-    use crate::expression::Expression;
+    use crate::expression::PhysicalExpression;
 
-    pub fn table_scan(table_schema: String) -> Expression {
-        Expression::Physical(PhysicalExpression::TableScan(TableScan { table_schema }))
+    pub fn table_scan(table_schema: String) -> PhysicalExpression {
+        PhysicalExpression::TableScan(TableScan { table_schema })
     }
 
-    pub fn filter(child_group: i32, expression: String) -> Expression {
-        Expression::Physical(PhysicalExpression::Filter(PhysicalFilter {
+    pub fn filter(child_group: GroupId, expression: String) -> PhysicalExpression {
+        PhysicalExpression::Filter(PhysicalFilter {
             child: child_group,
             expression,
-        }))
+        })
     }
 
-    pub fn hash_join(left_group: i32, right_group: i32, expression: String) -> Expression {
-        Expression::Physical(PhysicalExpression::HashJoin(HashJoin {
+    pub fn hash_join(
+        left_group: GroupId,
+        right_group: GroupId,
+        expression: String,
+    ) -> PhysicalExpression {
+        PhysicalExpression::HashJoin(HashJoin {
             left: left_group,
             right: right_group,
             expression,
-        }))
+        })
     }
 }

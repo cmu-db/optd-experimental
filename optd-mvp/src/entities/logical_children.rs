@@ -23,7 +23,7 @@ pub enum Relation {
     CascadesGroup,
     #[sea_orm(
         belongs_to = "super::logical_expression::Entity",
-        from = "Column::GroupId",
+        from = "Column::LogicalExpressionId",
         to = "super::logical_expression::Column::Id",
         on_update = "Cascade",
         on_delete = "Cascade"
