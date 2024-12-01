@@ -2,11 +2,8 @@
 //!
 //! FIXME: All fields are placeholders.
 //!
-//! TODO Remove dead code.
 //! TODO Figure out if each operator should be in a different submodule.
 //! TODO This entire file is a WIP.
-
-#![allow(dead_code)]
 
 use crate::{entities::*, memo::GroupId};
 use serde::{Deserialize, Serialize};
@@ -36,7 +33,7 @@ pub struct HashJoin {
     expression: String,
 }
 
-/// TODO Use a macro instead.
+/// TODO Use a macro.
 impl From<physical_expression::Model> for PhysicalExpression {
     fn from(value: physical_expression::Model) -> Self {
         match value.kind {
@@ -57,7 +54,7 @@ impl From<physical_expression::Model> for PhysicalExpression {
     }
 }
 
-/// TODO Use a macro instead.
+/// TODO Use a macro.
 impl From<PhysicalExpression> for physical_expression::Model {
     fn from(value: PhysicalExpression) -> physical_expression::Model {
         fn create_physical_expression(
@@ -99,24 +96,5 @@ mod build {
 
     pub fn table_scan(table_schema: String) -> PhysicalExpression {
         PhysicalExpression::TableScan(TableScan { table_schema })
-    }
-
-    pub fn filter(child_group: GroupId, expression: String) -> PhysicalExpression {
-        PhysicalExpression::Filter(PhysicalFilter {
-            child: child_group,
-            expression,
-        })
-    }
-
-    pub fn hash_join(
-        left_group: GroupId,
-        right_group: GroupId,
-        expression: String,
-    ) -> PhysicalExpression {
-        PhysicalExpression::HashJoin(HashJoin {
-            left: left_group,
-            right: right_group,
-            expression,
-        })
     }
 }

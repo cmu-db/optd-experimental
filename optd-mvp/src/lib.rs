@@ -18,8 +18,6 @@ pub const DATABASE_FILENAME: &str = "sqlite.db";
 pub const DATABASE_URL: &str = "sqlite:./sqlite.db?mode=rwc";
 
 /// An error type wrapping all the different kinds of error the optimizer might raise.
-///
-/// TODO more docs.
 #[derive(Error, Debug)]
 pub enum OptimizerError {
     #[error("SeaORM error")]

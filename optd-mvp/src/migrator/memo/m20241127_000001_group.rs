@@ -28,8 +28,8 @@
 //! `cost` foreign key reference to a cost record (FIXME). See the
 //! [section](#best-physical-plan-winner) below for more details.
 //!
-//! Finally, we maintain a union-find graph structure embedded in the group records.
-//! TODO write more information about this once this is implemented.
+//! Finally, we maintain a union-find graph structure embedded in the group records. See the
+//! `DESIGN.md` document for more information.
 //!
 //! # Entity Relationships
 //!

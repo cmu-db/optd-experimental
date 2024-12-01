@@ -8,7 +8,7 @@ This assumes that you already have the `sqlite3` binary installed. First, make s
 $ cargo install sea-orm-cli
 ```
 
-Make sure your working directory is in the crate root:
+Make sure your working directory is in the crate root (not workspace):
 
 ```sh
 $ cd optd-mvp
