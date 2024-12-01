@@ -45,7 +45,7 @@ impl PersistentMemo {
         }
 
         delete_all! {
-            cascades_group,
+            group,
             fingerprint,
             logical_expression,
             logical_children,
@@ -54,13 +54,13 @@ impl PersistentMemo {
         };
     }
 
-    /// Retrieves a [`cascades_group::Model`] given its ID.
+    /// Retrieves a [`group::Model`] given its ID.
     ///
     /// If the group does not exist, returns a [`MemoError::UnknownGroup`] error.
     ///
     /// FIXME: use an in-memory representation of a group instead.
-    pub async fn get_group(&self, group_id: GroupId) -> OptimizerResult<cascades_group::Model> {
-        Ok(cascades_group::Entity::find_by_id(group_id.0)
+    pub async fn get_group(&self, group_id: GroupId) -> OptimizerResult<group::Model> {
+        Ok(group::Entity::find_by_id(group_id.0)
             .one(&self.db)
             .await?
             .ok_or(MemoError::UnknownGroup(group_id))?)
@@ -78,11 +78,7 @@ impl PersistentMemo {
 
         // Traverse up the path and find the root group, keeping track of groups we have visited.
         let mut path = vec![];
-        loop {
-            let Some(parent_id) = curr_group.parent_id else {
-                break;
-            };
-
+        while let Some(parent_id) = curr_group.parent_id {
             let next_group = self.get_group(GroupId(parent_id)).await?;
             path.push(curr_group);
             curr_group = next_group;
@@ -468,29 +464,29 @@ impl PersistentMemo {
         }
 
         // The expression does not exist yet, so we need to create a new group and new expression.
-        let group = cascades_group::ActiveModel {
-            winner: Set(None),
+        let group = group::ActiveModel {
             status: Set(0), // `GroupStatus::InProgress` status.
             ..Default::default()
         };
 
         // Create the new group.
-        let res = cascades_group::Entity::insert(group).exec(&self.db).await?;
+        let group_res = group::Entity::insert(group).exec(&self.db).await?;
+        let group_id = group_res.last_insert_id;
 
         // Insert the input expression into the newly created group.
-        let model: logical_expression::Model = logical_expression.clone().into();
-        let mut active_model = model.into_active_model();
-        active_model.group_id = Set(res.last_insert_id);
-        active_model.id = NotSet;
-        let new_model = active_model.insert(&self.db).await?;
+        let expression: logical_expression::Model = logical_expression.clone().into();
+        let mut active_expression = expression.into_active_model();
+        active_expression.group_id = Set(group_id);
+        active_expression.id = NotSet;
+        let new_expression = active_expression.insert(&self.db).await?;
 
-        let group_id = new_model.group_id;
-        let expr_id = new_model.id;
+        let group_id = new_expression.group_id;
+        let expr_id = new_expression.id;
 
         // Insert the child groups of the expression into the junction / children table.
         logical_children::Entity::insert_many(children.iter().copied().map(|child_id| {
             logical_children::ActiveModel {
-                logical_expression_id: Set(new_model.id),
+                logical_expression_id: Set(new_expression.id),
                 group_id: Set(child_id.0),
             }
         }))
@@ -499,8 +495,8 @@ impl PersistentMemo {
         .await?;
 
         // Finally, insert the fingerprint of the logical expression as well.
-        let new_expr: LogicalExpression = new_model.into();
-        let kind = new_expr.kind();
+        let new_logical_expression: LogicalExpression = new_expression.into();
+        let kind = new_logical_expression.kind();
 
         // In order to calculate a correct fingerprint, we will want to use the IDs of the root
         // groups of the children instead of the child ID themselves.
@@ -509,7 +505,7 @@ impl PersistentMemo {
             let root_id = self.get_root_group(child_id).await?;
             rewrites.push((child_id, root_id));
         }
-        let hash = new_expr.fingerprint_with_rewrite(&rewrites);
+        let hash = new_logical_expression.fingerprint_with_rewrite(&rewrites);
 
         let fingerprint = fingerprint::ActiveModel {
             id: NotSet,

@@ -58,6 +58,8 @@ of a problem.
 
 TODO explain the fingerprinting algorithm and how it relates to group merging
 
+Union find data structure with a circular linked list for linear iteration
+
 When taking the fingerprint of an expression, the child groups of an expression need to be root groups. If they are not, we need to try again.
 Assuming that all children are root groups, the fingerprint we make for any expression that fulfills that is valid and can be looked up for duplicates.
 In order to maintain that correctness, on a merge of two sets, the smaller one requires that a new fingerprint be generated for every expression that has a group in that smaller set.

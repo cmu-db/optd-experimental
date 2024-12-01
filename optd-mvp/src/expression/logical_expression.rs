@@ -1,4 +1,4 @@
-//! Definition of logical expressions / relations in the Cascades query optimization framework.
+//! Definition of logical expressions / relations in our query optimization framework.
 //!
 //! FIXME: All fields are placeholders.
 //!

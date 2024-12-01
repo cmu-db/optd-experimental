@@ -1,18 +1,16 @@
-//! An entity representing the [`cascades_group`] children of every [`physical_expression`].
+//! An entity representing the [`group`] children of every [`physical_expression`].
 //!
 //! Formally, this entity is a junction which allows us to represent a many-to-many relationship
-//! between [`physical_expression`] and [`cascades_group`]. Expressions can have any number of child
+//! between [`physical_expression`] and [`group`]. Expressions can have any number of child
 //! groups, and every group can be a child of many different expressions, hence the many-to-many
 //! relationship.
 //!
-//! See [`cascades_group`] for more details.
+//! See [`group`] for more details.
 //!
-//! [`cascades_group`]: super::cascades_group
+//! [`group`]: super::group
 //! [`physical_expression`]: super::physical_expression
 
-use crate::migrator::memo::{
-    cascades_group::CascadesGroup, physical_expression::PhysicalExpression,
-};
+use crate::migrator::memo::{group::Group, physical_expression::PhysicalExpression};
 use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(DeriveIden)]
@@ -53,7 +51,7 @@ impl MigrationTrait for Migration {
                     .foreign_key(
                         ForeignKey::create()
                             .from(PhysicalChildren::Table, PhysicalChildren::GroupId)
-                            .to(CascadesGroup::Table, CascadesGroup::Id)
+                            .to(Group::Table, Group::Id)
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )

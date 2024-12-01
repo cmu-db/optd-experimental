@@ -1,4 +1,4 @@
-//! Definition of physical expressions / operators in the Cascades query optimization framework.
+//! Definition of physical expressions / operators in our query optimization framework.
 //!
 //! FIXME: All fields are placeholders.
 //!

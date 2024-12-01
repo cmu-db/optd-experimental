@@ -3,7 +3,7 @@
 use sea_orm::entity::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
-#[sea_orm(table_name = "cascades_group")]
+#[sea_orm(table_name = "group")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
@@ -11,10 +11,19 @@ pub struct Model {
     pub winner: Option<i32>,
     pub cost: Option<i64>,
     pub parent_id: Option<i32>,
+    pub next_id: Option<i32>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
+    #[sea_orm(
+        belongs_to = "Entity",
+        from = "Column::NextId",
+        to = "Column::Id",
+        on_update = "Cascade",
+        on_delete = "SetNull"
+    )]
+    SelfRef2,
     #[sea_orm(
         belongs_to = "Entity",
         from = "Column::ParentId",
@@ -22,7 +31,7 @@ pub enum Relation {
         on_update = "Cascade",
         on_delete = "SetNull"
     )]
-    SelfRef,
+    SelfRef1,
     #[sea_orm(has_many = "super::logical_children::Entity")]
     LogicalChildren,
     #[sea_orm(has_many = "super::logical_expression::Entity")]
@@ -56,7 +65,7 @@ impl Related<super::logical_expression::Entity> for Entity {
         super::logical_children::Relation::LogicalExpression.def()
     }
     fn via() -> Option<RelationDef> {
-        Some(super::logical_children::Relation::CascadesGroup.def().rev())
+        Some(super::logical_children::Relation::Group.def().rev())
     }
 }
 
@@ -65,11 +74,7 @@ impl Related<super::physical_expression::Entity> for Entity {
         super::physical_children::Relation::PhysicalExpression.def()
     }
     fn via() -> Option<RelationDef> {
-        Some(
-            super::physical_children::Relation::CascadesGroup
-                .def()
-                .rev(),
-        )
+        Some(super::physical_children::Relation::Group.def().rev())
     }
 }
 

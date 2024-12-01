@@ -1,4 +1,4 @@
-//! In-memory representation of Cascades logical and physical expression / operators / relations.
+//! In-memory representation of logical and physical expression / operators / relations.
 //!
 //! TODO more docs.
 
@@ -8,7 +8,7 @@ pub use logical_expression::*;
 mod physical_expression;
 pub use physical_expression::*;
 
-/// The representation of a Cascades expression.
+/// The representation of an expression.
 ///
 /// TODO more docs.
 #[derive(Clone, Debug)]

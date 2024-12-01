@@ -14,16 +14,16 @@ pub struct Model {
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
+    #[sea_orm(has_many = "super::fingerprint::Entity")]
+    Fingerprint,
     #[sea_orm(
-        belongs_to = "super::cascades_group::Entity",
+        belongs_to = "super::group::Entity",
         from = "Column::GroupId",
-        to = "super::cascades_group::Column::Id",
+        to = "super::group::Column::Id",
         on_update = "Cascade",
         on_delete = "Cascade"
     )]
-    CascadesGroup,
-    #[sea_orm(has_many = "super::fingerprint::Entity")]
-    Fingerprint,
+    Group,
     #[sea_orm(has_many = "super::logical_children::Entity")]
     LogicalChildren,
 }
@@ -40,9 +40,9 @@ impl Related<super::logical_children::Entity> for Entity {
     }
 }
 
-impl Related<super::cascades_group::Entity> for Entity {
+impl Related<super::group::Entity> for Entity {
     fn to() -> RelationDef {
-        super::logical_children::Relation::CascadesGroup.def()
+        super::logical_children::Relation::Group.def()
     }
     fn via() -> Option<RelationDef> {
         Some(

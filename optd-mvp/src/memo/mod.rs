@@ -1,5 +1,4 @@
-//! This module contains items related to the memo table, which is key to the Cascades query
-//! optimization framework.
+//! This module contains items related to the memo table.
 //!
 //! TODO more docs.
 

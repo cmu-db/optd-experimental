@@ -2,8 +2,8 @@
 
 #![allow(unused_imports)]
 
-pub use super::cascades_group::Entity as CascadesGroup;
 pub use super::fingerprint::Entity as Fingerprint;
+pub use super::group::Entity as Group;
 pub use super::logical_children::Entity as LogicalChildren;
 pub use super::logical_expression::Entity as LogicalExpression;
 pub use super::physical_children::Entity as PhysicalChildren;

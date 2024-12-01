@@ -14,13 +14,13 @@ pub struct Model {
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
     #[sea_orm(
-        belongs_to = "super::cascades_group::Entity",
+        belongs_to = "super::group::Entity",
         from = "Column::GroupId",
-        to = "super::cascades_group::Column::Id",
+        to = "super::group::Column::Id",
         on_update = "Cascade",
         on_delete = "Cascade"
     )]
-    CascadesGroup,
+    Group,
     #[sea_orm(
         belongs_to = "super::physical_expression::Entity",
         from = "Column::PhysicalExpressionId",
@@ -31,9 +31,9 @@ pub enum Relation {
     PhysicalExpression,
 }
 
-impl Related<super::cascades_group::Entity> for Entity {
+impl Related<super::group::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::CascadesGroup.def()
+        Relation::Group.def()
     }
 }
 

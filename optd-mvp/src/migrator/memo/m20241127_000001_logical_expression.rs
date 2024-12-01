@@ -1,4 +1,4 @@
-//! An entity representing a logical plan expression in the Cascades framework.
+//! An entity representing a logical relational expression.
 //!
 //! Quoted from the Microsoft article _Extensible query optimizers in practice_:
 //!
@@ -6,7 +6,7 @@
 //! > relational algebraic expression.
 //!
 //! In the Cascades query optimization framework, the memo table stores equivalence classes of
-//! expressions (see [`cascades_group`]). These equivalence classes, or "groups", store both
+//! expressions (see [`group`]). These equivalence classes, or "groups", store both
 //! `logical_expression`s and [`physical_expression`]s.
 //!
 //! Optimization starts by "exploring" equivalent logical expressions within a group. For example,
@@ -24,20 +24,20 @@
 //!
 //! # Entity Relationships
 //!
-//! The main relationship that `logical_expression` has is to [`cascades_group`]. It has **both** a
-//! one-to-many **and** a many-to-many relationship with [`cascades_group`], and you can see more
-//! details about this in the module-level documentation for [`cascades_group`].
+//! The main relationship that `logical_expression` has is to [`group`]. It has **both** a
+//! one-to-many **and** a many-to-many relationship with [`group`], and you can see more
+//! details about this in the module-level documentation for [`group`].
 //!
 //! The other relationship that `logical_expression` has is to [`fingerprint`]. This table stores
 //! 1 or more fingerprints for every (unique) logical expression. The reason we have multiple
 //! fingerprints is that an expression can belong to multiple groups during the exploration phase
 //! before the merging of groups.
 //!
-//! [`cascades_group`]: super::cascades_group
+//! [`group`]: super::group
 //! [`physical_expression`]: super::physical_expression
 //! [`fingerprint`]: super::fingerprint
 
-use crate::migrator::memo::cascades_group::CascadesGroup;
+use crate::migrator::memo::group::Group;
 use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(DeriveIden)]
@@ -65,7 +65,7 @@ impl MigrationTrait for Migration {
                     .foreign_key(
                         ForeignKey::create()
                             .from(LogicalExpression::Table, LogicalExpression::GroupId)
-                            .to(CascadesGroup::Table, CascadesGroup::Id)
+                            .to(Group::Table, Group::Id)
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
