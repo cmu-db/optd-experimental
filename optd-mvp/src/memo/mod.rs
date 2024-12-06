@@ -8,15 +8,27 @@ use thiserror::Error;
 /// A new type of an integer identifying a unique group.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(transparent)]
-pub struct GroupId(pub i32);
+pub struct GroupId(pub(crate) i32);
+
+/// A new type of an integer identifying a root group / canonical group ID of a group set.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(transparent)]
+pub struct RootGroupId(pub(crate) i32);
+
+/// A [`RootGroupId`] is always [`GroupId`], but not vice versa.
+impl From<RootGroupId> for GroupId {
+    fn from(value: RootGroupId) -> Self {
+        Self(value.0)
+    }
+}
 
 /// A new type of an integer identifying a unique logical expression.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct LogicalExpressionId(pub i32);
+pub struct LogicalExpressionId(i32);
 
 /// A new type of an integer identifying a unique physical expression.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct PhysicalExpressionId(pub i32);
+pub struct PhysicalExpressionId(i32);
 
 /// A status enum representing the different states a group can be during query optimization.
 #[repr(u8)]

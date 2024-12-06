@@ -10,7 +10,9 @@ use super::PersistentMemo;
 use crate::{
     entities::*,
     expression::{LogicalExpression, PhysicalExpression},
-    memo::{GroupId, GroupStatus, LogicalExpressionId, MemoError, PhysicalExpressionId},
+    memo::{
+        GroupId, GroupStatus, LogicalExpressionId, MemoError, PhysicalExpressionId, RootGroupId,
+    },
     OptimizerResult, DATABASE_URL,
 };
 use sea_orm::{
@@ -74,31 +76,27 @@ impl PersistentMemo {
     ///
     /// This function uses the path compression optimization, which amortizes the cost to a single
     /// lookup (theoretically in constant time, but we must be wary of the I/O roundtrip).
-    pub async fn get_root_group(&self, group_id: GroupId) -> OptimizerResult<GroupId> {
-        let mut curr_group = self.get_group(group_id).await?;
+    pub async fn get_root_group(&self, group_id: GroupId) -> OptimizerResult<RootGroupId> {
+        let curr_group = self.get_group(group_id).await?;
 
-        // Traverse up the path and find the root group, keeping track of groups we have visited.
-        let mut path = vec![];
-        while let Some(parent_id) = curr_group.parent_id {
-            let next_group = self.get_group(GroupId(parent_id)).await?;
-            path.push(curr_group);
-            curr_group = next_group;
-        }
+        // If we have no parent, then we are at the root.
+        let Some(parent_id) = curr_group.parent_id else {
+            return Ok(RootGroupId(curr_group.id));
+        };
 
-        let root_id = GroupId(curr_group.id);
+        // Recursively find the root group ID.
+        let root_id = Box::pin(self.get_root_group(GroupId(parent_id))).await?;
 
         // Path Compression Optimization:
         // For every group along the path that we walked, set their parent id pointer to the root.
         // This allows for an amortized O(1) cost for `get_root_group`.
-        for group in path {
-            let mut active_group = group.into_active_model();
+        let mut active_group = curr_group.into_active_model();
 
-            // Update the group to point to the new parent.
-            active_group.parent_id = Set(Some(root_id.0));
-            active_group.update(&self.db).await?;
-        }
+        // Update the group to point to the new parent.
+        active_group.parent_id = Set(Some(root_id.0));
+        active_group.update(&self.db).await?;
 
-        Ok(root_id)
+        Ok(RootGroupId(root_id.0))
     }
 
     /// Retrieves every group ID of groups that share the same root group with the input group.
@@ -246,8 +244,11 @@ impl PersistentMemo {
         Ok(old_status)
     }
 
-    /// Updates / replaces a group's best physical plan (winner). Optionally returns the previous
-    /// winner's physical expression ID.
+    /// Updates / replaces a group set's best physical plan (winner). Optionally returns the
+    /// previous winner's physical expression ID.
+    ///
+    /// Note that we want to update the root group and not a child group that has been merged into
+    /// a different group.
     ///
     /// If the group does not exist, returns a [`MemoError::UnknownGroup`] error.
     ///
@@ -255,11 +256,11 @@ impl PersistentMemo {
     /// updated from another thread by comparing against the cost of the plan.
     pub async fn update_group_winner(
         &self,
-        group_id: GroupId,
+        root_group_id: RootGroupId,
         physical_expression_id: PhysicalExpressionId,
     ) -> OptimizerResult<Option<PhysicalExpressionId>> {
         // First retrieve the group record.
-        let mut group = self.get_group(group_id).await?.into_active_model();
+        let mut group = self.get_group(root_group_id.into()).await?.into_active_model();
 
         // Update the group to point to the new winner.
         let old_id = group.winner;
@@ -331,7 +332,7 @@ impl PersistentMemo {
         let mut rewrites = vec![];
         for &child_id in children {
             let root_id = self.get_root_group(child_id).await?;
-            rewrites.push((child_id, root_id));
+            rewrites.push((child_id, root_id.into()));
         }
         let hash = new_expr.fingerprint_with_rewrite(&rewrites);
 
@@ -413,7 +414,7 @@ impl PersistentMemo {
         let mut rewrites = vec![];
         for &child_id in children {
             let root_id = self.get_root_group(child_id).await?;
-            rewrites.push((child_id, root_id));
+            rewrites.push((child_id, root_id.into()));
         }
         let fingerprint = logical_expression.fingerprint_with_rewrite(&rewrites);
 
@@ -443,7 +444,7 @@ impl PersistentMemo {
             let mut rewrites = rewrites.clone();
             for child_id in expr.children() {
                 let root_id = self.get_root_group(child_id).await?;
-                rewrites.push((child_id, root_id));
+                rewrites.push((child_id, root_id.into()));
             }
 
             // Check for an exact match after rewrites.
@@ -525,7 +526,7 @@ impl PersistentMemo {
         let mut rewrites = vec![];
         for &child_id in children {
             let root_id = self.get_root_group(child_id).await?;
-            rewrites.push((child_id, root_id));
+            rewrites.push((child_id, root_id.into()));
         }
         let hash = new_logical_expression.fingerprint_with_rewrite(&rewrites);
 
@@ -553,19 +554,19 @@ impl PersistentMemo {
         &self,
         left_group_id: GroupId,
         right_group_id: GroupId,
-    ) -> OptimizerResult<GroupId> {
+    ) -> OptimizerResult<RootGroupId> {
         // Without a rank / size field, we have no way of determining which set is better to merge
         // into the other. So we will arbitrarily choose to merge the left group into the right
         // group here. If rank is added in the future, then merge the smaller set into the larger.
 
         let left_root_id = self.get_root_group(left_group_id).await?;
-        let left_root = self.get_group(left_root_id).await?;
+        let left_root = self.get_group(left_root_id.into()).await?;
         // A `None` next pointer means it should technically be pointing to itself.
         let left_next = left_root.next_id.unwrap_or(left_root_id.0);
         let mut active_left_root = left_root.into_active_model();
 
         let right_root_id = self.get_root_group(right_group_id).await?;
-        let right_root = self.get_group(right_root_id).await?;
+        let right_root = self.get_group(right_root_id.into()).await?;
         // A `None` next pointer means it should technically be pointing to itself.
         let right_next = right_root.next_id.unwrap_or(right_root_id.0);
         let mut active_right_root = right_root.into_active_model();
@@ -591,7 +592,7 @@ impl PersistentMemo {
         // Need to replace every single occurrence of groups in the set with the new root.
         let rewrites: Vec<(GroupId, GroupId)> = group_set_ids
             .iter()
-            .map(|&group_id| (group_id, right_root_id))
+            .map(|&group_id| (group_id, right_root_id.into()))
             .collect();
 
         // For each expression, generate a new fingerprint.
