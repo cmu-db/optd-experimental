@@ -9,7 +9,7 @@ use crate::{entities::*, memo::GroupId};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum PhysicalExpression {
+pub enum DefaultPhysicalExpression {
     TableScan(TableScan),
     Filter(PhysicalFilter),
     HashJoin(HashJoin),
@@ -34,7 +34,7 @@ pub struct HashJoin {
 }
 
 /// TODO Use a macro.
-impl From<physical_expression::Model> for PhysicalExpression {
+impl From<physical_expression::Model> for DefaultPhysicalExpression {
     fn from(value: physical_expression::Model) -> Self {
         match value.kind {
             0 => Self::TableScan(
@@ -55,8 +55,8 @@ impl From<physical_expression::Model> for PhysicalExpression {
 }
 
 /// TODO Use a macro.
-impl From<PhysicalExpression> for physical_expression::Model {
-    fn from(value: PhysicalExpression) -> physical_expression::Model {
+impl From<DefaultPhysicalExpression> for physical_expression::Model {
+    fn from(value: DefaultPhysicalExpression) -> physical_expression::Model {
         fn create_physical_expression(
             kind: i16,
             data: serde_json::Value,
@@ -70,15 +70,15 @@ impl From<PhysicalExpression> for physical_expression::Model {
         }
 
         match value {
-            PhysicalExpression::TableScan(scan) => create_physical_expression(
+            DefaultPhysicalExpression::TableScan(scan) => create_physical_expression(
                 0,
                 serde_json::to_value(scan).expect("unable to serialize physical `TableScan`"),
             ),
-            PhysicalExpression::Filter(filter) => create_physical_expression(
+            DefaultPhysicalExpression::Filter(filter) => create_physical_expression(
                 1,
                 serde_json::to_value(filter).expect("unable to serialize physical `Filter`"),
             ),
-            PhysicalExpression::HashJoin(join) => create_physical_expression(
+            DefaultPhysicalExpression::HashJoin(join) => create_physical_expression(
                 2,
                 serde_json::to_value(join).expect("unable to serialize physical `HashJoin`"),
             ),
@@ -92,9 +92,9 @@ pub use build::*;
 #[cfg(test)]
 mod build {
     use super::*;
-    use crate::expression::PhysicalExpression;
+    use crate::expression::DefaultPhysicalExpression;
 
-    pub fn table_scan(table_schema: String) -> PhysicalExpression {
-        PhysicalExpression::TableScan(TableScan { table_schema })
+    pub fn table_scan(table_schema: String) -> DefaultPhysicalExpression {
+        DefaultPhysicalExpression::TableScan(TableScan { table_schema })
     }
 }

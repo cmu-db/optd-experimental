@@ -9,7 +9,7 @@
 use super::PersistentMemo;
 use crate::{
     entities::*,
-    expression::{LogicalExpression, PhysicalExpression},
+    expression::{DefaultLogicalExpression, DefaultPhysicalExpression},
     memo::{GroupId, GroupStatus, LogicalExpressionId, MemoError, PhysicalExpressionId},
     OptimizerResult, DATABASE_URL,
 };
@@ -147,7 +147,7 @@ impl PersistentMemo {
     pub async fn get_physical_expression(
         &self,
         physical_expression_id: PhysicalExpressionId,
-    ) -> OptimizerResult<(GroupId, PhysicalExpression)> {
+    ) -> OptimizerResult<(GroupId, DefaultPhysicalExpression)> {
         // Lookup the entity in the database via the unique expression ID.
         let model = physical_expression::Entity::find_by_id(physical_expression_id.0)
             .one(&self.db)
@@ -167,7 +167,7 @@ impl PersistentMemo {
     pub async fn get_logical_expression(
         &self,
         logical_expression_id: LogicalExpressionId,
-    ) -> OptimizerResult<(GroupId, LogicalExpression)> {
+    ) -> OptimizerResult<(GroupId, DefaultLogicalExpression)> {
         // Lookup the entity in the database via the unique expression ID.
         let model = logical_expression::Entity::find_by_id(logical_expression_id.0)
             .one(&self.db)
@@ -288,7 +288,7 @@ impl PersistentMemo {
     pub async fn add_logical_expression_to_group(
         &self,
         group_id: GroupId,
-        logical_expression: LogicalExpression,
+        logical_expression: DefaultLogicalExpression,
         children: &[GroupId],
     ) -> OptimizerResult<Result<LogicalExpressionId, (GroupId, LogicalExpressionId)>> {
         // Check if the expression already exists anywhere in the memo table.
@@ -323,7 +323,7 @@ impl PersistentMemo {
         .await?;
 
         // Finally, insert the fingerprint of the logical expression as well.
-        let new_expr: LogicalExpression = new_model.into();
+        let new_expr: DefaultLogicalExpression = new_model.into();
         let kind = new_expr.kind();
 
         // In order to calculate a correct fingerprint, we will want to use the IDs of the root
@@ -359,7 +359,7 @@ impl PersistentMemo {
     pub async fn add_physical_expression_to_group(
         &self,
         group_id: GroupId,
-        physical_expression: PhysicalExpression,
+        physical_expression: DefaultPhysicalExpression,
         children: &[GroupId],
     ) -> OptimizerResult<PhysicalExpressionId> {
         // Check if the group actually exists.
@@ -399,7 +399,7 @@ impl PersistentMemo {
     /// expression should _not_ have G2 as a child, and should be replaced with G1.
     pub async fn is_duplicate_logical_expression(
         &self,
-        logical_expression: &LogicalExpression,
+        logical_expression: &DefaultLogicalExpression,
         children: &[GroupId],
     ) -> OptimizerResult<Option<(GroupId, LogicalExpressionId)>> {
         let model: logical_expression::Model = logical_expression.clone().into();
@@ -473,7 +473,7 @@ impl PersistentMemo {
     /// expression, returning brand new IDs for both.
     pub async fn add_group(
         &self,
-        logical_expression: LogicalExpression,
+        logical_expression: DefaultLogicalExpression,
         children: &[GroupId],
     ) -> OptimizerResult<Result<(GroupId, LogicalExpressionId), (GroupId, LogicalExpressionId)>>
     {
@@ -517,7 +517,7 @@ impl PersistentMemo {
         .await?;
 
         // Finally, insert the fingerprint of the logical expression as well.
-        let new_logical_expression: LogicalExpression = new_expression.into();
+        let new_logical_expression: DefaultLogicalExpression = new_expression.into();
         let kind = new_logical_expression.kind();
 
         // In order to calculate a correct fingerprint, we will want to use the IDs of the root
@@ -606,7 +606,7 @@ impl PersistentMemo {
                 seen.insert(expr_id);
             }
 
-            let logical_expression: LogicalExpression = model.into();
+            let logical_expression: DefaultLogicalExpression = model.into();
             let hash = logical_expression.fingerprint_with_rewrite(&rewrites);
 
             let fingerprint = fingerprint::ActiveModel {

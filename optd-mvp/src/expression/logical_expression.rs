@@ -10,18 +10,18 @@ use fxhash::hash;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug)]
-pub enum LogicalExpression {
+pub enum DefaultLogicalExpression {
     Scan(Scan),
     Filter(Filter),
     Join(Join),
 }
 
-impl LogicalExpression {
+impl DefaultLogicalExpression {
     pub fn kind(&self) -> i16 {
         match self {
-            LogicalExpression::Scan(_) => 0,
-            LogicalExpression::Filter(_) => 1,
-            LogicalExpression::Join(_) => 2,
+            DefaultLogicalExpression::Scan(_) => 0,
+            DefaultLogicalExpression::Filter(_) => 1,
+            DefaultLogicalExpression::Join(_) => 2,
         }
     }
 
@@ -46,11 +46,11 @@ impl LogicalExpression {
 
         let kind = self.kind() as u16 as usize;
         let hash = match self {
-            LogicalExpression::Scan(scan) => hash(scan.table.as_str()),
-            LogicalExpression::Filter(filter) => {
+            DefaultLogicalExpression::Scan(scan) => hash(scan.table.as_str()),
+            DefaultLogicalExpression::Filter(filter) => {
                 hash(&rewrite(filter.child).0) ^ hash(filter.expression.as_str())
             }
-            LogicalExpression::Join(join) => {
+            DefaultLogicalExpression::Join(join) => {
                 // Make sure that there is a difference between `Join(A, B)` and `Join(B, A)`.
                 hash(&(rewrite(join.left).0 + 1))
                     ^ hash(&(rewrite(join.right).0 + 2))
@@ -80,14 +80,21 @@ impl LogicalExpression {
         };
 
         match (self, other) {
-            (LogicalExpression::Scan(scan_left), LogicalExpression::Scan(scan_right)) => {
-                scan_left.table == scan_right.table
-            }
-            (LogicalExpression::Filter(filter_left), LogicalExpression::Filter(filter_right)) => {
+            (
+                DefaultLogicalExpression::Scan(scan_left),
+                DefaultLogicalExpression::Scan(scan_right),
+            ) => scan_left.table == scan_right.table,
+            (
+                DefaultLogicalExpression::Filter(filter_left),
+                DefaultLogicalExpression::Filter(filter_right),
+            ) => {
                 rewrite(filter_left.child) == rewrite(filter_right.child)
                     && filter_left.expression == filter_right.expression
             }
-            (LogicalExpression::Join(join_left), LogicalExpression::Join(join_right)) => {
+            (
+                DefaultLogicalExpression::Join(join_left),
+                DefaultLogicalExpression::Join(join_right),
+            ) => {
                 rewrite(join_left.left) == rewrite(join_right.left)
                     && rewrite(join_left.right) == rewrite(join_right.right)
                     && join_left.expression == join_right.expression
@@ -98,9 +105,9 @@ impl LogicalExpression {
 
     pub fn children(&self) -> Vec<GroupId> {
         match self {
-            LogicalExpression::Scan(_) => vec![],
-            LogicalExpression::Filter(filter) => vec![filter.child],
-            LogicalExpression::Join(join) => vec![join.left, join.right],
+            DefaultLogicalExpression::Scan(_) => vec![],
+            DefaultLogicalExpression::Filter(filter) => vec![filter.child],
+            DefaultLogicalExpression::Join(join) => vec![join.left, join.right],
         }
     }
 }
@@ -124,7 +131,7 @@ pub struct Join {
 }
 
 /// TODO Use a macro.
-impl From<logical_expression::Model> for LogicalExpression {
+impl From<logical_expression::Model> for DefaultLogicalExpression {
     fn from(value: logical_expression::Model) -> Self {
         match value.kind {
             0 => Self::Scan(
@@ -145,8 +152,8 @@ impl From<logical_expression::Model> for LogicalExpression {
 }
 
 /// TODO Use a macro.
-impl From<LogicalExpression> for logical_expression::Model {
-    fn from(value: LogicalExpression) -> logical_expression::Model {
+impl From<DefaultLogicalExpression> for logical_expression::Model {
+    fn from(value: DefaultLogicalExpression) -> logical_expression::Model {
         fn create_logical_expression(
             kind: i16,
             data: serde_json::Value,
@@ -161,15 +168,15 @@ impl From<LogicalExpression> for logical_expression::Model {
 
         let kind = value.kind();
         match value {
-            LogicalExpression::Scan(scan) => create_logical_expression(
+            DefaultLogicalExpression::Scan(scan) => create_logical_expression(
                 kind,
                 serde_json::to_value(scan).expect("unable to serialize logical `Scan`"),
             ),
-            LogicalExpression::Filter(filter) => create_logical_expression(
+            DefaultLogicalExpression::Filter(filter) => create_logical_expression(
                 kind,
                 serde_json::to_value(filter).expect("unable to serialize logical `Filter`"),
             ),
-            LogicalExpression::Join(join) => create_logical_expression(
+            DefaultLogicalExpression::Join(join) => create_logical_expression(
                 kind,
                 serde_json::to_value(join).expect("unable to serialize logical `Join`"),
             ),
@@ -183,16 +190,16 @@ pub use build::*;
 #[cfg(test)]
 mod build {
     use super::*;
-    use crate::expression::LogicalExpression;
+    use crate::expression::DefaultLogicalExpression;
 
-    pub fn scan(table_schema: String) -> LogicalExpression {
-        LogicalExpression::Scan(Scan {
+    pub fn scan(table_schema: String) -> DefaultLogicalExpression {
+        DefaultLogicalExpression::Scan(Scan {
             table: table_schema,
         })
     }
 
-    pub fn filter(child_group: GroupId, expression: String) -> LogicalExpression {
-        LogicalExpression::Filter(Filter {
+    pub fn filter(child_group: GroupId, expression: String) -> DefaultLogicalExpression {
+        DefaultLogicalExpression::Filter(Filter {
             child: child_group,
             expression,
         })
@@ -202,8 +209,8 @@ mod build {
         left_group: GroupId,
         right_group: GroupId,
         expression: String,
-    ) -> LogicalExpression {
-        LogicalExpression::Join(Join {
+    ) -> DefaultLogicalExpression {
+        DefaultLogicalExpression::Join(Join {
             left: left_group,
             right: right_group,
             expression,

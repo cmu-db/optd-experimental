@@ -99,7 +99,7 @@ async fn test_simple_tree() {
     memo.cleanup().await;
 
     // Create two scan groups.
-    let scan1: LogicalExpression = scan("t1".to_string());
+    let scan1: DefaultLogicalExpression = scan("t1".to_string());
     let scan2 = scan("t2".to_string());
     let (scan_id_1, scan_expr_id_1) = memo.add_group(scan1, &[]).await.unwrap().ok().unwrap();
     let (scan_id_2, scan_expr_id_2) = memo.add_group(scan2, &[]).await.unwrap().ok().unwrap();
