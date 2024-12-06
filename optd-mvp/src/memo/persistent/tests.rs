@@ -4,7 +4,7 @@ use crate::{expression::*, memo::persistent::PersistentMemo};
 #[ignore]
 #[tokio::test]
 async fn test_simple_logical_duplicates() {
-    let memo = PersistentMemo::new().await;
+    let memo = PersistentMemo::<DefaultLogicalExpression, DefaultPhysicalExpression>::new().await;
     memo.cleanup().await;
 
     let scan = scan("t1".to_string());
@@ -95,7 +95,7 @@ async fn test_simple_add_physical_expression() {
 #[ignore]
 #[tokio::test]
 async fn test_simple_tree() {
-    let memo = PersistentMemo::new().await;
+    let memo = PersistentMemo::<DefaultLogicalExpression, DefaultPhysicalExpression>::new().await;
     memo.cleanup().await;
 
     // Create two scan groups.
@@ -145,7 +145,7 @@ async fn test_simple_tree() {
 #[ignore]
 #[tokio::test]
 async fn test_simple_group_link() {
-    let memo = PersistentMemo::new().await;
+    let memo = PersistentMemo::<DefaultLogicalExpression, DefaultPhysicalExpression>::new().await;
     memo.cleanup().await;
 
     // Create two scan groups.
@@ -198,10 +198,11 @@ async fn test_simple_group_link() {
     memo.cleanup().await;
 }
 
+/// Tests merging groups up a chain.
 #[ignore]
 #[tokio::test]
 async fn test_group_merge_ladder() {
-    let memo = PersistentMemo::new().await;
+    let memo = PersistentMemo::<DefaultLogicalExpression, DefaultPhysicalExpression>::new().await;
     memo.cleanup().await;
 
     // Build up a tree of true filters that should be collapsed into a single table scan.
@@ -259,7 +260,7 @@ async fn test_group_merge_ladder() {
 #[ignore]
 #[tokio::test]
 async fn test_group_merge() {
-    let memo = PersistentMemo::new().await;
+    let memo = PersistentMemo::<DefaultLogicalExpression, DefaultPhysicalExpression>::new().await;
     memo.cleanup().await;
 
     // Create a base group.
@@ -386,7 +387,7 @@ async fn test_group_merge() {
 #[ignore]
 #[tokio::test]
 async fn test_cascading_merge() {
-    let memo = PersistentMemo::new().await;
+    let memo = PersistentMemo::<DefaultLogicalExpression, DefaultPhysicalExpression>::new().await;
     memo.cleanup().await;
 
     // Create the base groups.

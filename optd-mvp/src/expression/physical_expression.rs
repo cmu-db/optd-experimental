@@ -2,11 +2,42 @@
 //!
 //! FIXME: All fields are placeholders.
 //!
+//! TODO Remove dead code.
 //! TODO Figure out if each operator should be in a different submodule.
 //! TODO This entire file is a WIP.
 
-use crate::{entities::*, memo::GroupId};
+#![allow(dead_code)]
+
+use crate::{entities::physical_expression::Model, memo::GroupId};
 use serde::{Deserialize, Serialize};
+use std::fmt::Debug;
+
+/// An interface defining what an in-memory physical expression representation should be able to do.
+pub trait PhysicalExpression: From<Model> + Into<Model> + Clone + Debug {
+    /// Returns the kind of relation / operator node encoded as an integer.
+    fn kind(&self) -> i16;
+
+    /// Retrieves the child groups IDs of this logical expression.
+    fn children(&self) -> Vec<GroupId>;
+}
+
+impl PhysicalExpression for DefaultPhysicalExpression {
+    fn kind(&self) -> i16 {
+        match self {
+            Self::TableScan(_) => 0,
+            Self::Filter(_) => 1,
+            Self::HashJoin(_) => 2,
+        }
+    }
+
+    fn children(&self) -> Vec<GroupId> {
+        match self {
+            Self::TableScan(_) => vec![],
+            Self::Filter(filter) => vec![filter.child],
+            Self::HashJoin(hash_join) => vec![hash_join.left, hash_join.right],
+        }
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum DefaultPhysicalExpression {
@@ -33,9 +64,8 @@ pub struct HashJoin {
     expression: String,
 }
 
-/// TODO Use a macro.
-impl From<physical_expression::Model> for DefaultPhysicalExpression {
-    fn from(value: physical_expression::Model) -> Self {
+impl From<Model> for DefaultPhysicalExpression {
+    fn from(value: Model) -> Self {
         match value.kind {
             0 => Self::TableScan(
                 serde_json::from_value(value.data)
@@ -54,14 +84,10 @@ impl From<physical_expression::Model> for DefaultPhysicalExpression {
     }
 }
 
-/// TODO Use a macro.
-impl From<DefaultPhysicalExpression> for physical_expression::Model {
-    fn from(value: DefaultPhysicalExpression) -> physical_expression::Model {
-        fn create_physical_expression(
-            kind: i16,
-            data: serde_json::Value,
-        ) -> physical_expression::Model {
-            physical_expression::Model {
+impl From<DefaultPhysicalExpression> for Model {
+    fn from(value: DefaultPhysicalExpression) -> Model {
+        fn create_physical_expression(kind: i16, data: serde_json::Value) -> Model {
+            Model {
                 id: -1,
                 group_id: -1,
                 kind,
