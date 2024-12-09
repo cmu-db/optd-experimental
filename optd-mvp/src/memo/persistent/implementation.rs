@@ -6,7 +6,7 @@
 
 #![allow(dead_code)]
 
-use super::PersistentMemo;
+use super::{PersistentMemo, PersistentMemoTransaction};
 use crate::{
     entities::*,
     expression::{LogicalExpression, PhysicalExpression},
@@ -14,9 +14,8 @@ use crate::{
     OptimizerResult, DATABASE_URL,
 };
 use sea_orm::{
-    entity::prelude::*,
-    entity::{IntoActiveModel, NotSet, Set},
-    Database,
+    entity::{prelude::*, IntoActiveModel, NotSet, Set},
+    Database, DatabaseTransaction, TransactionTrait,
 };
 use std::{collections::HashSet, marker::PhantomData};
 
@@ -37,6 +36,15 @@ where
             _phantom_logical: PhantomData,
             _phantom_physical: PhantomData,
         }
+    }
+
+    /// Starts a new database transaction.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`DbErr`] if unable to create a new transaction.
+    pub async fn begin(&self) -> OptimizerResult<PersistentMemoTransaction<L, P>> {
+        Ok(PersistentMemoTransaction::new(self.db.begin().await?).await)
     }
 
     /// Deletes all objects in the backing database.
@@ -71,6 +79,39 @@ where
             physical_children
         };
     }
+}
+
+impl<L, P> PersistentMemoTransaction<L, P>
+where
+    L: LogicalExpression,
+    P: PhysicalExpression,
+{
+    /// Creates a new transaction object.
+    pub async fn new(txn: DatabaseTransaction) -> Self {
+        Self {
+            txn,
+            _phantom_logical: PhantomData,
+            _phantom_physical: PhantomData,
+        }
+    }
+
+    /// Commits the transaction.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`DbErr`] if unable to commit the transaction.
+    pub async fn commit(self) -> OptimizerResult<()> {
+        Ok(self.txn.commit().await?)
+    }
+
+    /// Rolls back the transaction.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`DbErr`] if unable to roll back the transaction.
+    pub async fn rollback(self) -> OptimizerResult<()> {
+        Ok(self.txn.rollback().await?)
+    }
 
     /// Retrieves a [`group::Model`] given its ID.
     ///
@@ -81,7 +122,7 @@ where
     /// If the group does not exist, returns a [`MemoError::UnknownGroup`] error.
     pub async fn get_group(&self, group_id: GroupId) -> OptimizerResult<group::Model> {
         Ok(group::Entity::find_by_id(group_id.0)
-            .one(&self.db)
+            .one(&self.txn)
             .await?
             .ok_or(MemoError::UnknownGroup(group_id))?)
     }
@@ -117,7 +158,7 @@ where
 
         // Update the group to point to the new parent.
         active_group.parent_id = Set(Some(root_id.0));
-        active_group.update(&self.db).await?;
+        active_group.update(&self.txn).await?;
 
         Ok(GroupId(root_id.0))
     }
@@ -180,7 +221,7 @@ where
     ) -> OptimizerResult<(GroupId, P)> {
         // Lookup the entity in the database via the unique expression ID.
         let model = physical_expression::Entity::find_by_id(physical_expression_id.0)
-            .one(&self.db)
+            .one(&self.txn)
             .await?
             .ok_or(MemoError::UnknownPhysicalExpression(physical_expression_id))?;
 
@@ -202,7 +243,7 @@ where
     ) -> OptimizerResult<(GroupId, L)> {
         // Lookup the entity in the database via the unique expression ID.
         let model = logical_expression::Entity::find_by_id(logical_expression_id.0)
-            .one(&self.db)
+            .one(&self.txn)
             .await?
             .ok_or(MemoError::UnknownLogicalExpression(logical_expression_id))?;
 
@@ -230,7 +271,7 @@ where
         // Search for expressions that have the given parent group ID.
         let children = logical_expression::Entity::find()
             .filter(logical_expression::Column::GroupId.eq(group_id.0))
-            .all(&self.db)
+            .all(&self.txn)
             .await?
             .into_iter()
             .map(|m| LogicalExpressionId(m.id))
@@ -257,7 +298,7 @@ where
         // Search for expressions that have the given parent group ID.
         let children = physical_expression::Entity::find()
             .filter(physical_expression::Column::GroupId.eq(group_id.0))
-            .all(&self.db)
+            .all(&self.txn)
             .await?
             .into_iter()
             .map(|m| PhysicalExpressionId(m.id))
@@ -273,7 +314,7 @@ where
     /// If the group does not exist, returns a [`MemoError::UnknownGroup`] error. Can also return a
     /// [`DbErr`] if the update fails.
     pub async fn update_group_status(
-        &self,
+        &mut self,
         group_id: GroupId,
         status: GroupStatus,
     ) -> OptimizerResult<GroupStatus> {
@@ -283,7 +324,7 @@ where
         // Update the group's status.
         let old_status = group.status;
         group.status = Set(status as u8 as i8);
-        group.update(&self.db).await?;
+        group.update(&self.txn).await?;
 
         let old_status = match old_status.unwrap() {
             0 => GroupStatus::InProgress,
@@ -306,7 +347,7 @@ where
     /// If the group does not exist, returns a [`MemoError::UnknownGroup`] error. Can also return a
     /// [`DbErr`] if the update fails.
     pub async fn update_group_winner(
-        &self,
+        &mut self,
         group_id: GroupId,
         physical_expression_id: PhysicalExpressionId,
     ) -> OptimizerResult<Option<PhysicalExpressionId>> {
@@ -316,7 +357,7 @@ where
         // Update the group to point to the new winner.
         let old_id = group.winner;
         group.winner = Set(Some(physical_expression_id.0));
-        group.update(&self.db).await?;
+        group.update(&self.txn).await?;
 
         // Note that the `unwrap` here is unwrapping the `ActiveValue`, not the `Option`.
         let old_id = old_id.unwrap().map(PhysicalExpressionId);
@@ -345,7 +386,7 @@ where
     /// is used for notifying the caller if the expression that they attempted to insert was a
     /// duplicate expression or not.
     pub async fn add_logical_expression_to_group(
-        &self,
+        &mut self,
         group_id: GroupId,
         logical_expression: L,
         children: &[GroupId],
@@ -366,7 +407,7 @@ where
         let mut active_model = model.into_active_model();
         active_model.group_id = Set(group_id.0);
         active_model.id = NotSet;
-        let new_model = active_model.insert(&self.db).await?;
+        let new_model = active_model.insert(&self.txn).await?;
 
         let expr_id = new_model.id;
 
@@ -378,7 +419,7 @@ where
             }
         }))
         .on_empty_do_nothing()
-        .exec(&self.db)
+        .exec(&self.txn)
         .await?;
 
         // Finally, insert the fingerprint of the logical expression as well.
@@ -401,7 +442,7 @@ where
             hash: Set(hash),
         };
         fingerprint::Entity::insert(fingerprint)
-            .exec(&self.db)
+            .exec(&self.txn)
             .await?;
 
         Ok(Ok(LogicalExpressionId(expr_id)))
@@ -420,7 +461,7 @@ where
     /// insertion of the new physical expression or any of its child junction entries are not able
     /// to be inserted.
     pub async fn add_physical_expression_to_group(
-        &self,
+        &mut self,
         group_id: GroupId,
         physical_expression: P,
         children: &[GroupId],
@@ -433,7 +474,7 @@ where
         let mut active_model = model.into_active_model();
         active_model.group_id = Set(group_id.0);
         active_model.id = NotSet;
-        let new_model = active_model.insert(&self.db).await?;
+        let new_model = active_model.insert(&self.txn).await?;
 
         // Insert the child groups of the expression into the junction / children table.
         physical_children::Entity::insert_many(children.iter().copied().map(|child_id| {
@@ -443,7 +484,7 @@ where
             }
         }))
         .on_empty_do_nothing()
-        .exec(&self.db)
+        .exec(&self.txn)
         .await?;
 
         Ok(PhysicalExpressionId(new_model.id))
@@ -490,7 +531,7 @@ where
         let potential_matches = fingerprint::Entity::find()
             .filter(fingerprint::Column::Hash.eq(fingerprint))
             .filter(fingerprint::Column::Kind.eq(kind))
-            .all(&self.db)
+            .all(&self.txn)
             .await?;
 
         if potential_matches.is_empty() {
@@ -549,7 +590,7 @@ where
     /// is used for notifying the caller if the expression/group that they attempted to insert was a
     /// duplicate expression or not.
     pub async fn add_group(
-        &self,
+        &mut self,
         logical_expression: L,
         children: &[GroupId],
     ) -> OptimizerResult<Result<(GroupId, LogicalExpressionId), (GroupId, LogicalExpressionId)>>
@@ -569,7 +610,7 @@ where
         };
 
         // Create the new group.
-        let group_res = group::Entity::insert(group).exec(&self.db).await?;
+        let group_res = group::Entity::insert(group).exec(&self.txn).await?;
         let group_id = group_res.last_insert_id;
 
         // Insert the input expression into the newly created group.
@@ -577,7 +618,7 @@ where
         let mut active_expression = expression.into_active_model();
         active_expression.group_id = Set(group_id);
         active_expression.id = NotSet;
-        let new_expression = active_expression.insert(&self.db).await?;
+        let new_expression = active_expression.insert(&self.txn).await?;
 
         let group_id = new_expression.group_id;
         let expr_id = new_expression.id;
@@ -590,7 +631,7 @@ where
             }
         }))
         .on_empty_do_nothing()
-        .exec(&self.db)
+        .exec(&self.txn)
         .await?;
 
         // Finally, insert the fingerprint of the logical expression as well.
@@ -613,7 +654,7 @@ where
             hash: Set(hash),
         };
         fingerprint::Entity::insert(fingerprint)
-            .exec(&self.db)
+            .exec(&self.txn)
             .await?;
 
         Ok(Ok((GroupId(group_id), LogicalExpressionId(expr_id))))
@@ -631,7 +672,7 @@ where
     ///
     /// TODO
     pub async fn merge_groups(
-        &self,
+        &mut self,
         left_group_id: GroupId,
         right_group_id: GroupId,
     ) -> OptimizerResult<GroupId> {
@@ -665,7 +706,7 @@ where
             .load_many_to_many(
                 logical_expression::Entity,
                 logical_children::Entity,
-                &self.db,
+                &self.txn,
             )
             .await?;
 
@@ -697,7 +738,7 @@ where
                 hash: Set(hash),
             };
             fingerprint::Entity::insert(fingerprint)
-                .exec(&self.db)
+                .exec(&self.txn)
                 .await?;
         }
 
@@ -708,8 +749,8 @@ where
         active_left_root.next_id = Set(Some(right_next));
         active_right_root.next_id = Set(Some(left_next));
 
-        active_left_root.update(&self.db).await?;
-        active_right_root.update(&self.db).await?;
+        active_left_root.update(&self.txn).await?;
+        active_right_root.update(&self.txn).await?;
 
         Ok(right_root_id)
     }
