@@ -9,7 +9,7 @@
 use super::PersistentMemo;
 use crate::{
     entities::*,
-    expression::{LogicalExpression, PhysicalExpression},
+    expression::{logical_expression::LogicalExpression, physical_expression::PhysicalExpression},
     memo::{GroupId, GroupStatus, LogicalExpressionId, MemoError, PhysicalExpressionId},
     OptimizerResult, DATABASE_URL,
 };

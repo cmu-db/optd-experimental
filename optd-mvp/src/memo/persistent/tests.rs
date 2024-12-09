@@ -1,4 +1,7 @@
-use crate::{expression::*, memo::persistent::PersistentMemo};
+use crate::{
+    expression::{logical_expression::*, physical_expression::*},
+    memo::persistent::PersistentMemo,
+};
 
 /// Tests that exact expression matches are detected and handled by the memo table.
 #[ignore]

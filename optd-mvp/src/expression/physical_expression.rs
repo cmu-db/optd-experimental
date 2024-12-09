@@ -112,13 +112,11 @@ impl From<DefaultPhysicalExpression> for Model {
     }
 }
 
-#[cfg(test)]
 pub use build::*;
 
-#[cfg(test)]
 mod build {
     use super::*;
-    use crate::expression::DefaultPhysicalExpression;
+    use crate::expression::physical_expression::DefaultPhysicalExpression;
 
     pub fn table_scan(table_schema: String) -> DefaultPhysicalExpression {
         DefaultPhysicalExpression::TableScan(TableScan { table_schema })

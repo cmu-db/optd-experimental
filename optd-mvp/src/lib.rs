@@ -6,11 +6,8 @@ mod migrator;
 use migrator::Migrator;
 
 mod entities;
-
-mod memo;
-use memo::MemoError;
-
-mod expression;
+pub mod expression;
+pub mod memo;
 
 /// The filename of the SQLite database for migration.
 pub const DATABASE_FILENAME: &str = "sqlite.db";
@@ -23,7 +20,7 @@ pub enum OptimizerError {
     #[error("SeaORM error")]
     Database(#[from] sea_orm::error::DbErr),
     #[error("Memo table logical error")]
-    Memo(#[from] MemoError),
+    Memo(#[from] memo::MemoError),
     #[error("unknown error")]
     Unknown,
 }

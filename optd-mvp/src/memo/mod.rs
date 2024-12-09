@@ -39,4 +39,4 @@ pub enum MemoError {
     InvalidExpression,
 }
 
-mod persistent;
+pub mod persistent;

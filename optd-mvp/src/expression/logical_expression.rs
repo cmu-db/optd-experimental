@@ -188,13 +188,11 @@ impl From<DefaultLogicalExpression> for Model {
     }
 }
 
-#[cfg(test)]
 pub use build::*;
 
-#[cfg(test)]
 mod build {
     use super::*;
-    use crate::expression::DefaultLogicalExpression;
+    use crate::expression::logical_expression::DefaultLogicalExpression;
 
     pub fn scan(table_schema: String) -> DefaultLogicalExpression {
         DefaultLogicalExpression::Scan(Scan {

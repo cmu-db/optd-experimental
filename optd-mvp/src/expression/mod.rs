@@ -2,8 +2,5 @@
 //!
 //! TODO more docs.
 
-mod logical_expression;
-pub use logical_expression::*;
-
-mod physical_expression;
-pub use physical_expression::*;
+pub mod logical_expression;
+pub mod physical_expression;
