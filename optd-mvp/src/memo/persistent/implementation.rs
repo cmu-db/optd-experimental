@@ -27,6 +27,10 @@ where
 {
     /// Creates a new `PersistentMemo` struct by connecting to a database defined at
     /// [`DATABASE_URL`].
+    ///
+    /// # Panics
+    ///
+    /// Panics if unable to create a databse connection to [`DATABASE_URL`].
     pub async fn new() -> Self {
         Self {
             db: Database::connect(DATABASE_URL).await.unwrap(),
@@ -39,7 +43,14 @@ where
     ///
     /// Since there is no asynchronous drop yet in Rust, in order to drop all objects in the
     /// database, the user must call this manually.
+    ///
+    /// # Panics
+    ///
+    /// May panic if unable to delete entities from any table.
     pub async fn cleanup(&self) {
+        /// Simple private macro to teardown all tables in the database.
+        /// Note that these have to be specified manually, so when adding a new table to the
+        /// database, we must make sure to add that table here.
         macro_rules! delete_all {
             ($($module: ident),+ $(,)?) => {
                 $(
@@ -63,9 +74,11 @@ where
 
     /// Retrieves a [`group::Model`] given its ID.
     ///
-    /// If the group does not exist, returns a [`MemoError::UnknownGroup`] error.
-    ///
     /// FIXME: use an in-memory representation of a group instead.
+    ///
+    /// # Errors
+    ///
+    /// If the group does not exist, returns a [`MemoError::UnknownGroup`] error.
     pub async fn get_group(&self, group_id: GroupId) -> OptimizerResult<group::Model> {
         Ok(group::Entity::find_by_id(group_id.0)
             .one(&self.db)
@@ -80,39 +93,48 @@ where
     ///
     /// This function uses the path compression optimization, which amortizes the cost to a single
     /// lookup (theoretically in constant time, but we must be wary of the I/O roundtrip).
+    ///
+    /// # Errors
+    ///
+    /// If the group does not exist, returns a [`MemoError::UnknownGroup`] error. This function
+    /// also performs path compression pointer updates, so any of those updates can fail with a
+    /// [`DbErr`].
     pub async fn get_root_group(&self, group_id: GroupId) -> OptimizerResult<GroupId> {
-        let mut curr_group = self.get_group(group_id).await?;
+        let curr_group = self.get_group(group_id).await?;
 
-        // Traverse up the path and find the root group, keeping track of groups we have visited.
-        let mut path = vec![];
-        while let Some(parent_id) = curr_group.parent_id {
-            let next_group = self.get_group(GroupId(parent_id)).await?;
-            path.push(curr_group);
-            curr_group = next_group;
-        }
+        // If we have no parent, then we are at the root.
+        let Some(parent_id) = curr_group.parent_id else {
+            return Ok(GroupId(curr_group.id));
+        };
 
-        let root_id = GroupId(curr_group.id);
+        // Recursively find the root group ID.
+        let root_id = Box::pin(self.get_root_group(GroupId(parent_id))).await?;
 
         // Path Compression Optimization:
         // For every group along the path that we walked, set their parent id pointer to the root.
         // This allows for an amortized O(1) cost for `get_root_group`.
-        for group in path {
-            let mut active_group = group.into_active_model();
+        let mut active_group = curr_group.into_active_model();
 
-            // Update the group to point to the new parent.
-            active_group.parent_id = Set(Some(root_id.0));
-            active_group.update(&self.db).await?;
-        }
+        // Update the group to point to the new parent.
+        active_group.parent_id = Set(Some(root_id.0));
+        active_group.update(&self.db).await?;
 
-        Ok(root_id)
+        Ok(GroupId(root_id.0))
     }
 
     /// Retrieves every group ID of groups that share the same root group with the input group.
     ///
-    /// If a group does not exist in the cycle, returns a [`MemoError::UnknownGroup`] error.
-    ///
     /// The group records form a union-find data structure that also maintains a circular linked
     /// list in every set that allows us to iterate over all elements in a set in linear time.
+    ///
+    /// # Errors
+    ///
+    /// If the input group does not exist, or if any pointer along the path is invalid, returns a
+    /// [`MemoError::UnknownGroup`] error.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the embedded union-find data structure is malformed.
     pub async fn get_group_set(&self, group_id: GroupId) -> OptimizerResult<Vec<GroupId>> {
         // Iterate over the circular linked list until we reach ourselves again.
         let base_group = self.get_group(group_id).await?;
@@ -148,6 +170,8 @@ where
 
     /// Retrieves a [`physical_expression::Model`] given a [`PhysicalExpressionId`].
     ///
+    /// # Errors
+    ///
     /// If the physical expression does not exist, returns a
     /// [`MemoError::UnknownPhysicalExpression`] error.
     pub async fn get_physical_expression(
@@ -167,6 +191,8 @@ where
     }
 
     /// Retrieves a [`logical_expression::Model`] given its [`LogicalExpressionId`].
+    ///
+    /// # Errors
     ///
     /// If the logical expression does not exist, returns a [`MemoError::UnknownLogicalExpression`]
     /// error.
@@ -188,13 +214,19 @@ where
 
     /// Retrieves all of the logical expression "children" IDs of a group.
     ///
-    /// If the group does not exist, returns a [`MemoError::UnknownGroup`] error.
-    ///
     /// FIXME: `find_related` does not work for some reason, have to use manual `filter`.
+    ///
+    /// # Errors
+    ///
+    /// If the group does not exist, returns a [`MemoError::UnknownGroup`] error. Can also return
+    /// a [`DbErr`] if the something goes wrong with the filter scan.
     pub async fn get_logical_children(
         &self,
         group_id: GroupId,
     ) -> OptimizerResult<Vec<LogicalExpressionId>> {
+        // First ensure that the group exists.
+        let _ = self.get_group(group_id).await?;
+
         // Search for expressions that have the given parent group ID.
         let children = logical_expression::Entity::find()
             .filter(logical_expression::Column::GroupId.eq(group_id.0))
@@ -209,11 +241,19 @@ where
 
     /// Retrieves all of the physical expression "children" IDs of a group.
     ///
-    /// If the group does not exist, returns a [`MemoError::UnknownGroup`] error.
+    /// FIXME: `find_related` does not work for some reason, have to use manual `filter`.
+    ///
+    /// # Errors
+    ///
+    /// If the group does not exist, returns a [`MemoError::UnknownGroup`] error. Can also return
+    /// a [`DbErr`] if the something goes wrong with the filter scan.
     pub async fn get_physical_children(
         &self,
         group_id: GroupId,
     ) -> OptimizerResult<Vec<PhysicalExpressionId>> {
+        // First ensure that the group exists.
+        let _ = self.get_group(group_id).await?;
+
         // Search for expressions that have the given parent group ID.
         let children = physical_expression::Entity::find()
             .filter(physical_expression::Column::GroupId.eq(group_id.0))
@@ -228,7 +268,10 @@ where
 
     /// Updates / replaces a group's status. Returns the previous group status.
     ///
-    /// If the group does not exist, returns a [`MemoError::UnknownGroup`] error.
+    /// # Errors
+    ///
+    /// If the group does not exist, returns a [`MemoError::UnknownGroup`] error. Can also return a
+    /// [`DbErr`] if the update fails.
     pub async fn update_group_status(
         &self,
         group_id: GroupId,
@@ -246,7 +289,7 @@ where
             0 => GroupStatus::InProgress,
             1 => GroupStatus::Explored,
             2 => GroupStatus::Optimized,
-            _ => panic!("encountered an invalid group status"),
+            _ => unreachable!("encountered an invalid group status"),
         };
 
         Ok(old_status)
@@ -255,10 +298,13 @@ where
     /// Updates / replaces a group's best physical plan (winner). Optionally returns the previous
     /// winner's physical expression ID.
     ///
-    /// If the group does not exist, returns a [`MemoError::UnknownGroup`] error.
-    ///
     /// FIXME: In the future, this should first check that we aren't overwriting a winner that was
     /// updated from another thread by comparing against the cost of the plan.
+    ///
+    /// # Errors
+    ///
+    /// If the group does not exist, returns a [`MemoError::UnknownGroup`] error. Can also return a
+    /// [`DbErr`] if the update fails.
     pub async fn update_group_winner(
         &self,
         group_id: GroupId,
@@ -291,6 +337,13 @@ where
     ///
     /// If the memo table detects that the input is unique, it will insert the expression into the
     /// input group and return an `Ok(Ok(expression_id))`.
+    ///
+    /// # Errors
+    ///
+    /// Note that the return value is a [`Result`] wrapped in an [`OptimizerResult`]. The outer
+    /// result is used for raising [`DbErr`] or other database/IO-related errors. The inner result
+    /// is used for notifying the caller if the expression that they attempted to insert was a
+    /// duplicate expression or not.
     pub async fn add_logical_expression_to_group(
         &self,
         group_id: GroupId,
@@ -359,9 +412,13 @@ where
     /// The caller is required to pass in a slice of [`GroupId`] that represent the child groups of
     /// the input expression.
     ///
-    /// If the group does not exist, returns a [`MemoError::UnknownGroup`] error.
-    ///
     /// On successful insertion, returns the ID of the physical expression.
+    ///
+    /// # Errors
+    ///
+    /// If the group does not exist, returns a [`MemoError::UnknownGroup`] error. Can also fail if
+    /// insertion of the new physical expression or any of its child junction entries are not able
+    /// to be inserted.
     pub async fn add_physical_expression_to_group(
         &self,
         group_id: GroupId,
@@ -403,6 +460,10 @@ where
     /// This function assumes that the child groups of the expression are currently roots of their
     /// group sets. For example, if G1 and G2 should be merged, and G1 is the root, then the input
     /// expression should _not_ have G2 as a child, and should be replaced with G1.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`DbErr`] when a database operation fails.
     pub async fn is_duplicate_logical_expression(
         &self,
         logical_expression: &L,
@@ -480,6 +541,13 @@ where
     ///
     /// If the expression does not exist, this function will create a new group and a new
     /// expression, returning brand new IDs for both.
+    ///
+    /// # Errors
+    ///
+    /// Note that the return value is a [`Result`] wrapped in an [`OptimizerResult`]. The outer
+    /// result is used for raising [`DbErr`] or other database/IO-related errors. The inner result
+    /// is used for notifying the caller if the expression/group that they attempted to insert was a
+    /// duplicate expression or not.
     pub async fn add_group(
         &self,
         logical_expression: L,
@@ -558,6 +626,10 @@ where
     /// TODO write docs.
     /// TODO highly inefficient, need to understand metrics and performance testing.
     /// TODO Optimization: add rank / size into data structure
+    ///
+    /// # Errors
+    ///
+    /// TODO
     pub async fn merge_groups(
         &self,
         left_group_id: GroupId,

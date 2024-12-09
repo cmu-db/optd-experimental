@@ -22,4 +22,4 @@ pub struct PersistentMemo<L, P> {
     _phantom_physical: PhantomData<P>,
 }
 
-mod implementation;
+pub mod implementation;

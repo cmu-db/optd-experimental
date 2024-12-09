@@ -2,6 +2,12 @@
 //!
 //! TODO more docs.
 
+#![warn(missing_docs)]
+#![warn(clippy::missing_docs_in_private_items)]
+#![warn(clippy::missing_errors_doc)]
+#![warn(clippy::missing_panics_doc)]
+#![warn(clippy::missing_safety_doc)]
+
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -21,12 +27,16 @@ pub struct PhysicalExpressionId(pub i32);
 /// A status enum representing the different states a group can be during query optimization.
 #[repr(u8)]
 pub enum GroupStatus {
+    /// Represents a group that is currently being logically explored.
     InProgress = 0,
+    /// Represents a logically explored group that is currently being physically optimized.
     Explored = 1,
+    /// Represents a fully optimized group.
     Optimized = 2,
 }
 
 /// The different kinds of errors that might occur while running operations on a memo table.
+#[allow(missing_docs)]
 #[derive(Error, Debug)]
 pub enum MemoError {
     #[error("unknown group ID {0:?}")]
@@ -39,4 +49,4 @@ pub enum MemoError {
     InvalidExpression,
 }
 
-mod persistent;
+pub mod persistent;
