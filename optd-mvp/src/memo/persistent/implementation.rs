@@ -606,6 +606,7 @@ where
         // The expression does not exist yet, so we need to create a new group and new expression.
         let group = group::ActiveModel {
             status: Set(0), // `GroupStatus::InProgress` status.
+            set_size: Set(1),
             ..Default::default()
         };
 
@@ -676,18 +677,24 @@ where
         left_group_id: GroupId,
         right_group_id: GroupId,
     ) -> OptimizerResult<GroupId> {
-        // Without a rank / size field, we have no way of determining which set is better to merge
-        // into the other. So we will arbitrarily choose to merge the left group into the right
-        // group here. If rank is added in the future, then merge the smaller set into the larger.
+        let mut left_root_id = self.get_root_group(left_group_id).await?;
+        let mut left_root = self.get_group(left_root_id).await?;
+        let mut left_size = left_root.set_size;
 
-        let left_root_id = self.get_root_group(left_group_id).await?;
-        let left_root = self.get_group(left_root_id).await?;
+        let mut right_root_id = self.get_root_group(right_group_id).await?;
+        let mut right_root = self.get_group(right_root_id).await?;
+        let mut right_size = left_root.set_size;
+
+        // Rank/size optimization: merge the smaller set into the larger set.
+        if left_size > right_size {
+            std::mem::swap(&mut left_root_id, &mut right_root_id);
+            std::mem::swap(&mut left_root, &mut right_root);
+            std::mem::swap(&mut left_size, &mut right_size);
+        }
+
         // A `None` next pointer means it should technically be pointing to itself.
         let left_next = left_root.next_id.unwrap_or(left_root_id.0);
         let mut active_left_root = left_root.into_active_model();
-
-        let right_root_id = self.get_root_group(right_group_id).await?;
-        let right_root = self.get_group(right_root_id).await?;
         // A `None` next pointer means it should technically be pointing to itself.
         let right_next = right_root.next_id.unwrap_or(right_root_id.0);
         let mut active_right_root = right_root.into_active_model();

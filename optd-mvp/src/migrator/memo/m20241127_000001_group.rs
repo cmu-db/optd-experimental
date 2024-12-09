@@ -83,6 +83,7 @@ pub enum Group {
     Status,
     Winner,
     Cost,
+    SetSize,
     ParentId,
     NextId,
 }
@@ -109,6 +110,7 @@ impl MigrationTrait for Migration {
                             .on_delete(ForeignKeyAction::SetNull)
                             .on_update(ForeignKeyAction::Cascade),
                     )
+                    .col(integer(Group::SetSize))
                     .col(integer_null(Group::ParentId))
                     .foreign_key(
                         ForeignKey::create()
