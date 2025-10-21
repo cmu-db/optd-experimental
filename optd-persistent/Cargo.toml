@@ -20,5 +20,5 @@ trait-variant = "0.1.2"
 # Pin more recent versions for -Zminimal-versions
 async-trait = "0.1.43"
 async-stream = "0.3.1"
-strum = "0.26.1"
+strum = "0.27.2"
 num_enum = "0.7.3"
